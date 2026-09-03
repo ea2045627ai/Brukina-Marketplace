@@ -24,6 +24,26 @@ function renderProducts(list = products){ grid.innerHTML = list.length ? list.ma
 function visibleProducts(){ const query = search?.value.toLowerCase().trim() || ''; return products.filter(product => (activeCategory === 'All products' || product.category.toLowerCase() === activeCategory.toLowerCase()) && `${product.name} ${product.vendor} ${product.category} ${product.source}`.toLowerCase().includes(query)); }
 async function loadInventory(){ const {data,error} = await supabaseClient.from('marketplace_inventory').select('*').eq('active',true); if(error || !data?.length){ products = fallbackCatalog; renderProducts(visibleProducts()); if(error) showToast('Showing starter catalog · connect Supabase for live inventory'); return; } products = data.map(mapInventoryRow); renderProducts(visibleProducts()); }
 loadInventory();
+function formatGhs(amount){ return `GH₵ ${Number(amount || 0).toLocaleString('en-GH',{minimumFractionDigits:2,maximumFractionDigits:2})}`; }
+async function loadWallet(){
+  const balance = document.querySelector('#wallet-balance');
+  const escrow = document.querySelector('#wallet-escrow');
+  const payout = document.querySelector('#wallet-payout');
+  const transactions = document.querySelector('#wallet-transactions');
+  if(!balance || !transactions) return;
+  if(!currentUser){ balance.textContent = escrow.textContent = payout.textContent = 'Sign in to view'; transactions.innerHTML = '<p class="empty-state">Sign in to view wallet activity.</p>'; return; }
+  balance.textContent = escrow.textContent = payout.textContent = 'Loading...';
+  const {data: wallet, error: walletError} = await supabaseClient.from('wallets').select('id,balance,escrow_balance').eq('user_id',currentUser.id).maybeSingle();
+  if(walletError){ balance.textContent = escrow.textContent = payout.textContent = 'Unavailable'; transactions.innerHTML = '<p class="empty-state">Wallet data is unavailable until the wallet migration is applied.</p>'; return; }
+  if(!wallet){ balance.textContent = escrow.textContent = payout.textContent = 'GH₵ 0.00'; transactions.innerHTML = '<p class="empty-state">No wallet activity yet.</p>'; return; }
+  balance.textContent = formatGhs(wallet.balance);
+  escrow.textContent = formatGhs(wallet.escrow_balance);
+  payout.textContent = formatGhs(wallet.balance);
+  const {data: entries, error: entriesError} = await supabaseClient.from('wallet_transactions').select('amount,transaction_type,description,created_at').eq('wallet_id',wallet.id).order('created_at',{ascending:false}).limit(10);
+  if(entriesError || !entries?.length){ transactions.innerHTML = '<p class="empty-state">No wallet activity yet.</p>'; return; }
+  transactions.innerHTML = entries.map(entry => `<div class="transaction"><span class="transaction-icon ${entry.amount >= 0 ? 'green' : 'gray'}">${entry.amount >= 0 ? '↙' : '↗'}</span><div><strong>${entry.description}</strong><small>${new Date(entry.created_at).toLocaleString()}</small></div><b class="${entry.amount >= 0 ? 'positive' : 'negative'}">${entry.amount >= 0 ? '+' : '−'} ${formatGhs(Math.abs(entry.amount))}</b></div>`).join('');
+}
+loadWallet();
 let dispatchProviders = [];
 let activeDispatchProvider = null;
 async function loadDispatchProviders(){
@@ -60,7 +80,7 @@ const search = document.querySelector('#search-input');
 search.addEventListener('input', () => renderProducts(visibleProducts()));
 document.querySelectorAll('.geo-option').forEach(button => button.addEventListener('click', () => { document.querySelectorAll('.geo-option').forEach(item => item.classList.remove('selected')); button.classList.add('selected'); showToast(`${button.dataset.region === 'urban' ? 'Urban hub' : 'Rural market'} offers loaded`); }));
 document.querySelectorAll('.category').forEach(button => button.addEventListener('click', () => { document.querySelectorAll('.category').forEach(item => item.classList.remove('active')); button.classList.add('active'); activeCategory = button.textContent.trim(); renderProducts(visibleProducts()); showToast(`${activeCategory} deals loaded`); }));
-function navigate(viewName){ document.querySelectorAll('.view').forEach(view => view.classList.toggle('active', view.dataset.view === viewName)); document.querySelectorAll('.nav-item').forEach(item => item.classList.toggle('selected', item.dataset.nav === viewName)); if(viewName === 'tracking') initMap(); if(viewName === 'hub') initializeVendorDashboard(); window.scrollTo({top:0,behavior:'smooth'}); }
+function navigate(viewName){ document.querySelectorAll('.view').forEach(view => view.classList.toggle('active', view.dataset.view === viewName)); document.querySelectorAll('.nav-item').forEach(item => item.classList.toggle('selected', item.dataset.nav === viewName)); if(viewName === 'tracking') initMap(); if(viewName === 'hub') initializeVendorDashboard(); if(viewName === 'wallet') loadWallet(); window.scrollTo({top:0,behavior:'smooth'}); }
 document.querySelectorAll('[data-nav]').forEach(item => item.addEventListener('click', event => { event.preventDefault(); navigate(item.dataset.nav); history.replaceState(null,'',`#${item.dataset.nav}`); }));
 window.addEventListener('hashchange', () => navigate(location.hash.slice(1) || 'home'));
 
@@ -179,7 +199,7 @@ function renderDashboard(){
 document.querySelector('#auth-form').addEventListener('submit', async event => { event.preventDefault(); const form = event.currentTarget; const {data,error} = await supabaseClient.auth.signUp({email:document.querySelector('#auth-email').value.trim(),password:document.querySelector('#auth-password').value,options:{data:{full_name:document.querySelector('#auth-name').value.trim(),role:currentRole}}}); if(error){ showToast(error.message); return; } currentUser = data.user; closeAuth(); renderDashboard(); navigate('dashboard'); showToast(data.session ? `Welcome to Brukina, ${roleLabels[currentRole]}` : 'Check your email to confirm your Brukina account'); form.reset(); });
 document.querySelector('#admin-form').addEventListener('submit', async event => { event.preventDefault(); const form = event.currentTarget; const {data,error} = await supabaseClient.auth.signInWithPassword({email:form.querySelector('input[type="email"]').value.trim(),password:form.querySelector('input[type="password"]').value}); if(error){ showToast(error.message); return; } const role = data.user.app_metadata?.role; if(role !== 'admin'){ await supabaseClient.auth.signOut(); showToast('This account does not have administrator access.'); return; } currentUser = data.user; currentRole = 'admin'; adminBackdrop.hidden = true; renderDashboard(); navigate('dashboard'); showToast('Administrator session opened'); });
 document.querySelector('#auth-form').addEventListener('reset', () => { currentRole = 'customer'; });
-supabaseClient.auth.getSession().then(({data}) => { if(data.session){ currentUser = data.session.user; currentRole = data.session.user.app_metadata?.role || data.session.user.user_metadata?.role || 'customer'; renderDashboard(); if(document.querySelector('#hub-view.active')) initializeVendorDashboard(); } });
+supabaseClient.auth.getSession().then(({data}) => { if(data.session){ currentUser = data.session.user; currentRole = data.session.user.app_metadata?.role || data.session.user.user_metadata?.role || 'customer'; renderDashboard(); loadWallet(); if(document.querySelector('#hub-view.active')) initializeVendorDashboard(); } });
 document.querySelector('#dispatch-request').addEventListener('click', async () => {
   if(!currentUser){ openAuth(); showToast('Sign in to request backup dispatch.'); return; }
   if(!activeDispatchProvider){ showToast('No dispatch provider is currently available.'); return; }
