@@ -1,0 +1,9 @@
+{
+  "name": "brukina-marketplace",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Static marketplace PWA for wholesale trade and local delivery operations.",
+  "scripts": {
+    "check": "node --check app.js && node --check sw.js"
+  }
+}
