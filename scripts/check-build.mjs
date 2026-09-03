@@ -10,7 +10,8 @@ const requiredFiles = [
   'manifest.webmanifest',
   'icon.svg',
   'netlify.toml',
-  '_headers'
+  '_headers',
+  'supabase/production.sql'
 ];
 
 for (const file of requiredFiles) {
@@ -33,6 +34,11 @@ if (!manifest.name || !manifest.start_url || !manifest.icons?.length) {
 
 for (const anchor of ['product-grid', 'search-input', 'auth-form', 'dispatch-request']) {
   if (!html.includes(`id="${anchor}"`)) throw new Error(`Missing required page anchor: ${anchor}`);
+}
+
+const productionSql = readFileSync(resolve(root, 'supabase/production.sql'), 'utf8');
+for (const table of ['support_preferences', 'support_callback_requests', 'support_conversations']) {
+  if (!productionSql.includes(`public.${table}`)) throw new Error(`Missing production support table: ${table}`);
 }
 
 console.log('Marketplace structure check passed');

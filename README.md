@@ -22,6 +22,12 @@ The catalog supports building materials, tools and equipment, devices and gadget
 
 Dispatch health is managed through `dispatch_providers`. Buyers can switch between available Bolt, Yango, and Brukina Backup options on the tracking screen. Bolt and Yango can be marked unavailable by an admin or trusted server job; the app then recommends `brukina_backup` and queues a protected `dispatch_requests` record. `local_vendors`, `local_couriers`, and `cashflow_entries` support local supply, rider/driver operations, and delivery fees, payouts, and settlements.
 
+## Production support assistant
+
+Run [`supabase/production.sql`](supabase/production.sql) after the other migrations. It adds protected support preferences, conversation records, and consented callback requests. The web assistant supports typed questions and browser speech recognition/synthesis when the device and browser provide them. Language options include English, Twi/Akan, Ewe, Ga, Hausa, Swahili, French, and Portuguese; actual recognition and voice quality depend on the browser's installed language services.
+
+Phone calls and an always-on AI representative require a trusted server connector such as Netlify Functions plus a telephony provider and an AI speech provider. Configure those credentials as server environment variables and process `support_callback_requests`; never put provider keys in `app.js`. Full coverage of every African native language cannot be guaranteed by browser APIs alone and requires selecting and testing a speech provider per target language, with human escalation for unsupported or sensitive requests.
+
 ## Run locally
 
 ```bash
