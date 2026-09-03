@@ -10,7 +10,6 @@ const requiredFiles = [
   'manifest.webmanifest',
   'icon.svg',
   'netlify.toml',
-  'scripts/check-netlify.mjs',
   '_headers',
   'README.md',
   'ROADMAP.md',
