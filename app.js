@@ -14,6 +14,26 @@ function mapInventoryRow(row){ return {name:row.product_name || row.name || 'Mar
 function renderProducts(list = products){ grid.innerHTML = list.length ? list.map(product => `<article class="product-card"><div class="product-image" style="background-image:url('${product.image}')"><span class="product-tag">${product.tag}</span></div><div class="product-info"><h3>${product.name}</h3><span class="vendor-name">${product.vendor}</span><div class="price-row"><span class="price">${product.price}<small> / unit</small></span><button class="buy-button" data-checkout="${product.paystack_checkout_url || ''}" data-product="${product.name}">Buy now</button></div></div></article>`).join('') : '<p class="empty-state">No live offers are available yet. Connect your Supabase project to load inventory.</p>'; }
 async function loadInventory(){ const {data,error} = await supabaseClient.from('marketplace_inventory').select('*'); if(error){ renderProducts(); showToast(`Inventory unavailable: ${error.message}`); return; } products = (data || []).map(mapInventoryRow); renderProducts(); }
 loadInventory();
+let dispatchProviders = [];
+let activeDispatchProvider = null;
+async function loadDispatchProviders(){
+  const {data,error} = await supabaseClient.from('dispatch_providers').select('id,provider_code,display_name,enabled,available,priority').order('priority',{ascending:true});
+  if(error){ showToast('Dispatch health is unavailable. Backup dispatch remains available after database setup.'); return; }
+  dispatchProviders = (data || []).filter(provider => provider.enabled).sort((a,b) => a.priority - b.priority);
+  activeDispatchProvider = dispatchProviders.find(provider => provider.available) || dispatchProviders.find(provider => provider.provider_code === 'brukina_backup');
+  const externalAvailable = dispatchProviders.some(provider => provider.provider_code !== 'brukina_backup' && provider.available);
+  const copy = document.querySelector('#dispatch-provider-copy');
+  const badge = document.querySelector('#dispatch-provider-badge');
+  const list = document.querySelector('#provider-list');
+  const status = document.querySelector('#dispatch-status');
+  const request = document.querySelector('#dispatch-request');
+  if(list) list.innerHTML = dispatchProviders.map(provider => `<div class="provider-chip ${provider.available ? 'available' : 'unavailable'}"><strong>${provider.display_name}</strong><small>${provider.available ? 'Available' : 'Unavailable'}</small></div>`).join('');
+  if(copy) copy.textContent = externalAvailable ? `${activeDispatchProvider.display_name} is available for this delivery.` : 'Bolt and Yango are unavailable. Brukina Backup is standing by.';
+  if(badge) badge.textContent = externalAvailable ? 'READY' : 'FALLBACK';
+  if(status){ status.classList.toggle('fallback', !externalAvailable); status.querySelector('span').firstChild.nextSibling.textContent = `Dispatch provider: ${activeDispatchProvider?.display_name || 'Brukina Backup'}`; }
+  if(request) request.hidden = externalAvailable || !activeDispatchProvider;
+}
+loadDispatchProviders();
 
 grid.addEventListener('click', event => { const button = event.target.closest('[data-checkout]'); if (!button) return; const checkoutUrl = new URL(button.dataset.checkout); if (checkoutUrl.protocol !== 'https:' || !checkoutUrl.hostname.endsWith('paystack.com')) { showToast('Secure checkout URL could not be verified.'); return; } showToast(`Opening secure Paystack checkout for ${button.dataset.product}`); window.setTimeout(() => window.location.assign(checkoutUrl.href), 650); });
 const search = document.querySelector('#search-input');
@@ -106,3 +126,12 @@ document.querySelector('#auth-form').addEventListener('submit', async event => {
 document.querySelector('#admin-form').addEventListener('submit', async event => { event.preventDefault(); const form = event.currentTarget; const {data,error} = await supabaseClient.auth.signInWithPassword({email:form.querySelector('input[type="email"]').value.trim(),password:form.querySelector('input[type="password"]').value}); if(error){ showToast(error.message); return; } const role = data.user.app_metadata?.role; if(role !== 'admin'){ await supabaseClient.auth.signOut(); showToast('This account does not have administrator access.'); return; } currentUser = data.user; currentRole = 'admin'; adminBackdrop.hidden = true; renderDashboard(); navigate('dashboard'); showToast('Administrator session opened'); });
 document.querySelector('#auth-form').addEventListener('reset', () => { currentRole = 'customer'; });
 supabaseClient.auth.getSession().then(({data}) => { if(data.session){ currentUser = data.session.user; currentRole = data.session.user.user_metadata?.role || 'customer'; renderDashboard(); } });
+document.querySelector('#dispatch-request').addEventListener('click', async () => {
+  if(!currentUser){ openAuth(); showToast('Sign in to request backup dispatch.'); return; }
+  if(!activeDispatchProvider){ showToast('No dispatch provider is currently available.'); return; }
+  const {error} = await supabaseClient.from('dispatch_requests').insert({customer_id:currentUser.id,provider_id:activeDispatchProvider.id,status:'queued',pickup_address:'Akosombo Materials, 14 Independence Ave',dropoff_address:'Customer address pin'});
+  if(error){ showToast(`Backup dispatch could not be queued: ${error.message}`); return; }
+  document.querySelector('#dispatch-request').disabled = true;
+  document.querySelector('#dispatch-request').textContent = 'Queued';
+  showToast('Brukina Backup dispatch request queued securely.');
+});
