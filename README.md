@@ -37,3 +37,18 @@ python3 -m http.server 4173
 ```
 
 Open <http://localhost:4173> in a browser.
+
+## Netlify deployment check
+
+Run `npm run check:deployment` before connecting or merging a Netlify site. It
+validates the local deploy contract and reports the remaining action as
+`PENDING` when no deployment URL is configured. After Netlify is connected, run
+the same command with the deployed URL:
+
+```bash
+NETLIFY_DEPLOY_URL=https://YOUR-SITE.netlify.app npm run check:deployment
+```
+
+The remote check only verifies that the deployed app responds and that the
+operations function rejects an invalid method. Secrets and partner URLs remain
+Netlify environment variables; they are never committed to this repository.
