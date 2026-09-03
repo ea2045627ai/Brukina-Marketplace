@@ -27,11 +27,21 @@ async function loadDispatchProviders(){
   const list = document.querySelector('#provider-list');
   const status = document.querySelector('#dispatch-status');
   const request = document.querySelector('#dispatch-request');
+  const buyerList = document.querySelector('#buyer-provider-list');
   if(list) list.innerHTML = dispatchProviders.map(provider => `<div class="provider-chip ${provider.available ? 'available' : 'unavailable'}"><strong>${provider.display_name}</strong><small>${provider.available ? 'Available' : 'Unavailable'}</small></div>`).join('');
+  if(buyerList) buyerList.innerHTML = dispatchProviders.map(provider => `<button class="buyer-provider ${provider.id === activeDispatchProvider?.id ? 'selected' : ''}" data-provider-id="${provider.id}" ${provider.available ? '' : 'disabled'}><strong>${provider.display_name}</strong><small>${provider.available ? 'Choose' : 'Offline'}</small></button>`).join('');
   if(copy) copy.textContent = externalAvailable ? `${activeDispatchProvider.display_name} is available for this delivery.` : 'Bolt and Yango are unavailable. Brukina Backup is standing by.';
   if(badge) badge.textContent = externalAvailable ? 'READY' : 'FALLBACK';
   if(status){ status.classList.toggle('fallback', !externalAvailable); status.querySelector('span').firstChild.nextSibling.textContent = `Dispatch provider: ${activeDispatchProvider?.display_name || 'Brukina Backup'}`; }
   if(request) request.hidden = externalAvailable || !activeDispatchProvider;
+  buyerList?.querySelectorAll('[data-provider-id]').forEach(button => button.addEventListener('click', () => {
+    activeDispatchProvider = dispatchProviders.find(provider => provider.id === button.dataset.providerId);
+    buyerList.querySelectorAll('.buyer-provider').forEach(item => item.classList.toggle('selected', item === button));
+    if(copy) copy.textContent = `${activeDispatchProvider.display_name} selected for this delivery.`;
+    if(badge) badge.textContent = activeDispatchProvider.provider_code === 'brukina_backup' ? 'FALLBACK' : 'READY';
+    if(status){ status.classList.toggle('fallback', activeDispatchProvider.provider_code === 'brukina_backup'); status.querySelector('span').firstChild.nextSibling.textContent = `Dispatch provider: ${activeDispatchProvider.display_name}`; }
+    if(request) request.hidden = activeDispatchProvider.provider_code !== 'brukina_backup';
+  }));
 }
 loadDispatchProviders();
 
@@ -61,6 +71,13 @@ async function submitPartnerApplication(event, role){
   const vendor = {owner_id:currentUser.id, business_name:role === 'vendor' ? fullNameOrBusiness : `${fullNameOrBusiness} Dispatch`, category:role === 'vendor' ? categoryOrVehicle : 'Delivery rider', territory, vendor_tier:document.querySelector('#vendor-panel .tier.selected b')?.textContent || null, vehicle_type:role === 'rider' ? categoryOrVehicle : null, verification_status:'pending', document_name:license?.name || null};
   const {error: vendorError} = await supabaseClient.from('global_vendors').insert(vendor);
   if(vendorError){ showToast(`Partner record could not be saved: ${vendorError.message}`); return; }
+  const localRecord = role === 'vendor'
+    ? {owner_id:currentUser.id,business_name:fullNameOrBusiness,category:categoryOrVehicle,locality:territory,verification_status:'pending',is_active:false}
+    : {user_id:currentUser.id,courier_type:role === 'driver' ? 'driver' : 'rider',full_name:fullNameOrBusiness,vehicle_type:categoryOrVehicle,locality:territory,verification_status:'pending',is_online:false};
+  const localTable = role === 'vendor' ? 'local_vendors' : 'local_couriers';
+  const localWrite = role === 'vendor' ? supabaseClient.from(localTable).insert(localRecord) : supabaseClient.from(localTable).upsert(localRecord, {onConflict:'user_id'});
+  const {error: localError} = await localWrite;
+  if(localError){ showToast(`Local operations record could not be saved: ${localError.message}`); return; }
   form.reset(); showToast('Application saved · verification review started');
 }
 document.querySelector('#vendor-form').addEventListener('submit', event => submitPartnerApplication(event, 'vendor'));
@@ -129,8 +146,9 @@ supabaseClient.auth.getSession().then(({data}) => { if(data.session){ currentUse
 document.querySelector('#dispatch-request').addEventListener('click', async () => {
   if(!currentUser){ openAuth(); showToast('Sign in to request backup dispatch.'); return; }
   if(!activeDispatchProvider){ showToast('No dispatch provider is currently available.'); return; }
-  const {error} = await supabaseClient.from('dispatch_requests').insert({customer_id:currentUser.id,provider_id:activeDispatchProvider.id,status:'queued',pickup_address:'Akosombo Materials, 14 Independence Ave',dropoff_address:'Customer address pin'});
+  const {data: dispatchRequest, error} = await supabaseClient.from('dispatch_requests').insert({customer_id:currentUser.id,provider_id:activeDispatchProvider.id,status:'queued',pickup_address:'Akosombo Materials, 14 Independence Ave',dropoff_address:'Customer address pin'}).select('id').single();
   if(error){ showToast(`Backup dispatch could not be queued: ${error.message}`); return; }
+  await supabaseClient.from('cashflow_entries').insert({user_id:currentUser.id,dispatch_request_id:dispatchRequest.id,direction:'outflow',entry_type:'delivery_fee',amount:38,currency:'GHS',status:'pending',description:`${activeDispatchProvider.display_name} delivery fee`});
   document.querySelector('#dispatch-request').disabled = true;
   document.querySelector('#dispatch-request').textContent = 'Queued';
   showToast('Brukina Backup dispatch request queued securely.');
