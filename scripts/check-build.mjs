@@ -11,6 +11,8 @@ const requiredFiles = [
   'icon.svg',
   'netlify.toml',
   '_headers',
+  'README.md',
+  'ROADMAP.md',
   'supabase/production.sql',
   'supabase/supply_bridge.sql',
   'netlify/functions/supply-bridge.mjs'
@@ -21,6 +23,9 @@ for (const file of requiredFiles) {
 }
 
 const html = readFileSync(resolve(root, 'index.html'), 'utf8');
+const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]);
+const duplicateIds = ids.filter((id, index) => ids.indexOf(id) !== index);
+if (duplicateIds.length) throw new Error(`Duplicate HTML ids: ${[...new Set(duplicateIds)].join(', ')}`);
 const localReferences = [...html.matchAll(/(?:src|href)="([^"#][^"]*)"/g)]
   .map(match => match[1])
   .filter(reference => !reference.startsWith('http://') && !reference.startsWith('https://'));
