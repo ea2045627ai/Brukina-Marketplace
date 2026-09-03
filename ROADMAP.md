@@ -12,12 +12,13 @@ fallback catalog data is an outage state, not a second product mode.
 - Dispatch provider health, provider selection, and protected backup requests.
 - Sourcing requests, verified supplier partners, and vendor quotes.
 - Support preferences, conversations, and callback requests.
+- Authenticated wallet balance, escrow, payout, and transaction reads.
 - PWA shell, service worker, responsive navigation, and structural build checks.
 
 ## Next live increments
 
-1. Replace wallet display values with authenticated ledger reads and a trusted
-   payment webhook for deposits, withdrawals, payouts, and refunds.
+1. Add a trusted payment webhook for deposits, withdrawals, payouts, and
+   refunds; wallet mutations remain disabled until that path is idempotent.
 2. Add server-side order creation and fulfillment state transitions before
    enabling checkout for inventory rows.
 3. Replace simulated map coordinates with persisted courier location updates
