@@ -7,6 +7,12 @@
     "check": "node --check app.js && node --check sw.js && node --check netlify/functions/supply-bridge.mjs && node --check netlify/functions/create-order.mjs && node scripts/check-build.mjs && npm run check:netlify",
     "check:netlify": "node scripts/check-netlify.mjs",
     "start:webhook": "node server/operations-webhook.mjs",
+    "start:railway": "node server/railway.mjs",
     "check:webhook": "node scripts/check-webhook.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.57.4",
+    "cors": "^2.8.5",
+    "express": "^5.1.0"
   }
 }
