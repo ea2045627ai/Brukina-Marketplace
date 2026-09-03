@@ -56,3 +56,6 @@ Use the tracked [`.env.example`](.env.example) as the configuration checklist;
 copy its variable names into Netlify's environment settings rather than
 committing a real endpoint. When set, the check requires an HTTPS URL without
 embedded credentials.
+Connected Netlify builds also require `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and
+`SUPABASE_SERVICE_ROLE_KEY` for server-side order creation. The service-role
+key must be stored only as a Netlify secret.

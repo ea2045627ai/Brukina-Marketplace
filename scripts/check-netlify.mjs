@@ -11,8 +11,10 @@ if (!netlifyConfig.includes('command = "npm run check"')) {
 if (!netlifyConfig.includes('functions = "netlify/functions"')) {
   throw new Error('Netlify functions directory is not configured');
 }
-if (!existsSync(resolve(root, 'netlify/functions/supply-bridge.mjs'))) {
-  throw new Error('Netlify supply bridge function is missing');
+for (const functionFile of ['supply-bridge.mjs', 'create-order.mjs']) {
+  if (!existsSync(resolve(root, `netlify/functions/${functionFile}`))) {
+    throw new Error(`Netlify function is missing: ${functionFile}`);
+  }
 }
 
 if (!connected) {
@@ -22,6 +24,11 @@ if (!connected) {
 
 if (process.env.CONTEXT && !['deploy-preview', 'branch-deploy', 'production', 'dev'].includes(process.env.CONTEXT)) {
   throw new Error(`Unsupported Netlify deploy context: ${process.env.CONTEXT}`);
+}
+
+const missingServerConfig = ['SUPABASE_URL', 'SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY'].filter(name => !process.env[name]);
+if (missingServerConfig.length) {
+  throw new Error(`Connected Netlify deployment is missing: ${missingServerConfig.join(', ')}`);
 }
 
 console.log(`Netlify configuration check passed${process.env.CONTEXT ? ` for ${process.env.CONTEXT}` : ''}.`);
