@@ -13,6 +13,7 @@ const requiredFiles = [
   '_headers',
   'README.md',
   'ROADMAP.md',
+  '.env.example',
   'scripts/check-netlify.mjs',
   'supabase/production.sql',
   'supabase/supply_bridge.sql',

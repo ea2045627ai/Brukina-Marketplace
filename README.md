@@ -52,3 +52,7 @@ environment sets `NETLIFY=true`; the same command then verifies the configured
 build command, functions directory, deploy context, and supply bridge file.
 The optional `SUPPLY_PARTNER_WEBHOOK_URL` remains pending until a verified
 partner endpoint is ready. Never commit that value or any provider secret.
+Use the tracked [`.env.example`](.env.example) as the configuration checklist;
+copy its variable names into Netlify's environment settings rather than
+committing a real endpoint. When set, the check requires an HTTPS URL without
+embedded credentials.
