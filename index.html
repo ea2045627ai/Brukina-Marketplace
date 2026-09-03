@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#f6f1eb" />
+  <meta name="description" content="Brukina Marketplace - better wholesale and retail trade, connected." />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+  <link rel="stylesheet" href="styles.css" />
+  <title>Brukina Marketplace</title>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#home" aria-label="Brukina home"><span class="brand-mark">B</span><span>brukina<span class="brand-dot">.</span></span></a>
+      <div class="header-actions"><button class="icon-button" aria-label="Notifications"><span class="notification-dot"></span>♢</button><button class="profile-button" aria-label="Open profile"><span>EA</span><i></i></button></div>
+    </header>
+
+    <main>
+      <section class="view active" id="home-view" data-view="home">
+        <div class="page-heading"><div><p class="eyebrow">THURSDAY · 03 SEP 2026</p><h1>Good morning, Emmanuel</h1></div><span class="live-pill"><b></b> Live market</span></div>
+        <label class="search-box"><span>⌕</span><input id="search-input" type="search" placeholder="Search products, brands or vendors" /><kbd>⌘ K</kbd></label>
+        <div class="geo-switch" role="tablist" aria-label="Market region"><button class="geo-option selected" data-region="urban"><span>🏙</span><span><strong>Urban hubs</strong><small>Best wholesale rates</small></span><i>›</i></button><button class="geo-option" data-region="rural"><span>🏡</span><span><strong>Rural markets</strong><small>Local & regional supply</small></span><i>›</i></button></div>
+        <div class="section-line"><h2>Browse categories</h2><button class="text-button">View all <span>→</span></button></div>
+        <div class="category-row" aria-label="Product categories"><button class="category active">Material Dealership</button><button class="category">Tools &amp; Equipment</button><button class="category">Groceries</button><button class="category">Appliances</button><button class="category">Fashion</button><button class="category">Gadgets</button><button class="category">Machinery Accessories</button></div>
+        <div class="section-line inventory-header"><div><h2>Deals near you</h2><p><span class="tiny-pulse"></span> 128 offers refreshed now</p></div><button class="filter-button">≡ <span>Filter</span></button></div>
+        <div class="product-grid" id="product-grid"></div>
+      </section>
+
+      <section class="view" id="hub-view" data-view="hub">
+        <div class="page-heading"><div><p class="eyebrow">PARTNERSHIP NETWORK</p><h1>Vendor &amp; rider hub</h1></div><span class="round-status">●</span></div>
+        <div class="hub-hero"><div><span class="accent-label">BUILD WITH US</span><h2>Trade better.<br /><em>Move smarter.</em></h2><p>Join a growing network of trusted local businesses and independent riders.</p></div><span class="hero-orbit">↗</span></div>
+        <div class="section-line"><h2>Become a partner</h2><span class="step-count">01 / 02</span></div>
+        <div class="partner-tabs"><button class="partner-tab selected" data-panel="vendor-panel">Merchant</button><button class="partner-tab" data-panel="rider-panel">Rider network</button></div>
+        <div class="partner-panel" id="vendor-panel"><div class="tier-row"><button class="tier selected"><b>Elite</b><small>Large-scale</small></button><button class="tier"><b>Mid-scale</b><small>Growing retail</small></button><button class="tier"><b>Micro</b><small>Neighbourhood</small></button></div><form class="partner-form" id="vendor-form"><label>Business name<input required placeholder="e.g. Kofi & Sons Trading" /></label><label>Store category<select><option>Material Dealership</option><option>Tools & Equipment</option><option>Groceries</option><option>Appliances</option></select></label><label>Operating locality / territory<input required placeholder="e.g. Accra Metropolitan" /></label><label class="upload-field"><span>Business license or certificate</span><small>PDF, JPG or PNG · max 10 MB</small><input type="file" accept=".pdf,.jpg,.jpeg,.png" required /><b>＋</b></label><button class="primary-button" type="submit">Submit merchant application <span>→</span></button></form></div>
+        <div class="partner-panel hidden" id="rider-panel"><div class="backup-banner"><span>↯</span><div><strong>Backup dispatch grid</strong><p>Be first in line when Bolt or Yango is unavailable.</p></div><b>ON</b></div><form class="partner-form" id="rider-form"><label>Full legal name<input required placeholder="e.g. Kwame Mensah" /></label><label>Vehicle type<select><option>Motorbike</option><option>Bicycle</option><option>Compact Van</option></select></label><label>Operating territory<input required placeholder="e.g. East Legon &amp; Airport" /></label><label class="upload-field"><span>Driver license or national ID</span><small>PDF, JPG or PNG · max 10 MB</small><input type="file" accept=".pdf,.jpg,.jpeg,.png" required /><b>＋</b></label><button class="primary-button" type="submit">Join backup network <span>→</span></button></form></div>
+        <div class="admin-status"><span class="status-icon">✓</span><div><small>ADMIN ACCOUNT STATUS</small><strong id="admin-status-label">Pending verification</strong></div><button class="toggle" id="status-toggle" aria-label="Toggle account status"><i></i></button></div>
+      </section>
+
+      <section class="view" id="wallet-view" data-view="wallet">
+        <div class="page-heading"><div><p class="eyebrow">FINANCIAL CONTROL</p><h1>My wallet</h1></div><button class="more-button">•••</button></div>
+        <div class="wallet-card"><div class="wallet-card-top"><span class="wallet-chip">◈</span><span class="secure-label">SECURE · GHS</span></div><p>Escrow balance</p><strong>GH₵ 12,480<span>.50</span></strong><div class="wallet-card-bottom"><span>•••• &nbsp; 2840</span><span>Paystack managed</span></div></div>
+        <div class="wallet-actions"><div><label for="amount-input">Deposit funds</label><div class="amount-input"><span>GH₵</span><input id="amount-input" type="number" value="500" min="1" /></div></div><button class="deposit-button" id="deposit-button">＋ Top up</button></div>
+        <div class="ledger-summary"><div><small>Available balance</small><strong>GH₵ 8,920.00</strong></div><div class="growth"><span>+12.8%</span><small>this month</small></div></div>
+        <div class="wallet-role"><div><span class="eyebrow">PARTNER PAYOUTS</span><h2>Vendor &amp; rider ledger</h2></div><span class="role-badge">Vendor view</span></div><div class="payout-card"><div><small>Available to withdraw</small><strong>GH₵ 3,842.20</strong></div><button class="withdraw-button" id="withdraw-button">Withdraw <span>↗</span></button></div><div class="online-row"><div><strong>Go active / online</strong><small>Receive nearby delivery requests</small></div><button class="toggle online selected" aria-label="Toggle online availability"><i></i></button></div>
+        <div class="section-line transactions-title"><h2>Recent activity</h2><button class="text-button">View ledger <span>→</span></button></div><div class="transactions"><div class="transaction"><span class="transaction-icon green">↙</span><div><strong>Settlement · Order #BK-4928</strong><small>Today, 09:41</small></div><b class="positive">+ GH₵ 1,240.00</b></div><div class="transaction"><span class="transaction-icon orange">↗</span><div><strong>Deposit via Mobile Money</strong><small>Yesterday, 16:20</small></div><b>+ GH₵ 500.00</b></div><div class="transaction"><span class="transaction-icon gray">↗</span><div><strong>Order #BK-4914 · Tools</strong><small>02 Sep, 11:08</small></div><b class="negative">− GH₵ 820.00</b></div></div>
+      </section>
+
+      <section class="view tracking-view" id="tracking-view" data-view="tracking">
+        <div class="page-heading"><div><p class="eyebrow">ACTIVE DELIVERY · #BK-4928</p><h1>Eco-GPS tracking</h1></div><span class="tracking-live"><b></b> Live</span></div>
+        <div class="map-toolbar"><div><span class="map-mode-icon">⌖</span><div><strong>Accra, Ghana</strong><small>Privacy mode · delivery only</small></div></div><button class="map-menu">•••</button></div>
+        <div id="map" class="map-canvas" aria-label="Live delivery map"></div>
+        <div class="map-legend"><span><i class="legend-dot vendor"></i> Vendor pickup</span><span><i class="legend-dot rider"></i> Rider live</span><span><i class="legend-dot customer"></i> Drop-off</span></div>
+        <div class="delivery-card"><div class="delivery-top"><span class="eta-badge">ON TIME</span><span class="delivery-id">BK-4928 · 2.4 km</span></div><div class="route-line"><div class="route-point vendor-point">V</div><div class="route-track"><span></span></div><div class="route-point customer-point">E</div><div class="route-text"><div><strong>Akosombo Materials</strong><small>Pickup · 14 Independence Ave</small></div><div><strong>Emmanuel A.</strong><small>Drop-off · Custom address pin</small></div></div></div><div class="rider-row"><div class="rider-avatar">KM</div><div><strong>Kwame Mensah is riding</strong><small id="rider-eta">Arriving at pickup in 04 min</small></div><button class="call-button" aria-label="Call rider">☎</button></div></div>
+        <div class="alert-banner"><span>✦</span><div><strong>Rider is 2 minutes away from pickup</strong><small>Push alert · just now</small></div><button>×</button></div>
+      </section>
+    </main>
+
+    <nav class="bottom-nav" aria-label="Main navigation"><a class="nav-item selected" href="#home" data-nav="home"><span>⌂</span><small>Marketplace</small></a><a class="nav-item" href="#hub" data-nav="hub"><span>♧</span><small>Partner hub</small></a><a class="nav-item" href="#wallet" data-nav="wallet"><span>▣</span><small>My wallet</small></a><a class="nav-item" href="#tracking" data-nav="tracking"><span>⌁</span><small>Eco-GPS</small></a></nav>
+  </div>
+  <div class="toast" id="toast" role="status"></div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="app.js"></script>
+</body>
+</html>
