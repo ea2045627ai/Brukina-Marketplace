@@ -4,7 +4,7 @@
   "private": true,
   "description": "Static marketplace PWA for wholesale trade and local delivery operations.",
   "scripts": {
-    "check": "node --check app.js && node --check sw.js && node --check netlify/functions/supply-bridge.mjs && node --check netlify/functions/create-order.mjs && node scripts/check-build.mjs && npm run check:netlify",
+    "check": "node --check app.js && node --check sw.js && node --check netlify/functions/supply-bridge.mjs && node --check netlify/functions/create-order.mjs && node --check netlify/functions/operations-webhook.mjs && node --check server/operations-webhook.mjs && node --check server/railway.mjs && node --check scripts/check-build.mjs && node --check scripts/check-netlify.mjs && node --check scripts/check-webhook.mjs && node scripts/check-build.mjs && npm run check:netlify",
     "check:netlify": "node scripts/check-netlify.mjs",
     "start:webhook": "node server/operations-webhook.mjs",
     "start:railway": "node server/railway.mjs",
