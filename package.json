@@ -5,6 +5,7 @@
   "description": "Static marketplace PWA for wholesale trade and local delivery operations.",
   "scripts": {
     "check": "node --check app.js && node --check sw.js && node scripts/check-build.mjs",
+    "check:netlify": "node scripts/check-netlify.mjs",
     "start:webhook": "node server/operations-webhook.mjs",
     "check:webhook": "node scripts/check-webhook.mjs"
   }
