@@ -37,18 +37,3 @@ python3 -m http.server 4173
 ```
 
 Open <http://localhost:4173> in a browser.
-
-## Netlify connection check
-
-The build runs `npm run check`, including the Netlify connection gate. Without
-credentials it reports a pending action and exits successfully, so local builds
-remain usable. After connecting the site, provide `NETLIFY_AUTH_TOKEN` and
-`NETLIFY_SITE_ID` as environment variables and run:
-
-```bash
-npm run check:netlify
-```
-
-The connected check validates the Netlify site API, the repository's publish
-and functions directories, and the deployed site URL. Keep the token in the
-Netlify environment or local secret store; do not commit it.
