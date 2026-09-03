@@ -37,3 +37,11 @@ python3 -m http.server 4173
 ```
 
 Open <http://localhost:4173> in a browser.
+
+## Netlify handoff
+
+Run `npm run check:netlify` after the local checks. It validates the Netlify
+configuration and prints a pending action when no site is connected. Once the
+site is deployed, set `NETLIFY_SITE_URL` to its absolute URL and run the same
+command again; it will POST a validation event to the deployed operations
+webhook and fail if the endpoint does not return `202`.
