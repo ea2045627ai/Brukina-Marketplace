@@ -60,12 +60,39 @@ const search = document.querySelector('#search-input');
 search.addEventListener('input', () => renderProducts(visibleProducts()));
 document.querySelectorAll('.geo-option').forEach(button => button.addEventListener('click', () => { document.querySelectorAll('.geo-option').forEach(item => item.classList.remove('selected')); button.classList.add('selected'); showToast(`${button.dataset.region === 'urban' ? 'Urban hub' : 'Rural market'} offers loaded`); }));
 document.querySelectorAll('.category').forEach(button => button.addEventListener('click', () => { document.querySelectorAll('.category').forEach(item => item.classList.remove('active')); button.classList.add('active'); activeCategory = button.textContent.trim(); renderProducts(visibleProducts()); showToast(`${activeCategory} deals loaded`); }));
-function navigate(viewName){ document.querySelectorAll('.view').forEach(view => view.classList.toggle('active', view.dataset.view === viewName)); document.querySelectorAll('.nav-item').forEach(item => item.classList.toggle('selected', item.dataset.nav === viewName)); if(viewName === 'tracking') initMap(); window.scrollTo({top:0,behavior:'smooth'}); }
+function navigate(viewName){ document.querySelectorAll('.view').forEach(view => view.classList.toggle('active', view.dataset.view === viewName)); document.querySelectorAll('.nav-item').forEach(item => item.classList.toggle('selected', item.dataset.nav === viewName)); if(viewName === 'tracking') initMap(); if(viewName === 'hub') initializeVendorDashboard(); window.scrollTo({top:0,behavior:'smooth'}); }
 document.querySelectorAll('[data-nav]').forEach(item => item.addEventListener('click', event => { event.preventDefault(); navigate(item.dataset.nav); history.replaceState(null,'',`#${item.dataset.nav}`); }));
 window.addEventListener('hashchange', () => navigate(location.hash.slice(1) || 'home'));
 
 document.querySelectorAll('.partner-tab').forEach(tab => tab.addEventListener('click', () => { document.querySelectorAll('.partner-tab').forEach(item => item.classList.remove('selected')); tab.classList.add('selected'); document.querySelectorAll('.partner-panel').forEach(panel => panel.classList.toggle('hidden', panel.id !== tab.dataset.panel)); }));
 document.querySelectorAll('.tier').forEach(tier => tier.addEventListener('click', () => { tier.parentElement.querySelectorAll('.tier').forEach(item => item.classList.remove('selected')); tier.classList.add('selected'); }));
+let vendorLeadChannel;
+async function fetchOpenB2BRequests(){
+  const container = document.querySelector('#vendor-b2b-leads');
+  if(!container) return;
+  if(!currentUser || !['vendor','admin'].includes(currentRole)){ container.innerHTML = '<p class="empty-state">Sign in as a verified vendor to view buyer requests.</p>'; return; }
+  const {data: requests, error} = await supabaseClient.from('sourcing_requests').select('id,title,description,category,quantity,target_budget,delivery_territory').eq('status','open').order('created_at',{ascending:false});
+  if(error){ container.innerHTML = '<p class="empty-state">Buyer requests are unavailable until sourcing is configured.</p>'; return; }
+  container.innerHTML = requests?.length ? requests.map(request => `<article class="vendor-lead"><div><span class="accent-label">${request.category}</span><h3>${request.title}</h3><p>${request.description || 'Buyer has not added more details.'}</p><small>${request.quantity} units · ${request.delivery_territory}${request.target_budget ? ` · Budget GH₵ ${Number(request.target_budget).toLocaleString('en-GH',{minimumFractionDigits:2})}` : ''}</small></div><button class="outline-button" data-quote-request="${request.id}">Submit quote <span>→</span></button></article>`).join('') : '<p class="empty-state">No open wholesale requests match your market yet.</p>';
+  container.querySelectorAll('[data-quote-request]').forEach(button => button.addEventListener('click', () => submitVendorQuote(button.dataset.quoteRequest)));
+}
+async function submitVendorQuote(requestId){
+  if(!currentUser){ openAuth(); showToast('Sign in before submitting a vendor quote.'); return; }
+  const unitPrice = Number(window.prompt('Wholesale price per unit (GH₵):', '40'));
+  const leadTimeDays = Number(window.prompt('Estimated delivery time (days):', '7'));
+  if(!Number.isFinite(unitPrice) || unitPrice < 0 || !Number.isInteger(leadTimeDays) || leadTimeDays < 0){ showToast('Enter a valid price and delivery time.'); return; }
+  const {data: vendor, error: vendorError} = await supabaseClient.from('global_vendors').select('id').eq('owner_id',currentUser.id).eq('verification_status','verified').maybeSingle();
+  if(vendorError || !vendor){ showToast('A verified vendor profile is required before quoting.'); return; }
+  const {error} = await supabaseClient.from('sourcing_quotes').insert({request_id:requestId,vendor_id:vendor.id,unit_price:unitPrice,shipping_fee:0,lead_time_days:leadTimeDays,notes:'Submitted through Brukina Vendor Hub'});
+  if(error){ showToast(`Quote could not be submitted: ${error.message}`); return; }
+  showToast('Wholesale quote submitted successfully.');
+  fetchOpenB2BRequests();
+}
+function initializeVendorDashboard(){
+  fetchOpenB2BRequests();
+  if(vendorLeadChannel) return;
+  vendorLeadChannel = supabaseClient.channel('vendor:sourcing_pool').on('postgres_changes',{event:'INSERT',schema:'public',table:'sourcing_requests'},fetchOpenB2BRequests).subscribe();
+}
 async function submitPartnerApplication(event, role){
   event.preventDefault();
   if (!currentUser) { openAuth(); showToast('Create an account before submitting an application.'); return; }
@@ -152,7 +179,7 @@ function renderDashboard(){
 document.querySelector('#auth-form').addEventListener('submit', async event => { event.preventDefault(); const form = event.currentTarget; const {data,error} = await supabaseClient.auth.signUp({email:document.querySelector('#auth-email').value.trim(),password:document.querySelector('#auth-password').value,options:{data:{full_name:document.querySelector('#auth-name').value.trim(),role:currentRole}}}); if(error){ showToast(error.message); return; } currentUser = data.user; closeAuth(); renderDashboard(); navigate('dashboard'); showToast(data.session ? `Welcome to Brukina, ${roleLabels[currentRole]}` : 'Check your email to confirm your Brukina account'); form.reset(); });
 document.querySelector('#admin-form').addEventListener('submit', async event => { event.preventDefault(); const form = event.currentTarget; const {data,error} = await supabaseClient.auth.signInWithPassword({email:form.querySelector('input[type="email"]').value.trim(),password:form.querySelector('input[type="password"]').value}); if(error){ showToast(error.message); return; } const role = data.user.app_metadata?.role; if(role !== 'admin'){ await supabaseClient.auth.signOut(); showToast('This account does not have administrator access.'); return; } currentUser = data.user; currentRole = 'admin'; adminBackdrop.hidden = true; renderDashboard(); navigate('dashboard'); showToast('Administrator session opened'); });
 document.querySelector('#auth-form').addEventListener('reset', () => { currentRole = 'customer'; });
-supabaseClient.auth.getSession().then(({data}) => { if(data.session){ currentUser = data.session.user; currentRole = data.session.user.app_metadata?.role || data.session.user.user_metadata?.role || 'customer'; renderDashboard(); } });
+supabaseClient.auth.getSession().then(({data}) => { if(data.session){ currentUser = data.session.user; currentRole = data.session.user.app_metadata?.role || data.session.user.user_metadata?.role || 'customer'; renderDashboard(); if(document.querySelector('#hub-view.active')) initializeVendorDashboard(); } });
 document.querySelector('#dispatch-request').addEventListener('click', async () => {
   if(!currentUser){ openAuth(); showToast('Sign in to request backup dispatch.'); return; }
   if(!activeDispatchProvider){ showToast('No dispatch provider is currently available.'); return; }
