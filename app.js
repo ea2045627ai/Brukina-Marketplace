@@ -5,14 +5,24 @@ const roleLabels = { customer:'Customer', vendor:'Vendor', driver:'Driver', ride
 let currentUser = null;
 let currentRole = 'customer';
 let products = [];
+let activeCategory = 'All products';
 const grid = document.querySelector('#product-grid');
 const toast = document.querySelector('#toast');
 const installButton = document.querySelector('#install-button');
 let toastTimer;
 function showToast(message){ toast.textContent = message; toast.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => toast.classList.remove('show'), 2800); }
-function mapInventoryRow(row){ return {name:row.product_name || row.name || 'Marketplace offer', vendor:row.vendor_name || row.vendor || 'Verified vendor', price:row.price_display || `GH₵ ${Number(row.price || 0).toLocaleString('en-GH',{minimumFractionDigits:2})}`, tag:row.badge || row.tag || 'TRADE PRICE', image:row.image_url || row.image || 'icon.svg', paystack_checkout_url:row.paystack_checkout_url}; }
-function renderProducts(list = products){ grid.innerHTML = list.length ? list.map(product => `<article class="product-card"><div class="product-image" style="background-image:url('${product.image}')"><span class="product-tag">${product.tag}</span></div><div class="product-info"><h3>${product.name}</h3><span class="vendor-name">${product.vendor}</span><div class="price-row"><span class="price">${product.price}<small> / unit</small></span><button class="buy-button" data-checkout="${product.paystack_checkout_url || ''}" data-product="${product.name}">Buy now</button></div></div></article>`).join('') : '<p class="empty-state">No live offers are available yet. Connect your Supabase project to load inventory.</p>'; }
-async function loadInventory(){ const {data,error} = await supabaseClient.from('marketplace_inventory').select('*'); if(error){ renderProducts(); showToast(`Inventory unavailable: ${error.message}`); return; } products = (data || []).map(mapInventoryRow); renderProducts(); }
+const fallbackCatalog = [
+  {name:'Premium roofing sheets',vendor:'Akosombo Materials',category:'Building materials',source:'Made in Ghana',price:'GH₵ 1,850.00',tag:'WHOLESALE',image:'icon.svg'},
+  {name:'Leeknives utility knife set',vendor:'Leeknives Supply Co.',category:'Tools & equipment',source:'American market brand',price:'GH₵ 420.00',tag:'TRADE PRICE',image:'icon.svg'},
+  {name:'Solar power station 600W',vendor:'BrightGrid Devices',category:'Devices & gadgets',source:'Shopify partner',price:'GH₵ 3,280.00',tag:'BEST VALUE',image:'icon.svg'},
+  {name:'USB-C fast charge kit',vendor:'Northstar Accessories',category:'Accessories & body products',source:'American market brand',price:'GH₵ 185.00',tag:'BULK DEAL',image:'icon.svg'},
+  {name:'Unisex workwear overshirt',vendor:'Common Thread Co.',category:'Clothing',source:'Sourcing network',price:'GH₵ 290.00',tag:'NEW ARRIVAL',image:'icon.svg'},
+  {name:'Stainless kitchen tap',vendor:'Homeform Trade',category:'Home & living',source:'Made in China',price:'GH₵ 610.00',tag:'CONTAINER RATE',image:'icon.svg'}
+];
+function mapInventoryRow(row){ return {name:row.product_name || row.name || 'Marketplace offer',vendor:row.vendor_name || row.vendor || 'Verified vendor',category:row.category || 'General',source:row.source_country || row.source || 'Verified supply',price:row.price_display || `GH₵ ${Number(row.price || 0).toLocaleString('en-GH',{minimumFractionDigits:2})}`,tag:row.badge || row.tag || 'TRADE PRICE',image:row.image_url || row.image || 'icon.svg',paystack_checkout_url:row.paystack_checkout_url}; }
+function renderProducts(list = products){ grid.innerHTML = list.length ? list.map(product => `<article class="product-card"><div class="product-image" style="background-image:url('${product.image}')"><span class="product-tag">${product.tag}</span></div><div class="product-info"><h3>${product.name}</h3><span class="vendor-name">${product.vendor}</span><small class="product-source">${product.source}</small><div class="price-row"><span class="price">${product.price}<small> / unit</small></span><button class="buy-button" data-checkout="${product.paystack_checkout_url || ''}" data-product="${product.name}">Buy now</button></div></div></article>`).join('') : '<p class="empty-state">No offers match this market choice yet. Try another category or search.</p>'; }
+function visibleProducts(){ const query = search?.value.toLowerCase().trim() || ''; return products.filter(product => (activeCategory === 'All products' || product.category.toLowerCase() === activeCategory.toLowerCase()) && `${product.name} ${product.vendor} ${product.category} ${product.source}`.toLowerCase().includes(query)); }
+async function loadInventory(){ const {data,error} = await supabaseClient.from('marketplace_inventory').select('*').eq('active',true); if(error || !data?.length){ products = fallbackCatalog; renderProducts(visibleProducts()); if(error) showToast('Showing starter catalog · connect Supabase for live inventory'); return; } products = data.map(mapInventoryRow); renderProducts(visibleProducts()); }
 loadInventory();
 let dispatchProviders = [];
 let activeDispatchProvider = null;
@@ -45,11 +55,11 @@ async function loadDispatchProviders(){
 }
 loadDispatchProviders();
 
-grid.addEventListener('click', event => { const button = event.target.closest('[data-checkout]'); if (!button) return; const checkoutUrl = new URL(button.dataset.checkout); if (checkoutUrl.protocol !== 'https:' || !checkoutUrl.hostname.endsWith('paystack.com')) { showToast('Secure checkout URL could not be verified.'); return; } showToast(`Opening secure Paystack checkout for ${button.dataset.product}`); window.setTimeout(() => window.location.assign(checkoutUrl.href), 650); });
+grid.addEventListener('click', event => { const button = event.target.closest('[data-checkout]'); if (!button) return; if (!button.dataset.checkout) { showToast('This offer is available for inquiry while secure checkout is being connected.'); return; } let checkoutUrl; try { checkoutUrl = new URL(button.dataset.checkout); } catch { showToast('Secure checkout URL could not be verified.'); return; } if (checkoutUrl.protocol !== 'https:' || !checkoutUrl.hostname.endsWith('paystack.com')) { showToast('Secure checkout URL could not be verified.'); return; } showToast(`Opening secure Paystack checkout for ${button.dataset.product}`); window.setTimeout(() => window.location.assign(checkoutUrl.href), 650); });
 const search = document.querySelector('#search-input');
-search.addEventListener('input', () => { const query = search.value.toLowerCase().trim(); renderProducts(products.filter(product => `${product.name} ${product.vendor}`.toLowerCase().includes(query))); });
+search.addEventListener('input', () => renderProducts(visibleProducts()));
 document.querySelectorAll('.geo-option').forEach(button => button.addEventListener('click', () => { document.querySelectorAll('.geo-option').forEach(item => item.classList.remove('selected')); button.classList.add('selected'); showToast(`${button.dataset.region === 'urban' ? 'Urban hub' : 'Rural market'} offers loaded`); }));
-document.querySelectorAll('.category').forEach(button => button.addEventListener('click', () => { document.querySelectorAll('.category').forEach(item => item.classList.remove('active')); button.classList.add('active'); showToast(`${button.textContent} deals loaded`); }));
+document.querySelectorAll('.category').forEach(button => button.addEventListener('click', () => { document.querySelectorAll('.category').forEach(item => item.classList.remove('active')); button.classList.add('active'); activeCategory = button.textContent.trim(); renderProducts(visibleProducts()); showToast(`${activeCategory} deals loaded`); }));
 function navigate(viewName){ document.querySelectorAll('.view').forEach(view => view.classList.toggle('active', view.dataset.view === viewName)); document.querySelectorAll('.nav-item').forEach(item => item.classList.toggle('selected', item.dataset.nav === viewName)); if(viewName === 'tracking') initMap(); window.scrollTo({top:0,behavior:'smooth'}); }
 document.querySelectorAll('[data-nav]').forEach(item => item.addEventListener('click', event => { event.preventDefault(); navigate(item.dataset.nav); history.replaceState(null,'',`#${item.dataset.nav}`); }));
 window.addEventListener('hashchange', () => navigate(location.hash.slice(1) || 'home'));

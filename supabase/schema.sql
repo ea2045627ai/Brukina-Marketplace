@@ -27,12 +27,34 @@ create table if not exists public.global_vendors (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.marketplace_categories (
+  id uuid primary key default gen_random_uuid(),
+  name text unique not null,
+  description text,
+  sort_order integer not null default 100,
+  active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
 create table if not exists public.marketplace_inventory (
   id uuid primary key default gen_random_uuid(),
   vendor_id uuid references public.global_vendors(id) on delete set null,
   product_name text not null,
   vendor_name text not null,
   category text not null default 'General',
+  category_id uuid references public.marketplace_categories(id) on delete set null,
+  sku text,
+  brand text,
+  description text,
+  source_channel text not null default 'direct_vendor' check (source_channel in ('direct_vendor', 'leeknives', 'shopify', 'made_in_china', 'american_brand', 'sourcing_network')),
+  source_country text,
+  unit text not null default 'unit',
+  stock_quantity integer not null default 0 check (stock_quantity >= 0),
+  minimum_order_quantity integer not null default 1 check (minimum_order_quantity > 0),
+  fulfillment_type text not null default 'local_stock' check (fulfillment_type in ('local_stock', 'preorder', 'imported', 'dropship')),
+  lead_time_days integer check (lead_time_days >= 0),
+  marketplace_url text,
+  featured boolean not null default false,
   price numeric(12,2) not null check (price >= 0),
   price_display text,
   badge text not null default 'TRADE PRICE',
@@ -85,6 +107,7 @@ create table if not exists public.wallet_transactions (
 );
 
 create index if not exists inventory_active_idx on public.marketplace_inventory(active, category);
+create index if not exists inventory_source_idx on public.marketplace_inventory(source_channel, source_country);
 create index if not exists orders_customer_idx on public.orders(customer_id, created_at desc);
 create index if not exists vendors_owner_idx on public.global_vendors(owner_id);
 create index if not exists deliveries_rider_idx on public.deliveries(rider_id, status);
@@ -94,8 +117,14 @@ returns boolean language sql stable security definer set search_path = public
 as $$ select coalesce((auth.jwt() -> 'app_metadata' ->> 'role') = 'admin', false) $$;
 
 alter table public.user_profiles enable row level security;
+alter table public.marketplace_categories enable row level security;
 alter table public.global_vendors enable row level security;
 alter table public.marketplace_inventory enable row level security;
+
+drop policy if exists "categories public active read" on public.marketplace_categories;
+create policy "categories public active read" on public.marketplace_categories for select using (active = true or public.is_admin());
+drop policy if exists "categories admin write" on public.marketplace_categories;
+create policy "categories admin write" on public.marketplace_categories for all using (public.is_admin()) with check (public.is_admin());
 alter table public.orders enable row level security;
 alter table public.deliveries enable row level security;
 alter table public.wallets enable row level security;
@@ -131,6 +160,16 @@ create policy "wallet transactions own read" on public.wallet_transactions for s
 insert into public.marketplace_inventory (product_name, vendor_name, category, price, price_display, badge, image_url)
 select 'Premium roofing sheets', 'Akosombo Materials', 'Material Dealership', 1850, 'GH₵ 1,850.00', 'WHOLESALE', 'icon.svg'
 where not exists (select 1 from public.marketplace_inventory where product_name = 'Premium roofing sheets');
+
+insert into public.marketplace_categories (name, description, sort_order)
+values
+  ('Building materials', 'Materials for construction, repair, and renovation', 10),
+  ('Tools & equipment', 'Trade tools, workshop equipment, and machinery', 20),
+  ('Devices & gadgets', 'Consumer electronics, power, and connected devices', 30),
+  ('Accessories & body products', 'Personal care, accessories, and everyday essentials', 40),
+  ('Clothing', 'Workwear, fashion, and apparel in different kinds', 50),
+  ('Home & living', 'Fixtures, kitchen, home, and office goods', 60)
+on conflict (name) do update set description = excluded.description, sort_order = excluded.sort_order;
 
 -- Admin roles must be granted server-side with the service role:
 -- update auth.users set raw_app_meta_data = raw_app_meta_data || '{"role":"admin"}'::jsonb where email = 'admin@your-domain.com';

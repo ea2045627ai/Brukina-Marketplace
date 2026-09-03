@@ -18,6 +18,8 @@ Administrator access is intentionally separate: only an authenticated user whose
 
 The existing marketplace integrations expect these tables: `marketplace_inventory`, `user_profiles`, and `global_vendors`.
 
+The catalog supports building materials, tools and equipment, devices and gadgets, accessories and body products, clothing, and home and living goods. Run [`supabase/sourcing.sql`](supabase/sourcing.sql) after the core migrations to add verified source partners, buyer sourcing requests, and vendor quotes. External Shopify, Made-in-China, Leeknives, and American brand credentials must be handled by a server-side connector; never place those tokens in `app.js`.
+
 Dispatch health is managed through `dispatch_providers`. Buyers can switch between available Bolt, Yango, and Brukina Backup options on the tracking screen. Bolt and Yango can be marked unavailable by an admin or trusted server job; the app then recommends `brukina_backup` and queues a protected `dispatch_requests` record. `local_vendors`, `local_couriers`, and `cashflow_entries` support local supply, rider/driver operations, and delivery fees, payouts, and settlements.
 
 ## Run locally
