@@ -1,20 +1,16 @@
-const products = [
-  {name:'Portland Cement · 50kg', vendor:'Akosombo Materials', price:'GH₵ 92.00', tag:'−18% DEAL', image:'https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=700&q=80', paystack_checkout_url:'https://checkout.paystack.com/brukina-cement-50kg'},
-  {name:'Rechargeable Angle Grinder', vendor:'Toolsmith Ghana', price:'GH₵ 480.00', tag:'BULK RATE', image:'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=700&q=80', paystack_checkout_url:'https://checkout.paystack.com/brukina-angle-grinder'},
-  {name:'Premium Jasmine Rice · 25kg', vendor:'Golden Harvest Co.', price:'GH₵ 385.00', tag:'TOP SELLER', image:'https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=700&q=80', paystack_checkout_url:'https://checkout.paystack.com/brukina-jasmine-rice'},
-  {name:'EcoCool Chest Freezer', vendor:'Volta Appliance Hub', price:'GH₵ 4,250.00', tag:'−12% DEAL', image:'https://images.unsplash.com/photo-1584568694244-14fbdf83bd30?auto=format&fit=crop&w=700&q=80', paystack_checkout_url:'https://checkout.paystack.com/brukina-chest-freezer'},
-  {name:'Industrial Safety Boots', vendor:'Kente Workwear', price:'GH₵ 240.00', tag:'TRADE PRICE', image:'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=700&q=80', paystack_checkout_url:'https://checkout.paystack.com/brukina-safety-boots'},
-  {name:'Heavy Duty Drill Set', vendor:'Toolsmith Ghana', price:'GH₵ 650.00', tag:'BULK RATE', image:'https://images.unsplash.com/photo-1530124566582-a618bc2615dc?auto=format&fit=crop&w=700&q=80', paystack_checkout_url:'https://checkout.paystack.com/brukina-drill-set'},
-  {name:'Smart LED Panel · 4 pack', vendor:'Accra Electric', price:'GH₵ 310.00', tag:'NEW', image:'https://images.unsplash.com/photo-1565814329452-e1efa11c5b89?auto=format&fit=crop&w=700&q=80', paystack_checkout_url:'https://checkout.paystack.com/brukina-led-panel'},
-  {name:'Compact Water Pump', vendor:'Northern Machinery', price:'GH₵ 1,180.00', tag:'−9% DEAL', image:'https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&w=700&q=80', paystack_checkout_url:'https://checkout.paystack.com/brukina-water-pump'}
-];
+const SUPABASE_URL = 'https://YOUR_PROJECT_REF.supabase.co';
+const SUPABASE_ANON_KEY = 'YOUR_PUBLIC_ANON_KEY';
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let products = [];
 const grid = document.querySelector('#product-grid');
 const toast = document.querySelector('#toast');
 const installButton = document.querySelector('#install-button');
 let toastTimer;
 function showToast(message){ toast.textContent = message; toast.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => toast.classList.remove('show'), 2800); }
-function renderProducts(list = products){ grid.innerHTML = list.map(product => `<article class="product-card"><div class="product-image" style="background-image:url('${product.image}')"><span class="product-tag">${product.tag}</span></div><div class="product-info"><h3>${product.name}</h3><span class="vendor-name">${product.vendor}</span><div class="price-row"><span class="price">${product.price}<small> / unit</small></span><button class="buy-button" data-checkout="${product.paystack_checkout_url}" data-product="${product.name}">Buy now</button></div></div></article>`).join(''); }
-renderProducts();
+function mapInventoryRow(row){ return {name:row.product_name || row.name || 'Marketplace offer', vendor:row.vendor_name || row.vendor || 'Verified vendor', price:row.price_display || `GH₵ ${Number(row.price || 0).toLocaleString('en-GH',{minimumFractionDigits:2})}`, tag:row.badge || row.tag || 'TRADE PRICE', image:row.image_url || row.image || 'icon.svg', paystack_checkout_url:row.paystack_checkout_url}; }
+function renderProducts(list = products){ grid.innerHTML = list.length ? list.map(product => `<article class="product-card"><div class="product-image" style="background-image:url('${product.image}')"><span class="product-tag">${product.tag}</span></div><div class="product-info"><h3>${product.name}</h3><span class="vendor-name">${product.vendor}</span><div class="price-row"><span class="price">${product.price}<small> / unit</small></span><button class="buy-button" data-checkout="${product.paystack_checkout_url || ''}" data-product="${product.name}">Buy now</button></div></div></article>`).join('') : '<p class="empty-state">No live offers are available yet. Connect your Supabase project to load inventory.</p>'; }
+async function loadInventory(){ const {data,error} = await supabaseClient.from('marketplace_inventory').select('*'); if(error){ renderProducts(); showToast(`Inventory unavailable: ${error.message}`); return; } products = (data || []).map(mapInventoryRow); renderProducts(); }
+loadInventory();
 
 grid.addEventListener('click', event => { const button = event.target.closest('[data-checkout]'); if (!button) return; const checkoutUrl = new URL(button.dataset.checkout); if (checkoutUrl.protocol !== 'https:' || !checkoutUrl.hostname.endsWith('paystack.com')) { showToast('Secure checkout URL could not be verified.'); return; } showToast(`Opening secure Paystack checkout for ${button.dataset.product}`); window.setTimeout(() => window.location.assign(checkoutUrl.href), 650); });
 const search = document.querySelector('#search-input');
@@ -27,7 +23,25 @@ window.addEventListener('hashchange', () => navigate(location.hash.slice(1) || '
 
 document.querySelectorAll('.partner-tab').forEach(tab => tab.addEventListener('click', () => { document.querySelectorAll('.partner-tab').forEach(item => item.classList.remove('selected')); tab.classList.add('selected'); document.querySelectorAll('.partner-panel').forEach(panel => panel.classList.toggle('hidden', panel.id !== tab.dataset.panel)); }));
 document.querySelectorAll('.tier').forEach(tier => tier.addEventListener('click', () => { tier.parentElement.querySelectorAll('.tier').forEach(item => item.classList.remove('selected')); tier.classList.add('selected'); }));
-['vendor-form','rider-form','track-rider-form'].forEach(id => document.querySelector(`#${id}`).addEventListener('submit', event => { event.preventDefault(); event.target.reset(); showToast('Application received · verification review started'); }));
+async function submitPartnerApplication(event, role){
+  event.preventDefault();
+  const form = event.currentTarget;
+  const textInputs = [...form.querySelectorAll('input[type="text"], input:not([type])')];
+  const fullNameOrBusiness = textInputs[0]?.value.trim();
+  const territory = textInputs[1]?.value.trim();
+  const categoryOrVehicle = form.querySelector('select')?.value;
+  const license = form.querySelector('input[type="file"]')?.files[0];
+  const profile = {full_name:fullNameOrBusiness, role, territory, verification_status:'pending', document_name:license?.name || null};
+  const {error: profileError} = await supabaseClient.from('user_profiles').insert(profile);
+  if(profileError){ showToast(`Profile could not be saved: ${profileError.message}`); return; }
+  const vendor = {business_name:role === 'vendor' ? fullNameOrBusiness : null, category:role === 'vendor' ? categoryOrVehicle : 'Delivery rider', territory, vendor_tier:document.querySelector('#vendor-panel .tier.selected b')?.textContent || null, vehicle_type:role === 'rider' ? categoryOrVehicle : null, verification_status:'pending', document_name:license?.name || null};
+  const {error: vendorError} = await supabaseClient.from('global_vendors').insert(vendor);
+  if(vendorError){ showToast(`Partner record could not be saved: ${vendorError.message}`); return; }
+  form.reset(); showToast('Application saved · verification review started');
+}
+document.querySelector('#vendor-form').addEventListener('submit', event => submitPartnerApplication(event, 'vendor'));
+document.querySelector('#rider-form').addEventListener('submit', event => submitPartnerApplication(event, 'rider'));
+document.querySelector('#track-rider-form').addEventListener('submit', event => submitPartnerApplication(event, 'rider'));
 document.querySelector('#status-toggle').addEventListener('click', event => { const toggle = event.currentTarget; toggle.classList.toggle('selected'); document.querySelector('#admin-status-label').textContent = toggle.classList.contains('selected') ? 'Verified' : 'Pending verification'; showToast(toggle.classList.contains('selected') ? 'Account marked verified' : 'Account moved to pending'); });
 document.querySelector('#deposit-button').addEventListener('click', () => { const amount = Number(document.querySelector('#amount-input').value); if (!amount || amount < 1) return showToast('Enter a valid top-up amount'); showToast(`Top-up request for GH₵ ${amount.toFixed(2)} initiated`); });
 document.querySelector('#withdraw-button').addEventListener('click', () => showToast('Payout trigger queued · settlement in progress'));
