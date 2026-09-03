@@ -37,25 +37,3 @@ python3 -m http.server 4173
 ```
 
 Open <http://localhost:4173> in a browser.
-
-## Netlify handoff
-
-Run the local and Netlify configuration gate with:
-
-```bash
-npm run check:netlify
-```
-
-This command validates the required files and the Netlify publish, build, and
-function settings. Before a site is linked it reports `Netlify connection
-pending` and exits successfully, so it can run in local development and pull
-request checks. After connecting the repository with `netlify link`, it reports
-the linked state and leaves production deployment as an explicit action:
-
-```bash
-netlify deploy --prod
-```
-
-Configure Supabase and Netlify secrets in their respective dashboards before
-production deployment. Do not commit `.netlify/state.json`, tokens, or `.env`
-files.
