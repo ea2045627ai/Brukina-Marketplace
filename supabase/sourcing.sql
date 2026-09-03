@@ -58,7 +58,14 @@ drop policy if exists "sources admin write" on public.marketplace_sources;
 create policy "sources admin write" on public.marketplace_sources for all using (public.is_admin()) with check (public.is_admin());
 
 drop policy if exists "sourcing requests owner read" on public.sourcing_requests;
-create policy "sourcing requests owner read" on public.sourcing_requests for select using (requester_id = auth.uid() or public.is_admin());
+create policy "sourcing requests owner read" on public.sourcing_requests for select using (
+  requester_id = auth.uid()
+  or public.is_admin()
+  or (status = 'open' and exists (
+    select 1 from public.global_vendors v
+    where v.owner_id = auth.uid() and v.verification_status = 'verified'
+  ))
+);
 drop policy if exists "sourcing requests owner create" on public.sourcing_requests;
 create policy "sourcing requests owner create" on public.sourcing_requests for insert with check (requester_id = auth.uid());
 drop policy if exists "sourcing requests owner update" on public.sourcing_requests;

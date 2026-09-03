@@ -185,7 +185,6 @@ document.querySelector('#dispatch-request').addEventListener('click', async () =
   if(!activeDispatchProvider){ showToast('No dispatch provider is currently available.'); return; }
   const {data: dispatchRequest, error} = await supabaseClient.from('dispatch_requests').insert({customer_id:currentUser.id,provider_id:activeDispatchProvider.id,status:'queued',pickup_address:'Akosombo Materials, 14 Independence Ave',dropoff_address:'Customer address pin'}).select('id').single();
   if(error){ showToast(`Backup dispatch could not be queued: ${error.message}`); return; }
-  await supabaseClient.from('cashflow_entries').insert({user_id:currentUser.id,dispatch_request_id:dispatchRequest.id,direction:'outflow',entry_type:'delivery_fee',amount:38,currency:'GHS',status:'pending',description:`${activeDispatchProvider.display_name} delivery fee`});
   document.querySelector('#dispatch-request').disabled = true;
   document.querySelector('#dispatch-request').textContent = 'Queued';
   showToast('Brukina Backup dispatch request queued securely.');

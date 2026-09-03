@@ -63,6 +63,6 @@ create policy "local couriers owner write" on public.local_couriers for all usin
 drop policy if exists "cashflow owner read" on public.cashflow_entries;
 create policy "cashflow owner read" on public.cashflow_entries for select using (user_id = auth.uid() or public.is_admin());
 drop policy if exists "cashflow trusted write" on public.cashflow_entries;
-create policy "cashflow trusted write" on public.cashflow_entries for insert with check (user_id = auth.uid() or public.is_admin());
+create policy "cashflow trusted write" on public.cashflow_entries for insert with check (public.is_admin());
 
 -- A production payment webhook should create settled cashflow entries with the service role.

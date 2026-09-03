@@ -1,6 +1,6 @@
 # Brukina Marketplace
 
-Brukina is a static PWA marketplace frontend for wholesale and local delivery operations.
+Brukina is a deployable PWA marketplace for wholesale and local delivery operations. See [`ROADMAP.md`](ROADMAP.md) for the live product scope and release gates.
 
 ## Included workspaces
 
@@ -14,11 +14,11 @@ Brukina is a static PWA marketplace frontend for wholesale and local delivery op
 
 Run [`supabase/schema.sql`](supabase/schema.sql), then [`supabase/dispatch.sql`](supabase/dispatch.sql), then [`supabase/operations.sql`](supabase/operations.sql), in the Supabase SQL Editor. The frontend uses the Supabase project configured in `app.js`. Enable email/password authentication; sign-up stores `full_name` and the selected non-admin role in user metadata. Supported roles are `customer`, `vendor`, `driver`, `rider`, and `admin`.
 
-Administrator access is intentionally separate: only an authenticated user whose protected Supabase `app_metadata` contains `role: "admin"` can open the operations dashboard. Grant this server-side with the commented SQL at the end of the schema. Row Level Security is included in the schema and should be reviewed before production use.
+Administrator access is intentionally separate: only an authenticated user whose protected Supabase `app_metadata` contains `role: "admin"` can open the operations dashboard. Grant this server-side with the commented SQL at the end of the schema. Row Level Security is included in the schema and must be applied before production use. Financial ledger entries are trusted writes and must be created by an admin or server-side payment/operations worker.
 
 The existing marketplace integrations expect these tables: `marketplace_inventory`, `user_profiles`, and `global_vendors`.
 
-The catalog supports building materials, tools and equipment, devices and gadgets, accessories and body products, clothing, and home and living goods. Run [`supabase/sourcing.sql`](supabase/sourcing.sql) after the core migrations to add verified source partners, buyer sourcing requests, and vendor quotes. External Shopify, Made-in-China, Leeknives, and American brand credentials must be handled by a server-side connector; never place those tokens in `app.js`.
+The catalog supports building materials, tools and equipment, devices and gadgets, accessories and body products, clothing, and home and living goods. Run [`supabase/sourcing.sql`](supabase/sourcing.sql) after the core migrations to add verified source partners, buyer sourcing requests, and vendor quotes. External Shopify, Made-in-China, Leeknives, and American brand credentials must be handled by a server-side connector; never place those tokens in `app.js`. The starter catalog is an outage fallback when the live inventory query fails.
 
 Dispatch health is managed through `dispatch_providers`. Buyers can switch between available Bolt, Yango, and Brukina Backup options on the tracking screen. Bolt and Yango can be marked unavailable by an admin or trusted server job; the app then recommends `brukina_backup` and queues a protected `dispatch_requests` record. `local_vendors`, `local_couriers`, and `cashflow_entries` support local supply, rider/driver operations, and delivery fees, payouts, and settlements.
 
