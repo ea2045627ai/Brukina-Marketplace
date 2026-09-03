@@ -6,7 +6,6 @@
   "scripts": {
     "check": "node --check app.js && node --check sw.js && node scripts/check-build.mjs",
     "start:webhook": "node server/operations-webhook.mjs",
-    "check:webhook": "node scripts/check-webhook.mjs",
-    "check:netlify": "node scripts/check-netlify.mjs"
+    "check:webhook": "node scripts/check-webhook.mjs"
   }
 }
