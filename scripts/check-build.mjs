@@ -11,7 +11,9 @@ const requiredFiles = [
   'icon.svg',
   'netlify.toml',
   '_headers',
-  'supabase/production.sql'
+  'supabase/production.sql',
+  'supabase/supply_bridge.sql',
+  'netlify/functions/supply-bridge.mjs'
 ];
 
 for (const file of requiredFiles) {
@@ -39,6 +41,11 @@ for (const anchor of ['product-grid', 'search-input', 'auth-form', 'dispatch-req
 const productionSql = readFileSync(resolve(root, 'supabase/production.sql'), 'utf8');
 for (const table of ['support_preferences', 'support_callback_requests', 'support_conversations']) {
   if (!productionSql.includes(`public.${table}`)) throw new Error(`Missing production support table: ${table}`);
+}
+
+const bridgeSql = readFileSync(resolve(root, 'supabase/supply_bridge.sql'), 'utf8');
+for (const required of ['route_to_supply_partners', 'tr_sourcing_request_insert', 'vault.decrypted_secrets', 'net.http_post']) {
+  if (!bridgeSql.includes(required)) throw new Error(`Supply bridge migration is missing: ${required}`);
 }
 
 console.log('Marketplace structure check passed');
