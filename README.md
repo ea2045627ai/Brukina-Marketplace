@@ -37,3 +37,27 @@ python3 -m http.server 4173
 ```
 
 Open <http://localhost:4173> in a browser.
+
+## Netlify handoff
+
+Netlify is intentionally pending until the repository is connected to a Netlify
+site. Run the local release checks first:
+
+```bash
+npm run check
+npm run check:webhook
+npm run check:netlify
+```
+
+The Netlify check validates the deployment files and reports a pending status
+when `NETLIFY_SITE_ID` is not set. After connecting the site, export its site ID
+or slug and run the same command again:
+
+```bash
+export NETLIFY_SITE_ID=your-site-id
+npm run check:netlify
+```
+
+Netlify must run the configured `npm run check` build command before publishing.
+Configure Supabase Vault and Netlify environment variables before enabling the
+supply partner bridge or any payment and telephony connector.
