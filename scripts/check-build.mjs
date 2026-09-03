@@ -18,6 +18,7 @@ const requiredFiles = [
   'supabase/production.sql',
   'supabase/supply_bridge.sql',
   'netlify/functions/supply-bridge.mjs'
+  ,'netlify/functions/create-order.mjs'
 ];
 
 for (const file of requiredFiles) {

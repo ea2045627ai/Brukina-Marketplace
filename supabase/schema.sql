@@ -75,6 +75,15 @@ create table if not exists public.orders (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.order_items (
+  id uuid primary key default gen_random_uuid(),
+  order_id uuid not null references public.orders(id) on delete cascade,
+  inventory_id uuid not null references public.marketplace_inventory(id) on delete restrict,
+  quantity integer not null check (quantity > 0),
+  unit_price numeric(12,2) not null check (unit_price >= 0),
+  created_at timestamptz not null default now()
+);
+
 create table if not exists public.deliveries (
   id uuid primary key default gen_random_uuid(),
   order_id uuid unique not null references public.orders(id) on delete cascade,
@@ -109,6 +118,7 @@ create table if not exists public.wallet_transactions (
 create index if not exists inventory_active_idx on public.marketplace_inventory(active, category);
 create index if not exists inventory_source_idx on public.marketplace_inventory(source_channel, source_country);
 create index if not exists orders_customer_idx on public.orders(customer_id, created_at desc);
+create index if not exists order_items_order_idx on public.order_items(order_id);
 create index if not exists vendors_owner_idx on public.global_vendors(owner_id);
 create index if not exists deliveries_rider_idx on public.deliveries(rider_id, status);
 
@@ -126,6 +136,7 @@ create policy "categories public active read" on public.marketplace_categories f
 drop policy if exists "categories admin write" on public.marketplace_categories;
 create policy "categories admin write" on public.marketplace_categories for all using (public.is_admin()) with check (public.is_admin());
 alter table public.orders enable row level security;
+alter table public.order_items enable row level security;
 alter table public.deliveries enable row level security;
 alter table public.wallets enable row level security;
 alter table public.wallet_transactions enable row level security;
@@ -152,6 +163,7 @@ create policy "inventory vendor manage" on public.marketplace_inventory for all 
 create policy "orders participants read" on public.orders for select using (customer_id = auth.uid() or exists (select 1 from public.global_vendors v where v.id = vendor_id and v.owner_id = auth.uid()) or public.is_admin());
 create policy "customers create orders" on public.orders for insert with check (customer_id = auth.uid());
 create policy "order operators update" on public.orders for update using (customer_id = auth.uid() or public.is_admin());
+create policy "order items participants read" on public.order_items for select using (exists (select 1 from public.orders o where o.id = order_id and (o.customer_id = auth.uid() or public.is_admin())));
 create policy "deliveries participants read" on public.deliveries for select using (rider_id = auth.uid() or exists (select 1 from public.orders o where o.id = order_id and o.customer_id = auth.uid()) or public.is_admin());
 create policy "delivery operators update" on public.deliveries for update using (rider_id = auth.uid() or public.is_admin());
 create policy "wallet own read" on public.wallets for select using (user_id = auth.uid() or public.is_admin());
