@@ -41,7 +41,7 @@ if (!manifest.name || !manifest.start_url || !manifest.icons?.length) {
   throw new Error('Manifest is missing required PWA fields');
 }
 
-for (const anchor of ['product-grid', 'search-input', 'auth-form', 'dispatch-request', 'vendor-b2b-leads', 'wallet-balance', 'wallet-transactions']) {
+for (const anchor of ['product-grid', 'search-input', 'auth-form', 'dispatch-request', 'vendor-b2b-leads', 'wallet-balance', 'wallet-transactions', 'tracking-order-label', 'delivery-status']) {
   if (!html.includes(`id="${anchor}"`)) throw new Error(`Missing required page anchor: ${anchor}`);
 }
 

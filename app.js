@@ -143,7 +143,25 @@ document.querySelector('#track-rider-form').addEventListener('submit', event => 
 document.querySelector('#status-toggle').addEventListener('click', event => { const toggle = event.currentTarget; toggle.classList.toggle('selected'); document.querySelector('#admin-status-label').textContent = toggle.classList.contains('selected') ? 'Verified' : 'Pending verification'; showToast(toggle.classList.contains('selected') ? 'Account marked verified' : 'Account moved to pending'); });
 document.querySelector('#deposit-button').addEventListener('click', () => { const amount = Number(document.querySelector('#amount-input').value); if (!amount || amount < 1) return showToast('Enter a valid top-up amount'); showToast(`Top-up request for GH₵ ${amount.toFixed(2)} initiated`); });
 document.querySelector('#withdraw-button').addEventListener('click', () => showToast('Payout trigger queued · settlement in progress'));
-document.querySelector('.online-row .toggle').addEventListener('click', event => { event.currentTarget.classList.toggle('selected'); showToast(event.currentTarget.classList.contains('selected') ? 'You are now receiving delivery requests' : 'You are offline'); });
+document.querySelector('.online-row .toggle').addEventListener('click', async event => {
+  const toggle = event.currentTarget;
+  if(!currentUser || !['rider','driver'].includes(currentRole)){ showToast('Sign in as an approved rider or driver to change availability.'); return; }
+  const goingOnline = !toggle.classList.contains('selected');
+  if(goingOnline && !navigator.geolocation){ showToast('Location sharing is required to go online.'); return; }
+  toggle.disabled = true;
+  let location = null;
+  if(goingOnline){
+    try { location = await new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject, {enableHighAccuracy:true,timeout:10000,maximumAge:30000})); }
+    catch { toggle.disabled = false; showToast('Location permission is required to go online.'); return; }
+  }
+  const updates = {is_online:goingOnline};
+  if(location) { updates.current_lat = location.coords.latitude; updates.current_lng = location.coords.longitude; }
+  const {error} = await supabaseClient.from('local_couriers').update(updates).eq('user_id',currentUser.id);
+  toggle.disabled = false;
+  if(error){ showToast(`Availability could not be updated: ${error.message}`); return; }
+  toggle.classList.toggle('selected',goingOnline);
+  showToast(goingOnline ? 'You are now receiving delivery requests' : 'You are offline');
+});
 document.querySelector('.call-button').addEventListener('click', () => showToast('Calling Kwame Mensah…'));
 
 let map;
