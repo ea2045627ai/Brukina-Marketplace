@@ -13,6 +13,7 @@ fallback catalog data is an outage state, not a second product mode.
 - Sourcing requests, verified supplier partners, and vendor quotes.
 - Support preferences, conversations, and callback requests.
 - Authenticated wallet balance, escrow, payout, and transaction reads.
+- Active delivery tracking from persisted delivery and courier coordinates.
 - PWA shell, service worker, responsive navigation, and structural build checks.
 
 ## Next live increments
@@ -21,8 +22,8 @@ fallback catalog data is an outage state, not a second product mode.
    refunds; wallet mutations remain disabled until that path is idempotent.
 2. Add server-side order creation and fulfillment state transitions before
    enabling checkout for inventory rows.
-3. Replace simulated map coordinates with persisted courier location updates
-   and delivery events.
+3. Add persisted courier location update controls for riders and drivers;
+   customer tracking now reads live delivery and courier coordinates.
 4. Add vendor inventory management, dispatch queues, and admin review views.
 5. Add signed webhook authentication and an idempotent operations event queue.
 

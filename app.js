@@ -80,7 +80,7 @@ const search = document.querySelector('#search-input');
 search.addEventListener('input', () => renderProducts(visibleProducts()));
 document.querySelectorAll('.geo-option').forEach(button => button.addEventListener('click', () => { document.querySelectorAll('.geo-option').forEach(item => item.classList.remove('selected')); button.classList.add('selected'); showToast(`${button.dataset.region === 'urban' ? 'Urban hub' : 'Rural market'} offers loaded`); }));
 document.querySelectorAll('.category').forEach(button => button.addEventListener('click', () => { document.querySelectorAll('.category').forEach(item => item.classList.remove('active')); button.classList.add('active'); activeCategory = button.textContent.trim(); renderProducts(visibleProducts()); showToast(`${activeCategory} deals loaded`); }));
-function navigate(viewName){ document.querySelectorAll('.view').forEach(view => view.classList.toggle('active', view.dataset.view === viewName)); document.querySelectorAll('.nav-item').forEach(item => item.classList.toggle('selected', item.dataset.nav === viewName)); if(viewName === 'tracking') initMap(); if(viewName === 'hub') initializeVendorDashboard(); if(viewName === 'wallet') loadWallet(); window.scrollTo({top:0,behavior:'smooth'}); }
+function navigate(viewName){ document.querySelectorAll('.view').forEach(view => view.classList.toggle('active', view.dataset.view === viewName)); document.querySelectorAll('.nav-item').forEach(item => item.classList.toggle('selected', item.dataset.nav === viewName)); if(viewName === 'tracking') loadActiveDelivery(); if(viewName === 'hub') initializeVendorDashboard(); if(viewName === 'wallet') loadWallet(); window.scrollTo({top:0,behavior:'smooth'}); }
 document.querySelectorAll('[data-nav]').forEach(item => item.addEventListener('click', event => { event.preventDefault(); navigate(item.dataset.nav); history.replaceState(null,'',`#${item.dataset.nav}`); }));
 window.addEventListener('hashchange', () => navigate(location.hash.slice(1) || 'home'));
 
@@ -148,8 +148,47 @@ document.querySelector('.call-button').addEventListener('click', () => showToast
 
 let map;
 let riderMarker;
-let riderStep = 0;
-function initMap(){ if(map || !window.L) return; map = L.map('map',{zoomControl:false,attributionControl:false}).setView([5.6037,-0.1870],13); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18}).addTo(map); const vendor = L.latLng(5.6062,-0.1903), riderStart = L.latLng(5.5988,-0.1794), customer = L.latLng(5.6138,-0.1753); const icon = (color, label) => L.divIcon({className:'custom-pin',html:`<div style="background:${color};border:3px solid #fff;color:#fff;width:30px;height:30px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:grid;place-items:center;box-shadow:0 3px 8px #0004"><span style="transform:rotate(45deg);font:700 10px Manrope">${label}</span></div>`,iconSize:[30,30],iconAnchor:[15,30]}); L.marker(vendor,{icon:icon('#bf543c','V')}).addTo(map).bindTooltip('Akosombo Materials · pickup'); L.marker(customer,{icon:icon('#7043a4','E')}).addTo(map).bindTooltip('Emmanuel A. · drop-off'); riderMarker = L.marker(riderStart,{icon:icon('#e1ae39','R')}).addTo(map).bindTooltip('Kwame Mensah · active'); L.polyline([vendor,customer],{color:'#bf543c',weight:3,dashArray:'7 9',opacity:.65}).addTo(map); map.fitBounds(L.latLngBounds([vendor,customer]),{padding:[30,30]}); setInterval(() => { riderStep = (riderStep + 1) % 101; const position = L.latLng(riderStart.lat + (customer.lat-riderStart.lat)*(riderStep/100), riderStart.lng + (customer.lng-riderStart.lng)*(riderStep/100)); riderMarker.setLatLng(position); document.querySelector('#rider-eta').textContent = riderStep > 55 ? 'Arriving at your address in 02 min' : `Arriving at pickup in ${Math.max(1,4-Math.floor(riderStep/25)).toString().padStart(2,'0')} min`; },3000); setTimeout(() => map.invalidateSize(), 200); }
+let deliveryChannel;
+let activeDelivery;
+function renderDelivery(delivery, courier){
+  activeDelivery = delivery;
+  const order = delivery?.orders;
+  document.querySelector('#tracking-order-label').textContent = order ? `ACTIVE DELIVERY · #${order.order_number}` : 'DELIVERY TRACKING';
+  document.querySelector('#delivery-id').textContent = order ? `#${order.order_number}` : 'No active delivery';
+  document.querySelector('#delivery-status').textContent = delivery?.status?.replaceAll('_',' ').toUpperCase() || 'WAITING';
+  document.querySelector('#delivery-vendor').textContent = order?.global_vendors?.business_name || 'Vendor pickup';
+  document.querySelector('#delivery-customer').textContent = currentUser?.user_metadata?.full_name || 'Customer drop-off';
+  document.querySelector('#rider-name').textContent = courier?.full_name ? `${courier.full_name} is riding` : 'No rider assigned';
+  document.querySelector('#rider-avatar').textContent = courier?.full_name ? courier.full_name.split(' ').map(part => part[0]).join('').slice(0,2).toUpperCase() : '--';
+  document.querySelector('#rider-eta').textContent = delivery?.eta_minutes ? `Arriving in ${delivery.eta_minutes} min` : 'Live ETA pending';
+  document.querySelector('#tracking-alert strong').textContent = delivery ? `Delivery status: ${delivery.status.replaceAll('_',' ')}` : 'No active delivery';
+  document.querySelector('#tracking-alert small').textContent = delivery ? `Updated ${new Date(delivery.updated_at).toLocaleTimeString()}` : 'Sign in to view active delivery';
+}
+async function loadActiveDelivery(){
+  if(!currentUser){ renderDelivery(null,null); return; }
+  const {data, error} = await supabaseClient.from('deliveries').select('id,rider_id,status,pickup_lat,pickup_lng,dropoff_lat,dropoff_lng,eta_minutes,updated_at,orders!inner(order_number,customer_id,global_vendors(business_name))').eq('orders.customer_id',currentUser.id).not('status','eq','delivered').not('status','eq','unassigned').order('updated_at',{ascending:false}).limit(1).maybeSingle();
+  if(error || !data){ renderDelivery(null,null); return; }
+  const {data: courier} = data.rider_id ? await supabaseClient.from('local_couriers').select('full_name,current_lat,current_lng').eq('user_id',data.rider_id).maybeSingle() : {data:null};
+  renderDelivery(data,courier);
+  initMap(data,courier);
+  if(deliveryChannel) supabaseClient.removeChannel(deliveryChannel);
+  deliveryChannel = supabaseClient.channel(`delivery:${data.id}`).on('postgres_changes',{event:'UPDATE',schema:'public',table:'deliveries',filter:`id=eq.${data.id}`},payload => loadActiveDelivery()).subscribe();
+}
+function initMap(delivery = activeDelivery, courier){
+  if(!window.L || !delivery?.pickup_lat || !delivery.dropoff_lat) return;
+  if(map) map.remove();
+  map = L.map('map',{zoomControl:false,attributionControl:false}).setView([Number(delivery.pickup_lat),Number(delivery.pickup_lng)],13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18}).addTo(map);
+  const icon = (color, label) => L.divIcon({className:'custom-pin',html:`<div style="background:${color};border:3px solid #fff;color:#fff;width:30px;height:30px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:grid;place-items:center;box-shadow:0 3px 8px #0004"><span style="transform:rotate(45deg);font:700 10px Manrope">${label}</span></div>`,iconSize:[30,30],iconAnchor:[15,30]});
+  const pickup = L.latLng(Number(delivery.pickup_lat),Number(delivery.pickup_lng));
+  const dropoff = L.latLng(Number(delivery.dropoff_lat),Number(delivery.dropoff_lng));
+  L.marker(pickup,{icon:icon('#bf543c','V')}).addTo(map).bindTooltip('Vendor pickup');
+  L.marker(dropoff,{icon:icon('#7043a4','E')}).addTo(map).bindTooltip('Customer drop-off');
+  if(courier?.current_lat && courier?.current_lng){ riderMarker = L.marker([Number(courier.current_lat),Number(courier.current_lng)],{icon:icon('#e1ae39','R')}).addTo(map).bindTooltip('Rider live'); }
+  L.polyline([pickup,dropoff],{color:'#bf543c',weight:3,dashArray:'7 9',opacity:.65}).addTo(map);
+  map.fitBounds(L.latLngBounds([pickup,dropoff]),{padding:[30,30]});
+  setTimeout(() => map.invalidateSize(),200);
+}
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
 let installPrompt;
 window.addEventListener('beforeinstallprompt', event => { event.preventDefault(); installPrompt = event; installButton.hidden = false; });
@@ -199,7 +238,7 @@ function renderDashboard(){
 document.querySelector('#auth-form').addEventListener('submit', async event => { event.preventDefault(); const form = event.currentTarget; const {data,error} = await supabaseClient.auth.signUp({email:document.querySelector('#auth-email').value.trim(),password:document.querySelector('#auth-password').value,options:{data:{full_name:document.querySelector('#auth-name').value.trim(),role:currentRole}}}); if(error){ showToast(error.message); return; } currentUser = data.user; closeAuth(); renderDashboard(); navigate('dashboard'); showToast(data.session ? `Welcome to Brukina, ${roleLabels[currentRole]}` : 'Check your email to confirm your Brukina account'); form.reset(); });
 document.querySelector('#admin-form').addEventListener('submit', async event => { event.preventDefault(); const form = event.currentTarget; const {data,error} = await supabaseClient.auth.signInWithPassword({email:form.querySelector('input[type="email"]').value.trim(),password:form.querySelector('input[type="password"]').value}); if(error){ showToast(error.message); return; } const role = data.user.app_metadata?.role; if(role !== 'admin'){ await supabaseClient.auth.signOut(); showToast('This account does not have administrator access.'); return; } currentUser = data.user; currentRole = 'admin'; adminBackdrop.hidden = true; renderDashboard(); navigate('dashboard'); showToast('Administrator session opened'); });
 document.querySelector('#auth-form').addEventListener('reset', () => { currentRole = 'customer'; });
-supabaseClient.auth.getSession().then(({data}) => { if(data.session){ currentUser = data.session.user; currentRole = data.session.user.app_metadata?.role || data.session.user.user_metadata?.role || 'customer'; renderDashboard(); loadWallet(); if(document.querySelector('#hub-view.active')) initializeVendorDashboard(); } });
+supabaseClient.auth.getSession().then(({data}) => { if(data.session){ currentUser = data.session.user; currentRole = data.session.user.app_metadata?.role || data.session.user.user_metadata?.role || 'customer'; renderDashboard(); loadWallet(); if(document.querySelector('#tracking-view.active')) loadActiveDelivery(); if(document.querySelector('#hub-view.active')) initializeVendorDashboard(); } });
 document.querySelector('#dispatch-request').addEventListener('click', async () => {
   if(!currentUser){ openAuth(); showToast('Sign in to request backup dispatch.'); return; }
   if(!activeDispatchProvider){ showToast('No dispatch provider is currently available.'); return; }
