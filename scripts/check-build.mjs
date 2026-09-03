@@ -15,6 +15,8 @@ const requiredFiles = [
   'ROADMAP.md',
   '.env.example',
   'scripts/check-netlify.mjs',
+  'railway.toml',
+  'server/railway.mjs',
   'supabase/production.sql',
   'supabase/supply_bridge.sql',
   'netlify/functions/supply-bridge.mjs',

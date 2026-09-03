@@ -1,5 +1,6 @@
 import cors from 'cors';
 import express from 'express';
+import { createHmac, timingSafeEqual } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 
 const app = express();
@@ -30,6 +31,15 @@ function requireWebhookSecret(request, response) {
   return false;
 }
 
+function verifyPaystackSignature(request) {
+  const signature = request.get('x-paystack-signature');
+  if (!signature || !process.env.PAYSTACK_SECRET_KEY || typeof request.body !== 'object' || !request.body) return false;
+  const expected = createHmac('sha512', process.env.PAYSTACK_SECRET_KEY).update(JSON.stringify(request.body)).digest('hex');
+  const supplied = Buffer.from(signature, 'utf8');
+  const calculated = Buffer.from(expected, 'utf8');
+  return supplied.length === calculated.length && timingSafeEqual(supplied, calculated);
+}
+
 app.get('/health', (request, response) => response.json({ ok: true, service: 'brukina-railway' }));
 
 app.post('/api/v1/operations-webhook', async (request, response) => {
@@ -37,7 +47,7 @@ app.post('/api/v1/operations-webhook', async (request, response) => {
   try {
     const payload = parsePayload(request.body);
     const { record, type, table } = payload;
-    if (!record || typeof record !== 'object' || !['INSERT', 'UPDATE'].includes(type)) return response.status(400).json({ error: 'Invalid operations event' });
+    if (!record || typeof record !== 'object' || !['dispatch_providers', 'telephony_calls'].includes(table) || !['INSERT', 'UPDATE'].includes(type)) return response.status(400).json({ error: 'Invalid operations event' });
     if (table === 'dispatch_providers' && record.is_available === false) {
       const { error } = await supabase.from('telephony_calls').insert({ call_status: 'system_alert', detected_native_language: 'English', metadata: { event: 'provider_outage', action_taken: 'fallback_to_brukina_backup' } });
       if (error) throw error;
@@ -67,8 +77,7 @@ app.post('/api/v1/supply-bridge', async (request, response) => {
 });
 
 app.post('/api/v1/paystack-webhook', async (request, response) => {
-  const signature = request.get('x-paystack-signature');
-  if (!process.env.PAYSTACK_SECRET_KEY || !signature) return response.status(401).json({ error: 'Paystack signature validation is not configured' });
+  if (!verifyPaystackSignature(request)) return response.status(401).json({ error: 'Invalid Paystack signature' });
   try {
     const payload = parsePayload(request.body);
     if (payload.event !== 'charge.success' || !payload.data?.reference) return response.status(400).json({ error: 'Unsupported payment event' });
