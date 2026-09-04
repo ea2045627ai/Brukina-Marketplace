@@ -40,6 +40,15 @@ python3 -m http.server 4173
 
 Open <http://localhost:4173> in a browser.
 
+## Render deployment
+
+The tracked [`render.yaml`](render.yaml) blueprint provisions the Node web
+service and a Render PostgreSQL database named `brukina-marketplace-db`. The
+database connection is exposed as `DATABASE_URL` for future server-side data
+adapters. The current marketplace data layer remains Supabase, so apply the
+SQL migrations in the Supabase setup section before deploying production data.
+Validate the Render blueprint locally with `npm run check:render`.
+
 ## Netlify connection check
 
 Run the complete validation locally with:
