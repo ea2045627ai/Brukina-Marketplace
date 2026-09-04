@@ -119,7 +119,7 @@ function renderProfilePage(){
   document.querySelector('#verify-email').textContent = email;
 }
 function renderDataRows(selector, rows){
-  document.querySelector(selector).innerHTML = rows.map(row => `<div class="data-row"><div class="data-row-main"><strong>${row.id || row.name}</strong><small>${row.detail || row.route}</small></div>${row.status ? `<span class="status-chip ${row.status.toLowerCase().includes('pending') || row.status.toLowerCase().includes('stock') ? 'pending' : ''}">${row.status}</span>` : ''}<b>${row.total || row.fee || ''}</b></div>`).join('');
+  document.querySelector(selector).innerHTML = rows.map(row => `<div class="data-row"><div class="data-row-main"><strong>${row.id || row.name}</strong><small>${row.detail || row.route}</small></div>${row.status ? `<span class="status-chip ${row.status.toLowerCase().includes('pending') || row.status.toLowerCase().includes('stock') ? 'pending' : ''}">${row.status}</span>` : ''}<b>${row.total || row.fee || ''}</b>${selector === '#dispatch-queue' ? `<button class="outline-button" data-dispatch-id="${row.id}">Accept <span>→</span></button>` : ''}${selector === '#admin-queue' ? '<button class="outline-button">Review</button>' : ''}</div>`).join('');
 }
 function renderWorkspacePage(page){
   if(!requireSession(page)) return false;
@@ -138,9 +138,63 @@ function navigate(viewName){
   document.querySelectorAll('.nav-item').forEach(item => item.classList.toggle('selected', item.dataset.nav === viewName));
   if(viewName === 'tracking') loadActiveDelivery(); if(viewName === 'hub') initializeVendorDashboard(); if(viewName === 'wallet') loadWallet();
   window.scrollTo({top:0,behavior:'smooth'});
+  return true;
 }
 document.querySelectorAll('[data-nav]').forEach(item => item.addEventListener('click', event => { event.preventDefault(); navigate(item.dataset.nav); history.replaceState(null,'',`#${item.dataset.nav}`); }));
 document.querySelectorAll('[data-page]').forEach(item => item.addEventListener('click', event => { event.preventDefault(); const page = item.dataset.page; if(navigate(page)) history.replaceState(null,'',`#${page}`); }));
+document.querySelector('#settings-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  const name = document.querySelector('#settings-name').value.trim();
+  const email = document.querySelector('#settings-email').value.trim();
+  const validation = validateSignupForm({fullName:name, email, password:'Valid8_'});
+  if(validation.errors.fullName || validation.errors.email){ showToast(validation.errors.fullName || validation.errors.email); return; }
+  const {data,error} = await supabaseClient.auth.updateUser({data:{full_name:name}});
+  if(error){ showToast(error.message); return; }
+  currentUser = data.user;
+  renderProfilePage();
+  showToast('Profile changes saved.');
+});
+document.querySelector('#inventory-form').addEventListener('submit', event => {
+  event.preventDefault();
+  const stock = Number(document.querySelector('#inventory-stock').value);
+  const price = Number(document.querySelector('#inventory-price').value);
+  localProducts.unshift({name:document.querySelector('#inventory-name').value.trim(),detail:`${stock} units · GH₵ ${price.toFixed(2)}`,status:stock > 0 ? 'Active' : 'Out of stock'});
+  event.currentTarget.reset();
+  renderDataRows('#inventory-list', localProducts);
+  document.querySelector('#inventory-count').textContent = `${localProducts.length} products`;
+  showToast('Product added to your local catalog.');
+});
+document.querySelector('#dispatch-view').addEventListener('click', event => {
+  const button = event.target.closest('[data-dispatch-id]');
+  if(!button) return;
+  const job = dispatchQueue.find(item => item.id === button.dataset.dispatchId);
+  if(!job) return;
+  acceptedDispatch.unshift({...job, status:'In transit'});
+  dispatchQueue.splice(dispatchQueue.indexOf(job), 1);
+  renderDataRows('#dispatch-queue', dispatchQueue);
+  renderDataRows('#dispatch-manifest', acceptedDispatch);
+  showToast(`${job.id} added to your active manifest.`);
+});
+document.querySelector('#admin-view').addEventListener('click', event => {
+  const row = event.target.closest('.data-row');
+  if(!row) return;
+  row.remove();
+  const pending = document.querySelectorAll('#admin-queue .data-row').length;
+  document.querySelector('#admin-pending').textContent = pending;
+  showToast('Verification request marked as reviewed.');
+});
+document.querySelector('#verify-check').addEventListener('click', async () => {
+  if(!currentUser) return;
+  const {data} = await supabaseClient.auth.getUser();
+  const status = document.querySelector('#verify-status');
+  if(data.user?.email_confirmed_at){ status.textContent = 'Email confirmed. Your workspace is active.'; showToast('Workspace verification complete.'); navigate('dashboard'); }
+  else { status.textContent = 'Confirmation is still pending. Open the link in your email, then try again.'; }
+});
+document.querySelector('#verify-resend').addEventListener('click', async () => {
+  if(!currentUser?.email) return;
+  const {error} = await supabaseClient.auth.resend({type:'signup', email:currentUser.email});
+  document.querySelector('#verify-status').textContent = error ? error.message : 'A fresh verification link has been sent.';
+});
 window.addEventListener('hashchange', () => navigate(location.hash.slice(1) || 'home'));
 
 document.querySelectorAll('.partner-tab').forEach(tab => tab.addEventListener('click', () => { document.querySelectorAll('.partner-tab').forEach(item => item.classList.remove('selected')); tab.classList.add('selected'); document.querySelectorAll('.partner-panel').forEach(panel => panel.classList.toggle('hidden', panel.id !== tab.dataset.panel)); }));
