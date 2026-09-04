@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: brukina-marketplace
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run check
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: WEBHOOK_SECRET
+        sync: false
+      - key: PAYSTACK_SECRET_KEY
+        sync: false
+      - key: TELEPHONY_PROVIDER_API_KEY
+        sync: false
+      - key: TELEPHONY_PROVIDER_VOICE_URL
+        sync: false
+      - key: ARKESEL_DEFAULT_PHONE
+        sync: false
+      - key: SUPPLY_PARTNER_WEBHOOK_URL
+        sync: false
