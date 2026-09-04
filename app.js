@@ -1,4 +1,4 @@
-import { validateSignupForm } from './lib/validation.mjs';
+import { executeDatabaseLogin, validateLogin, validateSignupForm } from './lib/validation.mjs';
 
 const SUPABASE_URL = 'https://lhpdxsnsepvlhwkwsvel.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_f21PTSo3zKr1oayFCTTyxA_yn6C7QKo';
@@ -148,14 +148,17 @@ document.querySelector('#login-form').addEventListener('submit', async event => 
   const errorBox = document.querySelector('#login-error');
   const submitLabel = document.querySelector('#login-submit-label');
   errorBox.hidden = true;
+  const email = document.querySelector('#login-email').value.trim();
+  const password = document.querySelector('#login-password').value;
+  if(!validateLogin(email, password)){ errorBox.textContent = 'Enter a valid email address and password.'; errorBox.hidden = false; return; }
   submitLabel.textContent = 'Signing in...';
   form.querySelector('button[type="submit"]').disabled = true;
-  const {data,error} = await supabaseClient.auth.signInWithPassword({email:document.querySelector('#login-email').value.trim(),password:document.querySelector('#login-password').value});
+  const loginResult = await executeDatabaseLogin(supabaseClient, email, password);
   form.querySelector('button[type="submit"]').disabled = false;
   submitLabel.textContent = 'Sign in to workspace';
-  if(error){ errorBox.textContent = error.message; errorBox.hidden = false; return; }
-  currentUser = data.user;
-  const role = data.user.app_metadata?.role || data.user.user_metadata?.role || 'customer';
+  if(!loginResult.success){ errorBox.textContent = loginResult.error; errorBox.hidden = false; return; }
+  currentUser = loginResult.user;
+  const role = loginResult.role;
   currentRole = selectableRoles.has(role) || role === 'admin' ? role : 'customer';
   renderDashboard();
   navigate('dashboard');
