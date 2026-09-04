@@ -35,18 +35,18 @@ if (missingServerConfig.length) {
 }
 
 console.log(`Netlify configuration check passed${process.env.CONTEXT ? ` for ${process.env.CONTEXT}` : ''}.`);
-const partnerWebhookUrl = process.env.SUPPLY_PARTNER_WEBHOOK_URL;
+const partnerWebhookUrl = process.env.SKILLBRIDGE_WEBHOOK_URL || process.env.SUPPLY_PARTNER_WEBHOOK_URL;
 if (!partnerWebhookUrl) {
-  console.log('Netlify action pending: set SUPPLY_PARTNER_WEBHOOK_URL only when a verified supply partner endpoint is ready.');
+  console.log('Netlify action pending: set SKILLBRIDGE_WEBHOOK_URL only when a verified supply partner endpoint is ready.');
 } else {
   let parsedUrl;
   try {
     parsedUrl = new URL(partnerWebhookUrl);
   } catch {
-    throw new Error('SUPPLY_PARTNER_WEBHOOK_URL must be a valid HTTPS URL');
+    throw new Error('SKILLBRIDGE_WEBHOOK_URL must be a valid HTTPS URL');
   }
   if (parsedUrl.protocol !== 'https:' || parsedUrl.username || parsedUrl.password) {
-    throw new Error('SUPPLY_PARTNER_WEBHOOK_URL must be an HTTPS URL without embedded credentials');
+    throw new Error('SKILLBRIDGE_WEBHOOK_URL must be an HTTPS URL without embedded credentials');
   }
   console.log('Supply partner webhook configuration passed.');
 }
