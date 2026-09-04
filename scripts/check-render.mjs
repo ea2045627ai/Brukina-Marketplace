@@ -7,7 +7,7 @@ const requiredEntries = [
   'type: web',
   'name: brukina-marketplace',
   'runtime: node',
-  'buildCommand: npm install && npm run check',
+  'buildCommand: npm install && npm run build',
   'startCommand: npm start',
   'healthCheckPath: /health',
   'databases:',
