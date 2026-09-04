@@ -10,11 +10,7 @@ const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const webhookSecret = process.env.RAILWAY_WEBHOOK_SECRET;
 
-if (!supabaseUrl || !supabaseServiceKey) {
-  throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required');
-}
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+const supabase = supabaseUrl && supabaseServiceKey ? createClient(supabaseUrl, supabaseServiceKey) : null;
 app.use(cors());
 app.use(express.json({ limit: '100kb' }));
 app.use(express.text({ limit: '100kb', type: ['text/*', 'application/*+json'] }));
@@ -45,6 +41,7 @@ app.get('/health', (request, response) => response.json({ ok: true, service: 'br
 
 app.post('/api/v1/operations-webhook', async (request, response) => {
   if (!requireWebhookSecret(request, response)) return;
+  if (!supabase) return response.status(503).json({ error: 'Supabase server configuration is required' });
   try {
     const payload = parsePayload(request.body);
     const { record, type, table } = payload;
