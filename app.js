@@ -244,7 +244,8 @@ function updateProfileButton(){
   if(currentUser){
     const name = currentUser.user_metadata?.full_name || currentUser.email || 'U';
     span.textContent = name.split(' ').map(p => p[0]).join('').slice(0,2).toUpperCase();
-  } else { span.textContent = 'EA'; }
+    btn.classList.remove('signed-out');
+  } else { span.textContent = 'B'; btn.classList.add('signed-out'); }
 }
 document.querySelector('.profile-button').addEventListener('click', () => { if (currentUser) navigate('dashboard'); else openAuth(); });
 document.querySelector('#auth-close').addEventListener('click', closeAuth);
@@ -256,25 +257,47 @@ document.querySelector('#signout-button').addEventListener('click', async () => 
 document.querySelectorAll('.role-choice').forEach(choice => choice.addEventListener('click', () => { document.querySelectorAll('.role-choice').forEach(item => item.classList.remove('selected')); choice.classList.add('selected'); currentRole = choice.dataset.role; }));
 
 function renderDashboard(){
-  const name = currentUser?.user_metadata?.full_name || 'Emmanuel';
+  const name = currentUser?.user_metadata?.full_name || currentUser?.email?.split('@')[0] || 'User';
   const firstName = name.split(' ')[0];
   const role = currentRole;
   const configs = {
-    customer:{copy:'Track orders, discover better prices, and keep every delivery in view.',metrics:[['Active orders','03'],['Saved vendors','12'],['Wallet balance','GH₵ 8,920']],listTitle:'Recent orders',items:[['BK-4928','Akosombo Materials · Out for delivery','GH₵ 1,240.00'],['BK-4914','Tools & Equipment · Delivered','GH₵ 820.00'],['BK-4881','Groceries · Processing','GH₵ 340.50']],actions:[['Browse marketplace','home'],['Track a delivery','tracking'],['Top up wallet','wallet']]},
-    vendor:{copy:'Keep inventory moving, respond to demand, and grow your local trade network.',metrics:[['Today\'s sales','GH₵ 4,280'],['Live listings','28'],['Pending orders','07']],listTitle:'Order queue',items:[['BK-4928','Tools order · Awaiting pickup','GH₵ 1,240.00'],['BK-4925','Materials order · New request','GH₵ 680.00'],['BK-4918','Hardware order · Packed','GH₵ 420.00']],actions:[['Add inventory','home'],['Open vendor hub','hub'],['View payouts','wallet']]},
-    driver:{copy:'See your dispatch queue, route progress, and next payout at a glance.',metrics:[['Today\'s trips','08'],['Distance covered','42.6 km'],['Next payout','GH₵ 620']],listTitle:'Dispatch queue',items:[['BK-4928','Akosombo Materials → Emmanuel A.','04 min'],['BK-4921','Osu → Ridge · Ready','12 min'],['BK-4916','Airport → Labone · Scheduled','18 min']],actions:[['Go active','wallet'],['Open live route','tracking'],['View earnings','wallet']]},
-    rider:{copy:'Pick up nearby work, stay visible to customers, and build your delivery record.',metrics:[['Available jobs','06'],['Completed trips','124'],['This week','GH₵ 1,842']],listTitle:'Nearby requests',items:[['BK-4930','East Legon → Cantonments · 2.1 km','GH₵ 42'],['BK-4928','Materials pickup · Active','GH₵ 38'],['BK-4920','Airport → Osu · New','GH₵ 55']],actions:[['Go online','wallet'],['View dispatch map','tracking'],['Update profile','hub']]},
-    admin:{copy:'Monitor marketplace health, approve partners, and keep settlements moving across Brukina.',metrics:[['Pending reviews','18'],['Live inventory','1,284'],['Today\'s GMV','GH₵ 42,860']],listTitle:'Operations queue',items:[['18 applications','Vendor and rider verification pending','Review'],['128 offers','Inventory refreshed across 14 hubs','Monitor'],['06 dispatches','Rider exceptions need attention','Open']],actions:[['Review applications','hub'],['Monitor dispatch','tracking'],['Audit settlements','wallet']]}
+    customer:{copy:'Track orders, discover better prices, and keep every delivery in view.',metrics:[['Active orders','—'],['Saved vendors','—'],['Wallet balance','—']],listTitle:'Recent orders',items:[],actions:[['Browse marketplace','home'],['Track a delivery','tracking'],['Top up wallet','wallet']]},
+    vendor:{copy:'Keep inventory moving, respond to demand, and grow your local trade network.',metrics:[['Today\'s sales','—'],['Live listings','—'],['Pending orders','—']],listTitle:'Order queue',items:[],actions:[['Add inventory','home'],['Open vendor hub','hub'],['View payouts','wallet']]},
+    driver:{copy:'See your dispatch queue, route progress, and next payout at a glance.',metrics:[['Today\'s trips','—'],['Distance covered','—'],['Next payout','—']],listTitle:'Dispatch queue',items:[],actions:[['Go active','wallet'],['Open live route','tracking'],['View earnings','wallet']]},
+    rider:{copy:'Pick up nearby work, stay visible to customers, and build your delivery record.',metrics:[['Available jobs','—'],['Completed trips','—'],['This week','—']],listTitle:'Nearby requests',items:[],actions:[['Go online','wallet'],['View dispatch map','tracking'],['Update profile','hub']]},
+    admin:{copy:'Monitor marketplace health, approve partners, and keep settlements moving across Brukina.',metrics:[['Pending reviews','—'],['Live inventory','—'],['Today\'s GMV','—']],listTitle:'Operations queue',items:[],actions:[['Review applications','hub'],['Monitor dispatch','tracking'],['Audit settlements','wallet']]}
   }[role] || {};
-  document.querySelector('#dashboard-title').textContent = `${roleLabels[role]} dashboard`;
+  const roleBadge = document.querySelector('#dashboard-role-badge');
+  if(roleBadge){ roleBadge.textContent = roleLabels[role] || 'User'; roleBadge.className = `role-badge role-tag ${role}`; }
+  document.querySelector('#dashboard-title').textContent = `${roleLabels[role] || 'User'} dashboard`;
   document.querySelector('#dashboard-greeting').textContent = `Welcome back, ${firstName}`;
   document.querySelector('#dashboard-copy').textContent = configs.copy;
   document.querySelector('#dashboard-avatar').textContent = name.split(' ').map(part => part[0]).join('').slice(0,2).toUpperCase();
   document.querySelector('#dashboard-metrics').innerHTML = configs.metrics.map(metric => `<div class="metric"><small>${metric[0]}</small><strong>${metric[1]}</strong></div>`).join('');
   document.querySelector('#dashboard-list-title').textContent = configs.listTitle;
-  document.querySelector('#dashboard-list').innerHTML = configs.items.map(item => `<div class="dashboard-item"><span class="dashboard-item-icon">✓</span><div><strong>${item[0]}</strong><small>${item[1]}</small></div><b>${item[2]}</b></div>`).join('');
+  const listEl = document.querySelector('#dashboard-list');
+  listEl.innerHTML = configs.items.length ? configs.items.map(item => `<div class="dashboard-item"><span class="dashboard-item-icon">✓</span><div><strong>${item[0]}</strong><small>${item[1]}</small></div><b>${item[2]}</b></div>`).join('') : '<p class="empty-state">No records yet. Your activity will appear here once you start trading.</p>';
   document.querySelector('#dashboard-actions').innerHTML = configs.actions.map(action => `<button class="action-button" data-action="${action[1]}">${action[0]} <span>→</span></button>`).join('');
   document.querySelectorAll('[data-action]').forEach(action => action.addEventListener('click', () => navigate(action.dataset.action)));
+  loadUserProfile();
+}
+async function loadUserProfile(){
+  const verifyEl = document.querySelector('#dashboard-verification');
+  if(!verifyEl || !currentUser) return;
+  verifyEl.innerHTML = '<span class="verification-pill pending">Loading status…</span>';
+  const {data: profile} = await supabaseClient.from('user_profiles').select('verification_status,role,territory').eq('id',currentUser.id).maybeSingle();
+  let status = profile?.verification_status || 'pending';
+  let label = status === 'verified' ? 'Verified member' : status === 'rejected' ? 'Verification rejected' : 'Verification pending';
+  if(['vendor','driver','rider'].includes(currentRole)){
+    const {data: vendor} = await supabaseClient.from('global_vendors').select('verification_status,business_name').eq('owner_id',currentUser.id).maybeSingle();
+    if(vendor){
+      status = vendor.verification_status || status;
+      label = status === 'verified' ? `Verified vendor${vendor.business_name ? ' · ' + vendor.business_name : ''}` : status === 'rejected' ? 'Vendor verification rejected' : 'Vendor verification pending';
+    }
+  }
+  const statusText = document.querySelector('#dashboard-status-text');
+  if(statusText) statusText.textContent = status === 'verified' ? 'Verified' : 'Pending verification';
+  verifyEl.innerHTML = `<span class="verification-pill ${status}">${label}</span>`;
 }
 
 document.querySelector('#auth-form').addEventListener('submit', async event => {
