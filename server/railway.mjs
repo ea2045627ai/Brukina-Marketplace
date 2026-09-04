@@ -97,8 +97,10 @@ app.post('/api/v1/supply-bridge', async (request, response) => {
   try {
     const payload = parsePayload(request.body);
     if (payload.table !== 'sourcing_requests' || payload.type !== 'INSERT' || !payload.record?.id) return response.status(400).json({ error: 'Invalid sourcing event' });
-    const partnerUrl = process.env.SUPPLY_PARTNER_WEBHOOK_URL;
+    const partnerUrl = process.env.SKILLBRIDGE_WEBHOOK_URL || process.env.SUPPLY_PARTNER_WEBHOOK_URL;
     if (partnerUrl) {
+      const parsedUrl = new URL(partnerUrl);
+      if (parsedUrl.protocol !== 'https:' || parsedUrl.username || parsedUrl.password) throw new Error('SkillBridge endpoint must be an HTTPS URL without embedded credentials');
       const forwarded = await fetch(partnerUrl, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Brukina-Event': 'sourcing_request.created' }, body: JSON.stringify(payload) });
       if (!forwarded.ok) throw new Error(`Supply partner returned ${forwarded.status}`);
     }
