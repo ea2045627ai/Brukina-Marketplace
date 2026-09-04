@@ -46,7 +46,8 @@ const localReferences = [...html.matchAll(/(?:src|href)="([^"#][^"]*)"/g)]
   .filter(reference => !reference.startsWith('http://') && !reference.startsWith('https://'));
 
 for (const reference of localReferences) {
-  if (!existsSync(resolve(root, reference))) throw new Error(`Missing local asset: ${reference}`);
+  const projectReference = reference.replace(/^\/+/, '');
+  if (!existsSync(resolve(root, projectReference))) throw new Error(`Missing local asset: ${reference}`);
 }
 
 const manifest = JSON.parse(readFileSync(resolve(root, 'manifest.webmanifest'), 'utf8'));
