@@ -1,7 +1,10 @@
+import { validateSignupForm } from './lib/validation.mjs';
+
 const SUPABASE_URL = 'https://lhpdxsnsepvlhwkwsvel.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_f21PTSo3zKr1oayFCTTyxA_yn6C7QKo';
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const roleLabels = { customer:'Customer', vendor:'Vendor', driver:'Driver', rider:'Rider', admin:'Administrator' };
+const selectableRoles = new Set(['customer', 'vendor', 'driver', 'rider']);
 let currentUser = null;
 let currentRole = 'customer';
 let products = [];
@@ -253,10 +256,50 @@ function renderDashboard(){
   document.querySelectorAll('[data-action]').forEach(action => action.addEventListener('click', () => navigate(action.dataset.action)));
 }
 
-document.querySelector('#auth-form').addEventListener('submit', async event => { event.preventDefault(); const form = event.currentTarget; const {data,error} = await supabaseClient.auth.signUp({email:document.querySelector('#auth-email').value.trim(),password:document.querySelector('#auth-password').value,options:{data:{full_name:document.querySelector('#auth-name').value.trim(),role:currentRole}}}); if(error){ showToast(error.message); return; } currentUser = data.user; closeAuth(); renderDashboard(); navigate('dashboard'); showToast(data.session ? `Welcome to Brukina, ${roleLabels[currentRole]}` : 'Check your email to confirm your Brukina account'); form.reset(); });
+document.querySelector('#auth-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const fullName = document.querySelector('#auth-name').value.trim();
+  const email = document.querySelector('#auth-email').value.trim();
+  const password = document.querySelector('#auth-password').value;
+  const validation = validateSignupForm({ fullName, email, password });
+  if(!validation.isValid){ showToast(Object.values(validation.errors)[0]); return; }
+  if(!selectableRoles.has(currentRole)){ showToast('Choose a valid marketplace workspace.'); return; }
+
+  const submitButton = form.querySelector('button[type="submit"]');
+  submitButton.disabled = true;
+  submitButton.setAttribute('aria-busy', 'true');
+  try {
+    const {data,error} = await supabaseClient.auth.signUp({email,password,options:{data:{full_name:fullName,role:currentRole}}});
+    if(error){ showToast(error.message); return; }
+    form.reset();
+    if(!data.session){
+      closeAuth();
+      showToast('Check your email to confirm your account before opening the workspace.');
+      return;
+    }
+    currentUser = data.user;
+    closeAuth();
+    renderDashboard();
+    navigate('dashboard');
+    showToast(`Welcome to Brukina, ${roleLabels[currentRole]}`);
+  } finally {
+    submitButton.disabled = false;
+    submitButton.removeAttribute('aria-busy');
+  }
+});
 document.querySelector('#admin-form').addEventListener('submit', async event => { event.preventDefault(); const form = event.currentTarget; const {data,error} = await supabaseClient.auth.signInWithPassword({email:form.querySelector('input[type="email"]').value.trim(),password:form.querySelector('input[type="password"]').value}); if(error){ showToast(error.message); return; } const role = data.user.app_metadata?.role; if(role !== 'admin'){ await supabaseClient.auth.signOut(); showToast('This account does not have administrator access.'); return; } currentUser = data.user; currentRole = 'admin'; adminBackdrop.hidden = true; renderDashboard(); navigate('dashboard'); showToast('Administrator session opened'); });
 document.querySelector('#auth-form').addEventListener('reset', () => { currentRole = 'customer'; });
-supabaseClient.auth.getSession().then(({data}) => { if(data.session){ currentUser = data.session.user; currentRole = data.session.user.app_metadata?.role || data.session.user.user_metadata?.role || 'customer'; renderDashboard(); loadWallet(); if(document.querySelector('#tracking-view.active')) loadActiveDelivery(); if(document.querySelector('#hub-view.active')) initializeVendorDashboard(); } });
+supabaseClient.auth.getSession().then(({data}) => {
+  if(!data.session) return;
+  currentUser = data.session.user;
+  const storedRole = data.session.user.app_metadata?.role || data.session.user.user_metadata?.role || 'customer';
+  currentRole = selectableRoles.has(storedRole) || storedRole === 'admin' ? storedRole : 'customer';
+  renderDashboard();
+  loadWallet();
+  if(document.querySelector('#tracking-view.active')) loadActiveDelivery();
+  if(document.querySelector('#hub-view.active')) initializeVendorDashboard();
+});
 document.querySelector('#dispatch-request').addEventListener('click', async () => {
   if(!currentUser){ openAuth(); showToast('Sign in to request backup dispatch.'); return; }
   if(!activeDispatchProvider){ showToast('No dispatch provider is currently available.'); return; }
