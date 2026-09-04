@@ -141,7 +141,35 @@ function navigate(viewName){
   return true;
 }
 document.querySelectorAll('[data-nav]').forEach(item => item.addEventListener('click', event => { event.preventDefault(); navigate(item.dataset.nav); history.replaceState(null,'',`#${item.dataset.nav}`); }));
-document.querySelectorAll('[data-page]').forEach(item => item.addEventListener('click', event => { event.preventDefault(); const page = item.dataset.page; if(navigate(page)) history.replaceState(null,'',`#${page}`); }));
+document.querySelectorAll('[data-page]').forEach(item => item.addEventListener('click', event => { event.preventDefault(); const page = item.dataset.page; if(page === 'signup'){ openAuth(); return; } if(navigate(page)) history.replaceState(null,'',`#${page}`); }));
+document.querySelector('#login-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const errorBox = document.querySelector('#login-error');
+  const submitLabel = document.querySelector('#login-submit-label');
+  errorBox.hidden = true;
+  submitLabel.textContent = 'Signing in...';
+  form.querySelector('button[type="submit"]').disabled = true;
+  const {data,error} = await supabaseClient.auth.signInWithPassword({email:document.querySelector('#login-email').value.trim(),password:document.querySelector('#login-password').value});
+  form.querySelector('button[type="submit"]').disabled = false;
+  submitLabel.textContent = 'Sign in to workspace';
+  if(error){ errorBox.textContent = error.message; errorBox.hidden = false; return; }
+  currentUser = data.user;
+  const role = data.user.app_metadata?.role || data.user.user_metadata?.role || 'customer';
+  currentRole = selectableRoles.has(role) || role === 'admin' ? role : 'customer';
+  renderDashboard();
+  navigate('dashboard');
+  form.reset();
+  showToast(`Welcome back, ${roleLabels[currentRole]}.`);
+});
+document.querySelector('#forgot-password').addEventListener('click', async () => {
+  const email = document.querySelector('#login-email').value.trim();
+  const errorBox = document.querySelector('#login-error');
+  if(!email){ errorBox.textContent = 'Enter your email address first.'; errorBox.hidden = false; return; }
+  const {error} = await supabaseClient.auth.resetPasswordForEmail(email, {redirectTo:`${window.location.origin}/#settings`});
+  if(error){ errorBox.textContent = error.message; errorBox.hidden = false; return; }
+  showToast('Password reset instructions sent.');
+});
 document.querySelector('#settings-form').addEventListener('submit', async event => {
   event.preventDefault();
   const name = document.querySelector('#settings-name').value.trim();
