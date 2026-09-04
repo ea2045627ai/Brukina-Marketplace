@@ -440,8 +440,12 @@ document.querySelector('#auth-form').addEventListener('submit', async event => {
     if(error){ showToast(error.message); return; }
     form.reset();
     if(!data.session){
+      currentUser = data.user;
+      currentRole = selectableRoles.has(currentRole) ? currentRole : 'customer';
       closeAuth();
-      showToast('Check your email to confirm your account before opening the workspace.');
+      navigate('verify');
+      history.replaceState(null,'','#verify');
+      showToast('Check your email, then return here to activate your workspace.');
       return;
     }
     currentUser = data.user;
