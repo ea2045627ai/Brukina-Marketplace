@@ -5,8 +5,11 @@ const root = resolve(import.meta.dirname, '..');
 const netlifyConfig = readFileSync(resolve(root, 'netlify.toml'), 'utf8');
 const connected = process.env.NETLIFY === 'true' || Boolean(process.env.NETLIFY_SITE_ID);
 
-if (!netlifyConfig.includes('command = "npm run check"')) {
-  throw new Error('Netlify build command must run npm run check');
+if (!netlifyConfig.includes('command = "npm install && npm run build"')) {
+  throw new Error('Netlify build command must run npm run build');
+}
+if (!netlifyConfig.includes('publish = "dist"')) {
+  throw new Error('Netlify publish directory must be dist');
 }
 if (!netlifyConfig.includes('functions = "netlify/functions"')) {
   throw new Error('Netlify functions directory is not configured');
