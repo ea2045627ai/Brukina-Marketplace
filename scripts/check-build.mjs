@@ -29,6 +29,7 @@ const requiredFiles = [
   'supabase/sourcing.sql',
   'supabase/supply_bridge.sql',
   'supabase/complete_repair.sql',
+  'supabase/project_database.sql',
   'netlify/functions/supply-bridge.mjs',
   'netlify/functions/create-order.mjs'
 ];

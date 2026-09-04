@@ -28,6 +28,20 @@ Dispatch health is managed through `dispatch_providers`. Buyers can switch betwe
 
 Run [`supabase/production.sql`](supabase/production.sql) after the other migrations. It adds protected support preferences, conversation records, and consented callback requests. The web assistant supports typed questions and browser speech recognition/synthesis when the device and browser provide them. Language options include English, Twi/Akan, Ewe, Ga, Hausa, Swahili, French, and Portuguese; actual recognition and voice quality depend on the browser's installed language services.
 
+To create and apply the complete Brukina database bundle, use the tracked
+migration order with a Supabase Postgres connection string:
+
+```bash
+npm run db:bundle
+DATABASE_URL="postgresql://..." npm run db:apply
+```
+
+The command applies `schema.sql`, `dispatch.sql`, `operations.sql`,
+`sourcing.sql`, `production.sql`, `complete_repair.sql`, and
+`supply_bridge.sql` in that order. `npm run check:database` verifies that all
+files are present and reports when `DATABASE_URL` is still pending. Do not put
+database URLs, service keys, or video-library credentials in source control.
+
 To route new sourcing requests to supply partners, run [`supabase/supply_bridge.sql`](supabase/supply_bridge.sql) after [`supabase/sourcing.sql`](supabase/sourcing.sql). Store your deployed Netlify function URL in Supabase Vault under `supply_bridge_url`, for example `https://YOUR-SITE.netlify.app/.netlify/functions/supply-bridge`. The trigger rejects missing or non-HTTPS bridge URLs. Set `SUPPLY_PARTNER_WEBHOOK_URL` in Netlify only when a verified partner endpoint is ready; otherwise the bridge acknowledges and records the event without forwarding it.
 
 Phone calls and an always-on AI representative require a trusted server connector such as Netlify Functions plus a telephony provider and an AI speech provider. Configure those credentials as server environment variables and process `support_callback_requests`; never put provider keys in `app.js`. Full coverage of every African native language cannot be guaranteed by browser APIs alone and requires selecting and testing a speech provider per target language, with human escalation for unsupported or sensitive requests.
