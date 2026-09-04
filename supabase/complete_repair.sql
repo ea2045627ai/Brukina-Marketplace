@@ -110,6 +110,19 @@ create table if not exists public.support_conversations (
   ended_at timestamptz
 );
 
+create table if not exists public.payment_events (
+  id uuid primary key default gen_random_uuid(),
+  provider text not null default 'paystack',
+  provider_event_id text not null,
+  event_type text not null,
+  reference text not null,
+  amount numeric(12,2),
+  currency text,
+  payload jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  unique (provider, provider_event_id)
+);
+
 create index if not exists orders_customer_idx on public.orders(customer_id, created_at desc);
 create index if not exists order_items_order_idx on public.order_items(order_id);
 create index if not exists wallet_transactions_wallet_idx on public.wallet_transactions(wallet_id, created_at desc);
@@ -118,6 +131,7 @@ create index if not exists sourcing_quotes_request_idx on public.sourcing_quotes
 create index if not exists local_couriers_dispatch_idx on public.local_couriers(courier_type, locality, is_online);
 create index if not exists callback_queue_idx on public.support_callback_requests(status, created_at);
 create index if not exists support_conversations_user_idx on public.support_conversations(user_id, started_at desc);
+create index if not exists payment_events_reference_idx on public.payment_events(reference, created_at desc);
 
 alter table public.orders enable row level security;
 alter table public.order_items enable row level security;
@@ -128,6 +142,7 @@ alter table public.sourcing_quotes enable row level security;
 alter table public.local_couriers enable row level security;
 alter table public.support_callback_requests enable row level security;
 alter table public.support_conversations enable row level security;
+alter table public.payment_events enable row level security;
 
 -- Policies are recreated so this migration also repairs a partially applied schema.
 drop policy if exists "orders participants read" on public.orders;
@@ -158,3 +173,5 @@ drop policy if exists "callback own read" on public.support_callback_requests;
 create policy "callback own read" on public.support_callback_requests for select using (auth.uid() = user_id or public.is_admin());
 drop policy if exists "conversation own access" on public.support_conversations;
 create policy "conversation own access" on public.support_conversations for all using (auth.uid() = user_id or public.is_admin()) with check (auth.uid() = user_id or user_id is null);
+drop policy if exists "payment events admin read" on public.payment_events;
+create policy "payment events admin read" on public.payment_events for select using (public.is_admin());

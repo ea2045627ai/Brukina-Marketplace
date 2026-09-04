@@ -119,9 +119,19 @@ app.post('/api/v1/paystack-webhook', async (request, response) => {
   if (!verifyPaystackSignature(request)) return response.status(401).json({ error: 'Invalid Paystack signature' });
   try {
     const payload = parsePayload(request.body);
+    if (!supabase) return response.status(503).json({ error: 'Supabase server configuration is required' });
     if (payload.event !== 'charge.success' || !payload.data?.reference) return response.status(400).json({ error: 'Unsupported payment event' });
-    console.log(`[PAYMENT] Verified event received: ${payload.data.reference}`);
-    return response.json({ received: true });
+    const providerEventId = String(payload.data.id || payload.data.reference);
+    const { data: existingEvent, error: lookupError } = await supabase.from('payment_events').select('id, reference').eq('provider', 'paystack').eq('provider_event_id', providerEventId).maybeSingle();
+    if (lookupError) throw lookupError;
+    if (existingEvent) return response.json({ received: true, duplicate: true, reference: existingEvent.reference });
+    const { error: insertError } = await supabase.from('payment_events').insert({ provider: 'paystack', provider_event_id: providerEventId, event_type: payload.event, reference: payload.data.reference, amount: Number(payload.data.amount || 0) / 100, currency: payload.data.currency || 'GHS', payload });
+    if (insertError) {
+      if (insertError.code === '23505') return response.json({ received: true, duplicate: true, reference: payload.data.reference });
+      throw insertError;
+    }
+    console.log(`[PAYMENT] Verified event recorded: ${payload.data.reference}`);
+    return response.status(202).json({ received: true, duplicate: false, reference: payload.data.reference });
   } catch (error) {
     return response.status(400).json({ error: 'Invalid payment event' });
   }
