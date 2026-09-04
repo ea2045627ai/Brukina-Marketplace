@@ -119,7 +119,8 @@ function Workspace({ page, role, user, onNavigate, onLogout }) {
     if (!selectedProduct) return;
     setNotice('');
     const { data: sessionData } = await supabase.auth.getSession();
-    const response = await fetch('/.netlify/functions/create-order', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sessionData.session?.access_token || ''}` }, body: JSON.stringify({ inventory_id: selectedProduct.id, quantity }) });
+    const orderEndpoint = window.location.hostname.endsWith('netlify.app') ? '/.netlify/functions/create-order' : '/api/v1/orders';
+    const response = await fetch(orderEndpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sessionData.session?.access_token || ''}` }, body: JSON.stringify({ inventory_id: selectedProduct.id, quantity }) });
     const result = await response.json();
     if (!response.ok) return setNotice(result.error || 'Order could not be created.');
     setSelectedProduct(null);
