@@ -61,3 +61,25 @@ embedded credentials.
 Connected Netlify builds also require `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and
 `SUPABASE_SERVICE_ROLE_KEY` for server-side order creation. The service-role
 key must be stored only as a Netlify secret.
+
+## Heroku deployment
+
+Heroku runs the Express service in [`server/railway.mjs`](server/railway.mjs)
+through the root [`Procfile`](Procfile). Supabase remains the application
+database; Heroku hosts the web process and does not replace the Supabase
+migrations. Apply the SQL files in the order documented above, then create the
+Heroku app and configure its secrets:
+
+```bash
+heroku create brukina-marketplace
+heroku config:set SUPABASE_URL="https://YOUR-PROJECT.supabase.co" \
+	SUPABASE_SERVICE_ROLE_KEY="YOUR_SERVICE_ROLE_KEY" \
+	WEBHOOK_SECRET="YOUR_WEBHOOK_SECRET" \
+	PAYSTACK_SECRET_KEY="YOUR_PAYSTACK_SECRET"
+git push heroku main
+heroku open
+```
+
+The deployed health endpoint is `/health`. Use [`app.json`](app.json) to
+review the required Heroku variables before creating the app. Never commit
+secret values or place the service-role key in browser code.

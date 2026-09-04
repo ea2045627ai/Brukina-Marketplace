@@ -8,7 +8,7 @@ const app = express();
 const port = Number(process.env.PORT || 3000);
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const webhookSecret = process.env.RAILWAY_WEBHOOK_SECRET;
+const webhookSecret = process.env.WEBHOOK_SECRET || process.env.RAILWAY_WEBHOOK_SECRET;
 
 const supabase = supabaseUrl && supabaseServiceKey ? createClient(supabaseUrl, supabaseServiceKey) : null;
 app.use(cors());
