@@ -1,131 +1,17 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#f6f1eb" />
-  <meta name="description" content="Brukina Marketplace - better wholesale and retail trade, connected." />
-  <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <meta name="apple-mobile-web-app-title" content="Brukina" />
-  <link rel="apple-touch-icon" href="icon.svg" />
-  <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
-  <link rel="stylesheet" href="styles.css" />
-  <link rel="stylesheet" href="pages.css" />
-  <link rel="stylesheet" href="login.css" />
-  <title>Brukina Marketplace</title>
-</head>
-<body>
-  <div class="app-shell">
-    <header class="topbar">
-      <a class="brand" href="#home" aria-label="Brukina home"><span class="brand-mark">B</span><span>brukina<span class="brand-dot">.</span></span></a>
-      <div class="header-actions"><button class="install-button" id="install-button" hidden>⇩ <span>Install</span></button><button class="icon-button" aria-label="Notifications"><span class="notification-dot"></span>♢</button><button class="profile-button" aria-label="Open profile"><span>EA</span><i></i></button></div>
-    </header>
-
-    <main>
-      <section class="view active" id="home-view" data-view="home">
-        <div class="page-heading"><div><p class="eyebrow">THURSDAY · 03 SEP 2026</p><h1>Good morning, Emmanuel</h1></div><span class="live-pill"><b></b> Live market</span></div>
-        <label class="search-box"><span>⌕</span><input id="search-input" type="search" placeholder="Search products, brands or vendors" /><kbd>⌘ K</kbd></label>
-        <div class="geo-switch" role="tablist" aria-label="Market region"><button class="geo-option selected" data-region="urban"><span>🏙</span><span><strong>Urban hubs</strong><small>Best wholesale rates</small></span><i>›</i></button><button class="geo-option" data-region="rural"><span>🏡</span><span><strong>Rural markets</strong><small>Local & regional supply</small></span><i>›</i></button></div>
-        <div class="section-line"><h2>Browse categories</h2><button class="text-button">View all <span>→</span></button></div>
-        <div class="category-row" aria-label="Product categories"><button class="category active">All products</button><button class="category">Building materials</button><button class="category">Tools &amp; equipment</button><button class="category">Devices &amp; gadgets</button><button class="category">Accessories &amp; body products</button><button class="category">Clothing</button><button class="category">Home &amp; living</button></div>
-        <div class="section-line inventory-header"><div><h2>Deals near you</h2><p><span class="tiny-pulse"></span> 128 offers refreshed now</p></div><button class="filter-button">≡ <span>Filter</span></button></div>
-        <div class="product-grid" id="product-grid"></div>
-      </section>
-
-      <section class="view" id="hub-view" data-view="hub">
-        <div class="page-heading"><div><p class="eyebrow">PARTNERSHIP NETWORK</p><h1>Vendor &amp; rider hub</h1></div><span class="round-status">●</span></div>
-        <div class="hub-hero"><div><span class="accent-label">BUILD WITH US</span><h2>Trade better.<br /><em>Move smarter.</em></h2><p>Join a growing network of trusted local businesses and independent riders.</p></div><span class="hero-orbit">↗</span></div>
-        <div class="section-line"><h2>Become a partner</h2><span class="step-count">01 / 02</span></div>
-        <div class="partner-tabs"><button class="partner-tab selected" data-panel="vendor-panel">Merchant</button><button class="partner-tab" data-panel="rider-panel">Rider network</button></div>
-          <div class="partner-panel" id="vendor-panel"><div class="tier-row"><button class="tier selected"><b>Elite</b><small>Large-scale</small></button><button class="tier"><b>Mid-scale</b><small>Growing retail</small></button><button class="tier"><b>Micro</b><small>Neighbourhood</small></button></div><form class="partner-form" id="vendor-form"><label>Business name<input required placeholder="e.g. Kofi & Sons Trading" /></label><label>Store category<select><option>Material Dealership</option><option>Tools & Equipment</option><option>Groceries</option><option>Appliances</option></select></label><label>Operating locality / territory<input required placeholder="e.g. Accra Metropolitan" /></label><label class="upload-field"><span>Business license or certificate</span><small>PDF, JPG or PNG · max 10 MB</small><input type="file" accept=".pdf,.jpg,.jpeg,.png" required /><b>＋</b></label><button class="primary-button" type="submit">Submit merchant application <span>→</span></button></form><div class="vendor-leads"><div class="section-line"><div><p class="eyebrow">BUYER DEMAND</p><h2>Open wholesale requests</h2></div><span class="role-badge">Live pool</span></div><div id="vendor-b2b-leads"><p class="empty-state">Sign in as a verified vendor to view buyer requests.</p></div></div></div>
-        <div class="partner-panel hidden" id="rider-panel"><div class="backup-banner"><span>↯</span><div><strong>Backup dispatch grid</strong><p id="dispatch-provider-copy">Checking Bolt and Yango availability...</p></div><b id="dispatch-provider-badge">CHECKING</b></div><div class="provider-list" id="provider-list"></div><form class="partner-form" id="rider-form"><label>Full legal name<input required placeholder="e.g. Kwame Mensah" /></label><label>Vehicle type<select><option>Motorbike</option><option>Bicycle</option><option>Compact Van</option></select></label><label>Operating territory<input required placeholder="e.g. East Legon &amp; Airport" /></label><label class="upload-field"><span>Driver license or national ID</span><small>PDF, JPG or PNG · max 10 MB</small><input type="file" accept=".pdf,.jpg,.jpeg,.png" required /><b>＋</b></label><button class="primary-button" type="submit">Join backup network <span>→</span></button></form></div>
-        <div class="admin-status"><span class="status-icon">✓</span><div><small>ADMIN ACCOUNT STATUS</small><strong id="admin-status-label">Pending verification</strong></div><button class="toggle" id="status-toggle" aria-label="Toggle account status"><i></i></button></div>
-      </section>
-
-      <section class="view" id="wallet-view" data-view="wallet">
-        <div class="page-heading"><div><p class="eyebrow">FINANCIAL CONTROL</p><h1>My wallet</h1></div><button class="more-button">•••</button></div>
-        <div class="wallet-card"><div class="wallet-card-top"><span class="wallet-chip">◈</span><span class="secure-label">SECURE · GHS</span></div><p>Escrow balance</p><strong id="wallet-escrow">Sign in to view</strong><div class="wallet-card-bottom"><span>Live account balance</span><span>Paystack managed</span></div></div>
-        <div class="wallet-actions"><div><label for="amount-input">Deposit funds</label><div class="amount-input"><span>GH₵</span><input id="amount-input" type="number" value="500" min="1" /></div></div><button class="deposit-button" id="deposit-button">＋ Top up</button></div>
-        <div class="ledger-summary"><div><small>Available balance</small><strong id="wallet-balance">Sign in to view</strong></div><div class="growth"><span id="wallet-status">LIVE</span><small>account status</small></div></div>
-        <div class="wallet-role"><div><span class="eyebrow">PARTNER PAYOUTS</span><h2>Vendor &amp; rider ledger</h2></div><span class="role-badge">Live view</span></div><div class="payout-card"><div><small>Available to withdraw</small><strong id="wallet-payout">Sign in to view</strong></div><button class="withdraw-button" id="withdraw-button">Withdraw <span>↗</span></button></div><div class="online-row"><div><strong>Go active / online</strong><small>Receive nearby delivery requests</small></div><button class="toggle online selected" aria-label="Toggle online availability"><i></i></button></div>
-        <div class="section-line transactions-title"><h2>Recent activity</h2><button class="text-button">View ledger <span>→</span></button></div><div class="transactions" id="wallet-transactions"><p class="empty-state">Sign in to view wallet activity.</p></div>
-      </section>
-
-      <section class="view" id="dashboard-view" data-view="dashboard">
-        <div class="page-heading"><div><p class="eyebrow" id="dashboard-eyebrow">YOUR WORKSPACE</p><h1 id="dashboard-title">Customer dashboard</h1></div><span class="live-pill"><b></b> Account active</span></div>
-        <div class="dashboard-grid">
-          <div class="dashboard-main"><div class="dashboard-welcome"><div><span class="accent-label">PERSONAL OVERVIEW</span><h2 id="dashboard-greeting">Welcome back, Emmanuel</h2><p id="dashboard-copy">Track orders, discover better prices, and keep every delivery in view.</p></div><div class="dashboard-avatar" id="dashboard-avatar">EA</div></div><div class="metric-row" id="dashboard-metrics"></div><div class="section-line dashboard-section-title"><h2 id="dashboard-list-title">Recent orders</h2><button class="text-button">View all <span>→</span></button></div><div class="dashboard-list" id="dashboard-list"></div></div>
-          <aside class="dashboard-side"><div class="side-panel"><span class="eyebrow">QUICK ACTIONS</span><div id="dashboard-actions"></div></div><div class="side-panel admin-entry"><span class="eyebrow">CONTROL CENTER</span><h3>Operations console</h3><p>Review verification, inventory, dispatch, and settlements from one secure workspace.</p><button class="outline-button" id="admin-login-button">Admin sign in <span>↗</span></button></div></aside>
-        </div>
-      </section>
-
-      <section class="view tracking-view" id="tracking-view" data-view="tracking">
-        <div class="page-heading"><div><p class="eyebrow" id="tracking-order-label">DELIVERY TRACKING</p><h1>Eco-GPS tracking</h1></div><span class="tracking-live"><b></b> Live</span></div>
-        <div class="map-toolbar"><div><span class="map-mode-icon">⌖</span><div><strong>Accra, Ghana</strong><small>Privacy mode · delivery only</small></div></div><button class="map-menu">•••</button></div>
-        <div id="map" class="map-canvas" aria-label="Live delivery map"></div>
-        <div class="map-legend"><span><i class="legend-dot vendor"></i> Vendor pickup</span><span><i class="legend-dot rider"></i> Rider live</span><span><i class="legend-dot customer"></i> Drop-off</span></div>
-        <div class="rider-onboarding"><div class="section-line"><div><p class="eyebrow">COURIER NETWORK</p><h2>Become a local rider</h2></div><span class="role-badge">Backup dispatch</span></div><form class="partner-form" id="track-rider-form"><label>Full legal name<input required placeholder="e.g. Kwame Mensah" /></label><label>Vehicle type<select><option>Motorbike</option><option>Bicycle</option><option>Van</option></select></label><label>Operating territory<input required placeholder="e.g. East Legon &amp; Airport" /></label><label class="upload-field"><span>Driver license or national ID</span><small>PDF, JPG or PNG · max 10 MB</small><input type="file" accept=".pdf,.jpg,.jpeg,.png" required /><b>＋</b></label><button class="primary-button" type="submit">Apply for rider dispatch <span>→</span></button></form></div>
-        <div class="delivery-card" id="delivery-card"><div class="delivery-top"><span class="eta-badge" id="delivery-status">CHECKING</span><span class="delivery-id" id="delivery-id">No active delivery</span></div><div class="route-line"><div class="route-point vendor-point">V</div><div class="route-track"><span></span></div><div class="route-point customer-point">E</div><div class="route-text"><div><strong id="delivery-vendor">Pickup unavailable</strong><small>Pickup · <span id="delivery-pickup">Not available</span></small></div><div><strong id="delivery-customer">Drop-off unavailable</strong><small>Drop-off · <span id="delivery-dropoff">Not available</span></small></div></div></div><div class="rider-row"><div class="rider-avatar" id="rider-avatar">--</div><div><strong id="rider-name">No rider assigned</strong><small id="rider-eta">Sign in to view active delivery</small></div><button class="call-button" aria-label="Call rider">☎</button></div><div class="buyer-dispatch"><div><span class="eyebrow">CHOOSE YOUR DISPATCH</span><small>Switch provider before requesting a rider.</small></div><div class="buyer-provider-list" id="buyer-provider-list"></div></div><div class="dispatch-status" id="dispatch-status"><span><span class="tiny-pulse"></span> Dispatch provider: checking availability</span><button class="dispatch-request" id="dispatch-request" hidden>Request backup</button></div></div>
-        <div class="alert-banner" id="tracking-alert"><span>✦</span><div><strong>Live delivery updates appear here</strong><small>Waiting for an active delivery</small></div><button>×</button></div>
-      </section>
-
-      <section class="view page-view" id="profile-view" data-view="profile">
-        <div class="page-heading"><div><p class="eyebrow">ACCOUNT PROFILE</p><h1>Your profile</h1></div><span class="role-badge" id="profile-role">Customer</span></div>
-        <div class="page-layout"><aside class="page-sidebar"><strong>Workspace</strong><a href="#profile" data-page="profile">Account profile</a><a href="#settings" data-page="settings">App settings</a><a href="#dashboard" data-page="dashboard">Dashboard</a></aside><div class="page-panel"><div class="profile-hero"><div class="dashboard-avatar" id="profile-avatar">EA</div><div><span class="accent-label">ACTIVE ACCOUNT</span><h2 id="profile-name">Emmanuel</h2><p id="profile-email">Sign in to view account details.</p></div></div><div class="detail-grid"><div><small>Workspace role</small><strong id="profile-workspace">Customer</strong></div><div><small>Account status</small><strong class="success-text" id="profile-status">Active</strong></div><div><small>Member since</small><strong id="profile-member-since">Today</strong></div><div><small>Verification</small><strong id="profile-verification">Email confirmed</strong></div></div><button class="primary-button" data-page="settings">Edit profile <span>→</span></button></div></div>
-      </section>
-
-      <section class="view page-view" id="login-view" data-view="login">
-        <div class="page-heading"><div><p class="eyebrow">BRUKINA ACCESS</p><h1>Welcome back</h1></div><span class="role-badge">Secure sign in</span></div>
-        <div class="page-panel auth-page-panel"><div class="auth-page-header"><span class="accent-label">WORKSPACE LOGIN</span><h2>Resume your marketplace workspace</h2><p>Sign in to manage orders, listings, deliveries, and account activity.</p></div><div class="form-status error-status" id="login-error" role="alert" hidden></div><form class="settings-form" id="login-form"><label>Email address<input id="login-email" type="email" autocomplete="email" required placeholder="name@domain.com" /></label><label>Password<input id="login-password" type="password" autocomplete="current-password" required minlength="6" placeholder="Your password" /></label><div class="login-options"><button class="text-button" id="forgot-password" type="button">Forgot password?</button><a href="#signup" data-page="signup">Create account <span>↗</span></a></div><button class="primary-button" type="submit"><span id="login-submit-label">Sign in to workspace</span> <span>→</span></button></form></div>
-      </section>
-
-      <section class="view page-view" id="settings-view" data-view="settings">
-        <div class="page-heading"><div><p class="eyebrow">WORKSPACE SETTINGS</p><h1>Profile settings</h1></div></div>
-        <div class="page-layout"><aside class="page-sidebar"><strong>Manage</strong><a href="#profile" data-page="profile">Account profile</a><a href="#settings" data-page="settings">Profile settings</a><a href="#wallet" data-page="wallet">Wallet</a></aside><div class="page-panel"><form class="settings-form" id="settings-form"><label>Full name<input id="settings-name" required /></label><label>Email address<input id="settings-email" type="email" required /></label><label>Workspace role<select id="settings-role" disabled><option value="customer">Customer</option><option value="vendor">Vendor</option><option value="driver">Driver</option><option value="rider">Rider</option></select></label><label>Default locality or delivery address<textarea id="settings-address" rows="3" placeholder="Add your preferred location"></textarea></label><button class="primary-button" type="submit">Save profile changes <span>→</span></button></form></div></div>
-      </section>
-
-      <section class="view page-view" id="inventory-view" data-view="inventory">
-        <div class="page-heading"><div><p class="eyebrow">VENDOR WORKSPACE</p><h1>Catalog management</h1></div><span class="role-badge">Live catalog</span></div>
-        <div class="page-panel"><div class="section-line"><div><h2>List a product</h2><p>Add inventory to your marketplace catalog.</p></div></div><form class="product-form" id="inventory-form"><label>Product title<input id="inventory-name" required placeholder="e.g. Concentrated millet bottle" /></label><div class="form-columns"><label>Unit price (GHS)<input id="inventory-price" type="number" min="0" step="0.01" required placeholder="0.00" /></label><label>Stock quantity<input id="inventory-stock" type="number" min="0" required placeholder="0" /></label></div><label>Category<select id="inventory-category"><option>Building materials</option><option>Tools &amp; equipment</option><option>Groceries</option><option>Home &amp; living</option></select></label><button class="primary-button" type="submit">List on marketplace <span>→</span></button></form><div class="section-line page-section-heading"><h2>Current catalog</h2><span class="role-badge" id="inventory-count">3 products</span></div><div class="data-list" id="inventory-list"></div></div>
-      </section>
-
-      <section class="view page-view" id="orders-view" data-view="orders">
-        <div class="page-heading"><div><p class="eyebrow">CUSTOMER WORKSPACE</p><h1>Marketplace orders</h1></div><button class="outline-button" data-page="home">Browse marketplace <span>→</span></button></div>
-        <div class="page-panel"><div class="section-line"><div><h2>Order history</h2><p>Track purchases and delivery progress.</p></div></div><div class="data-list" id="orders-list"></div></div>
-      </section>
-
-      <section class="view page-view" id="dispatch-view" data-view="dispatch">
-        <div class="page-heading"><div><p class="eyebrow">LOGISTICS WORKSPACE</p><h1>Dispatch center</h1></div><span class="tracking-live"><b></b> Network live</span></div>
-        <div class="dispatch-grid"><div class="page-panel"><div class="section-line"><div><h2>Open delivery requests</h2><p>Claim a route that fits your territory.</p></div></div><div class="data-list" id="dispatch-queue"></div></div><div class="page-panel"><div class="section-line"><div><h2>Active manifest</h2><p>Your accepted deliveries.</p></div></div><div class="data-list" id="dispatch-manifest"></div></div></div>
-      </section>
-
-      <section class="view page-view" id="verify-view" data-view="verify">
-        <div class="page-heading"><div><p class="eyebrow">ACCOUNT SECURITY</p><h1>Verify your workspace</h1></div></div>
-        <div class="page-panel verify-panel"><div class="verify-icon">✉</div><h2>Confirm your email address</h2><p>We sent a verification link to <strong id="verify-email">your email address</strong>. Confirm it, then return here to activate your workspace.</p><button class="primary-button" id="verify-check">I have confirmed my email <span>→</span></button><button class="text-button" id="verify-resend">Resend verification link <span>↗</span></button><p class="form-status" id="verify-status"></p></div>
-      </section>
-
-      <section class="view page-view" id="admin-view" data-view="admin">
-        <div class="page-heading"><div><p class="eyebrow">RESTRICTED OPERATIONS</p><h1>Admin console</h1></div><span class="role-badge">Administrator</span></div>
-        <div class="stats-grid"><div class="metric"><small>Total accounts</small><strong>1,420</strong></div><div class="metric"><small>Active vendors</small><strong>84</strong></div><div class="metric"><small>Active drivers</small><strong>32</strong></div><div class="metric"><small>Pending reviews</small><strong id="admin-pending">5</strong></div></div><div class="page-panel"><div class="section-line"><div><h2>Verification queue</h2><p>Review partner access requests.</p></div></div><div class="data-list" id="admin-queue"></div></div>
-      </section>
-    </main>
-
-    <nav class="bottom-nav" aria-label="Main navigation"><a class="nav-item selected" href="#home" data-nav="home"><span>⌂</span><small>Home</small></a><a class="nav-item" href="#hub" data-nav="hub"><span>♧</span><small>Vendor Hub</small></a><a class="nav-item" href="#tracking" data-nav="tracking"><span>⌁</span><small>Rider Track</small></a><a class="nav-item" href="#wallet" data-nav="wallet"><span>▣</span><small>Wallet</small></a></nav>
-  </div>
-  <div class="auth-backdrop" id="auth-backdrop" hidden><section class="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-title"><button class="auth-close" id="auth-close" aria-label="Close">×</button><span class="accent-label">BRUKINA ACCESS</span><h2 id="auth-title">Create your workspace</h2><p class="auth-intro">Choose how you participate in the marketplace. Your dashboard adapts to your role.</p><div class="role-picker" role="tablist" aria-label="Account role"><button class="role-choice selected" data-role="customer">Customer<small>Shop &amp; track</small></button><button class="role-choice" data-role="vendor">Vendor<small>Sell inventory</small></button><button class="role-choice" data-role="driver">Driver<small>Deliver orders</small></button><button class="role-choice" data-role="rider">Rider<small>Join dispatch</small></button></div><form id="auth-form" class="auth-form"><label>Full name<input id="auth-name" required placeholder="Your full name" /></label><label>Email address<input id="auth-email" type="email" required placeholder="you@example.com" /></label><label>Password<input id="auth-password" type="password" minlength="6" required placeholder="At least 6 characters" /></label><button class="primary-button" type="submit">Create account <span>→</span></button></form><button class="admin-link" id="login-auth-button">Already have an account? Sign in <span>↗</span></button><button class="admin-link" id="admin-auth-button">Admin access <span>↗</span></button><p class="auth-note">By continuing, you agree to Brukina's marketplace terms.</p></section></div>
-  <div class="admin-backdrop" id="admin-backdrop" hidden><section class="auth-modal admin-modal" role="dialog" aria-modal="true"><button class="auth-close" id="admin-close" aria-label="Close">×</button><span class="accent-label">RESTRICTED AREA</span><h2>Admin console</h2><p class="auth-intro">Operations access for platform administrators only.</p><form id="admin-form" class="auth-form"><label>Admin email<input type="email" required placeholder="admin@brukina.com" /></label><label>Secure password<input type="password" required minlength="6" placeholder="Enter password" /></label><button class="primary-button" type="submit">Open console <span>→</span></button></form><p class="auth-note">Admin roles are granted manually through Supabase Auth metadata.</p></section></div>
-  <div class="toast" id="toast" role="status"></div>
-  <button class="assistant-launcher" id="assistant-launcher" aria-label="Open Brukina assistant">✦<span>Ask Brukina</span></button>
-  <div class="assistant-backdrop" id="assistant-backdrop" hidden><section class="assistant-modal" role="dialog" aria-modal="true" aria-labelledby="assistant-title"><button class="auth-close" id="assistant-close" aria-label="Close assistant">×</button><span class="accent-label">BRUKINA SUPPORT</span><h2 id="assistant-title">Your marketplace assistant</h2><p class="auth-intro">Get help with orders, listings, dispatch, and wallet questions in your preferred language.</p><label class="assistant-language">Language<select id="assistant-language"><option value="en-GH">English</option><option value="ak-GH">Twi / Akan</option><option value="ee-GH">Ewe</option><option value="gaa-GH">Ga</option><option value="ha-GH">Hausa</option><option value="sw-KE">Swahili</option><option value="fr-FR">French</option><option value="pt-PT">Portuguese</option></select></label><div class="assistant-actions"><button class="outline-button" id="assistant-listen">🎙 Listen</button><button class="primary-button" id="assistant-speak">🔊 Speak</button></div><p class="assistant-status" id="assistant-status">Ready for your question.</p><form class="assistant-form" id="assistant-form"><label>Your question<textarea id="assistant-question" rows="3" placeholder="Ask about an order, vendor listing, delivery, or wallet"></textarea></label><button class="primary-button" type="submit">Send question <span>→</span></button></form><div class="assistant-callback"><div><strong>Need a phone call?</strong><small>A connected support agent can call you after a secure callback request.</small></div><button class="text-button" id="assistant-callback-button">Request callback <span>→</span></button></div></section></div>
-  <div class="callback-backdrop" id="callback-backdrop" hidden><section class="assistant-modal callback-modal" role="dialog" aria-modal="true" aria-labelledby="callback-title"><button class="auth-close" id="callback-close" aria-label="Close callback form">×</button><span class="accent-label">CALLBACK REQUEST</span><h2 id="callback-title">Ask our team to call</h2><form class="assistant-form" id="callback-form"><label>Phone number<input id="callback-phone" type="tel" required placeholder="+233 24 000 0000" /></label><label>What can we help with?<textarea id="callback-topic" rows="2" required placeholder="Order, vendor account, delivery, or wallet"></textarea></label><label class="consent-check"><input id="callback-consent" type="checkbox" required /> I agree that Brukina may use this number for this support callback.</label><button class="primary-button" type="submit">Queue secure callback <span>→</span></button></form></section></div>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script type="module" src="app.js"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f6f1eb" />
+    <meta name="description" content="Brukina Marketplace workspace" />
+    <link rel="icon" href="/icon.svg" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" />
+    <title>Brukina Marketplace</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
 </html>
