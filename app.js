@@ -141,7 +141,7 @@ function navigate(viewName){
   window.scrollTo({top:0,behavior:'smooth'});
   return true;
 }
-const pathToView = {
+export const routes = Object.freeze({
   '/': 'home',
   '/signup': 'home',
   '/login': 'login',
@@ -152,9 +152,9 @@ const pathToView = {
   '/dashboard/rider': 'dispatch',
   '/dashboard/driver': 'dispatch',
   '/dashboard/wallet': 'wallet'
-};
+});
 export function renderApp(){
-  const requestedView = location.hash.slice(1) || pathToView[location.pathname] || 'home';
+  const requestedView = location.hash.slice(1) || routes[location.pathname] || 'home';
   navigate(requestedView);
 }
 export function navigateTo(urlPath){
