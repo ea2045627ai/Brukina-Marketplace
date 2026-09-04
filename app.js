@@ -218,6 +218,7 @@ installButton.addEventListener('click', async () => {
 window.addEventListener('appinstalled', () => { installButton.hidden = true; showToast('Brukina installed successfully'); });
 navigate(location.hash.slice(1) || 'home');
 updateProfileButton();
+updateHomeGreeting();
 
 const authBackdrop = document.querySelector('#auth-backdrop');
 const adminBackdrop = document.querySelector('#admin-backdrop');
@@ -238,6 +239,17 @@ document.querySelectorAll('.auth-mode-tab').forEach(tab => tab.addEventListener(
 const openAuth = () => { authBackdrop.hidden = false; setAuthMode(authMode); };
 const closeAuth = () => { authBackdrop.hidden = true; };
 const openAdmin = () => { closeAuth(); adminBackdrop.hidden = false; adminBackdrop.querySelector('input').focus(); };
+function updateHomeGreeting(){
+  const greetingEl = document.querySelector('#home-greeting');
+  const dateEl = document.querySelector('#home-date-label');
+  if(!greetingEl) return;
+  const now = new Date();
+  const hour = now.getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const name = currentUser?.user_metadata?.full_name?.split(' ')[0];
+  greetingEl.textContent = name ? `${greeting}, ${name}` : greeting;
+  if(dateEl) dateEl.textContent = now.toLocaleDateString('en-GH',{weekday:'long',day:'numeric',month:'short',year:'numeric'}).toUpperCase();
+}
 function updateProfileButton(){
   const btn = document.querySelector('.profile-button');
   const span = btn.querySelector('span');
@@ -310,12 +322,12 @@ document.querySelector('#auth-form').addEventListener('submit', async event => {
     if(error){ showToast(error.message); return; }
     currentUser = data.user;
     currentRole = data.user.app_metadata?.role || data.user.user_metadata?.role || 'customer';
-    closeAuth(); updateProfileButton(); renderDashboard(); navigate('dashboard'); showToast(`Welcome back to Brukina`); form.reset();
+    closeAuth(); updateProfileButton(); updateHomeGreeting(); renderDashboard(); navigate('dashboard'); showToast(`Welcome back to Brukina`); form.reset();
   } else {
     const {data,error} = await supabaseClient.auth.signUp({email,password,options:{data:{full_name:document.querySelector('#auth-name').value.trim(),role:currentRole}}});
     if(error){ showToast(error.message); return; }
     currentUser = data.user;
-    closeAuth(); updateProfileButton(); renderDashboard(); navigate('dashboard');
+    closeAuth(); updateProfileButton(); updateHomeGreeting(); renderDashboard(); navigate('dashboard');
     showToast(data.session ? `Welcome to Brukina, ${roleLabels[currentRole]}` : 'Check your email to confirm your Brukina account');
     form.reset();
   }
