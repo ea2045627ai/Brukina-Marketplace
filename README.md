@@ -30,6 +30,8 @@ To route new sourcing requests to supply partners, run [`supabase/supply_bridge.
 
 Phone calls and an always-on AI representative require a trusted server connector such as Netlify Functions plus a telephony provider and an AI speech provider. Configure those credentials as server environment variables and process `support_callback_requests`; never put provider keys in `app.js`. Full coverage of every African native language cannot be guaranteed by browser APIs alone and requires selecting and testing a speech provider per target language, with human escalation for unsupported or sensitive requests.
 
+Arkesel voice dispatch runs when a `telephony_calls` INSERT includes `record.metadata.buyer_phone` and the server has `TELEPHONY_PROVIDER_API_KEY` plus `TELEPHONY_PROVIDER_VOICE_URL`. Optional `ARKESEL_DEFAULT_PHONE` can provide a fallback recipient. The shared server adapter also exposes Arkesel SMS, balance, and contact-subscription operations using the documented `sms.arkesel.com` endpoints. Keep all values in Railway or Netlify environment variables; never commit real credentials.
+
 ## Run locally
 
 ```bash

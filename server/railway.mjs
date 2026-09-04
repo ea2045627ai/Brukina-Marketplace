@@ -2,6 +2,7 @@ import cors from 'cors';
 import express from 'express';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
+import { triggerArkeselVoiceCall } from '../lib/arkesel.mjs';
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -52,7 +53,10 @@ app.post('/api/v1/operations-webhook', async (request, response) => {
       const { error } = await supabase.from('telephony_calls').insert({ call_status: 'system_alert', detected_native_language: 'English', metadata: { event: 'provider_outage', action_taken: 'fallback_to_brukina_backup' } });
       if (error) throw error;
     }
-    if (table === 'telephony_calls' && type === 'INSERT') console.log(`[TELEPHONY] Call queued in ${record.detected_native_language || 'unknown'} language`);
+    if (table === 'telephony_calls' && type === 'INSERT') {
+      console.log(`[TELEPHONY] Call queued in ${record.detected_native_language || 'unknown'} language`);
+      await triggerArkeselVoiceCall(record);
+    }
     return response.status(202).json({ accepted: true, table, type });
   } catch (error) {
     console.error('[OPERATIONS ERROR]', error.message);

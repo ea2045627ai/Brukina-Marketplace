@@ -2,6 +2,7 @@ import { appendFile, mkdir } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { triggerArkeselVoiceCall } from '../lib/arkesel.mjs';
 
 const port = Number(process.env.PORT || 8888);
 const eventsFile = resolve(dirname(fileURLToPath(import.meta.url)), '../.data/operations-events.ndjson');
@@ -34,6 +35,7 @@ const server = createServer(async (request, response) => {
   try {
     const event = await readJson(request);
     validateEvent(event);
+    if (event.table === 'telephony_calls' && event.type === 'INSERT') await triggerArkeselVoiceCall(event.record);
     const stored = { received_at: new Date().toISOString(), ...event };
     await mkdir(dirname(eventsFile), { recursive: true });
     await appendFile(eventsFile, `${JSON.stringify(stored)}\n`);
