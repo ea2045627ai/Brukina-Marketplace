@@ -16,6 +16,8 @@ const requiredFiles = [
   '.env.example',
   'scripts/check-netlify.mjs',
   'railway.toml',
+  'Procfile',
+  'app.json',
   'server/railway.mjs',
   'server/operations-webhook.mjs',
   'netlify/functions/operations-webhook.mjs',

@@ -7,7 +7,7 @@ const app = express();
 const port = Number(process.env.PORT || 3000);
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const webhookSecret = process.env.RAILWAY_WEBHOOK_SECRET;
+const webhookSecret = process.env.WEBHOOK_SECRET || process.env.RAILWAY_WEBHOOK_SECRET;
 
 if (!supabaseUrl || !supabaseServiceKey) {
   throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required');
