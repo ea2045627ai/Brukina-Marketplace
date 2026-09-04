@@ -15,12 +15,16 @@ const migrations = [
   'supply_bridge.sql'
 ];
 
-function bundle() {
-  const content = migrations.map(file => {
+function buildContent() {
+  return migrations.map(file => {
     const path = resolve(sqlDirectory, file);
     if (!existsSync(path)) throw new Error(`Missing database migration: supabase/${file}`);
     return `-- BEGIN supabase/${file}\n${readFileSync(path, 'utf8').trim()}\n-- END supabase/${file}`;
   }).join('\n\n');
+}
+
+function bundle() {
+  const content = buildContent();
   writeFileSync(bundlePath, `${content}\n`, 'utf8');
   console.log(`Database bundle created: supabase/project_database.sql (${migrations.length} migrations)`);
 }
@@ -28,6 +32,9 @@ function bundle() {
 function check() {
   for (const file of [...migrations, 'project_database.sql']) {
     if (!existsSync(resolve(sqlDirectory, file))) throw new Error(`Missing database file: supabase/${file}`);
+  }
+  if (readFileSync(bundlePath, 'utf8') !== `${buildContent()}\n`) {
+    throw new Error('supabase/project_database.sql is stale; run npm run db:bundle');
   }
   console.log('Database files and migration order are ready.');
   if (!process.env.DATABASE_URL) console.log('Database action pending: set DATABASE_URL to apply the bundle.');
