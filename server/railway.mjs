@@ -1,11 +1,14 @@
 import cors from 'cors';
 import express from 'express';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 import { triggerArkeselVoiceCall } from '../lib/arkesel.mjs';
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
+const projectRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const webhookSecret = process.env.WEBHOOK_SECRET || process.env.RAILWAY_WEBHOOK_SECRET;
@@ -14,7 +17,7 @@ const supabase = supabaseUrl && supabaseServiceKey ? createClient(supabaseUrl, s
 app.use(cors());
 app.use(express.json({ limit: '100kb' }));
 app.use(express.text({ limit: '100kb', type: ['text/*', 'application/*+json'] }));
-app.use(express.static('.'));
+app.use(express.static(projectRoot));
 
 function parsePayload(body) {
   if (typeof body === 'string') return JSON.parse(body || '{}');
@@ -98,6 +101,11 @@ app.post('/api/v1/generate-invoice', (request, response) => {
   } catch {
     return response.status(400).json({ error: 'Invalid invoice event' });
   }
+});
+
+// Serve the SPA shell for direct browser visits to client-side routes.
+app.get(/^\/(?!api(?:\/|$)|health(?:\/|$)).*/, (request, response) => {
+  response.sendFile(path.join(projectRoot, 'index.html'));
 });
 
 app.listen(port, '0.0.0.0', () => console.log(`[RAILWAY SERVER ACTIVE] Port ${port}`));
