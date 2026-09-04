@@ -14,6 +14,8 @@ Brukina is a deployable PWA marketplace for wholesale and local delivery operati
 
 Run [`supabase/schema.sql`](supabase/schema.sql), then [`supabase/dispatch.sql`](supabase/dispatch.sql), then [`supabase/operations.sql`](supabase/operations.sql), in the Supabase SQL Editor. The frontend uses the Supabase project configured in `app.js`. Enable email/password authentication; sign-up stores `full_name` and the selected non-admin role in user metadata. Supported roles are `customer`, `vendor`, `driver`, `rider`, and `admin`.
 
+If the hosted project was only partially migrated, run [`supabase/complete_repair.sql`](supabase/complete_repair.sql) after all migrations. It creates missing order, wallet, dispatch, courier, quote, and support tables and reapplies their RLS policies safely.
+
 Administrator access is intentionally separate: only an authenticated user whose protected Supabase `app_metadata` contains `role: "admin"` can open the operations dashboard. Grant this server-side with the commented SQL at the end of the schema. Row Level Security is included in the schema and must be applied before production use. Financial ledger entries are trusted writes and must be created by an admin or server-side payment/operations worker.
 
 The existing marketplace integrations expect these tables: `marketplace_inventory`, `user_profiles`, and `global_vendors`.
