@@ -4,6 +4,9 @@
 
 create extension if not exists pgcrypto;
 
+alter table if exists public.orders add column if not exists idempotency_key text;
+create unique index if not exists orders_customer_idempotency_idx on public.orders(customer_id, idempotency_key) where idempotency_key is not null;
+
 create table if not exists public.orders (
   id uuid primary key default gen_random_uuid(),
   order_number text unique not null,

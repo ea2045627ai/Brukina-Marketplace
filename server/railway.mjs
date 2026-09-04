@@ -2,7 +2,7 @@ import cors from 'cors';
 import express from 'express';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 import { triggerArkeselVoiceCall } from '../lib/arkesel.mjs';
 
@@ -52,12 +52,17 @@ app.post('/api/v1/orders', async (request, response) => {
     if (userError || !userData.user) return response.status(401).json({ error: 'Authentication required' });
     const inventoryId = request.body?.inventory_id;
     const quantity = Number(request.body?.quantity);
+    const idempotencyKey = request.get('idempotency-key') || request.body?.idempotency_key || randomUUID();
+    if (idempotencyKey.length > 100) return response.status(400).json({ error: 'The idempotency key is too long' });
     if (!inventoryId || !Number.isInteger(quantity) || quantity < 1 || quantity > 1000) return response.status(400).json({ error: 'A valid inventory item and quantity are required' });
+    const { data: replayOrder, error: replayError } = await supabase.from('orders').select('id, order_number, status').eq('customer_id', userData.user.id).eq('idempotency_key', idempotencyKey).maybeSingle();
+    if (replayError) throw replayError;
+    if (replayOrder) return response.json({ accepted: true, replayed: true, order_id: replayOrder.id, order_number: replayOrder.order_number, status: replayOrder.status });
     const { data: item, error: inventoryError } = await supabase.from('marketplace_inventory').select('id, vendor_id, price, stock_quantity, minimum_order_quantity').eq('id', inventoryId).eq('active', true).single();
     if (inventoryError || !item) return response.status(409).json({ error: 'Inventory item is no longer available' });
     if (quantity < item.minimum_order_quantity || quantity > item.stock_quantity) return response.status(400).json({ error: 'Quantity is outside the available stock limits' });
     const orderNumber = `BK-${Date.now().toString(36).toUpperCase()}`;
-    const { data: order, error: orderError } = await supabase.from('orders').insert({ order_number: orderNumber, customer_id: userData.user.id, vendor_id: item.vendor_id, total: Number(item.price) * quantity, status: 'pending' }).select('id, order_number').single();
+    const { data: order, error: orderError } = await supabase.from('orders').insert({ order_number: orderNumber, customer_id: userData.user.id, vendor_id: item.vendor_id, idempotency_key: idempotencyKey, total: Number(item.price) * quantity, status: 'pending' }).select('id, order_number').single();
     if (orderError) throw orderError;
     const { error: itemError } = await supabase.from('order_items').insert({ order_id: order.id, inventory_id: item.id, quantity, unit_price: item.price });
     if (itemError) throw itemError;
