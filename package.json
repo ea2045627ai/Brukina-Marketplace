@@ -16,6 +16,8 @@
     "check:render": "node scripts/check-render.mjs",
     "start:webhook": "node server/operations-webhook.mjs",
     "start:railway": "node --env-file-if-exists=.env.local server/railway.mjs",
+    "netlify:status": "netlify status",
+    "netlify:deploy": "npm run check:all && npm run build && netlify deploy --prod",
     "check:webhook": "node scripts/check-webhook.mjs",
     "db:bundle": "node scripts/database.mjs --bundle",
     "db:apply": "node scripts/database.mjs --apply",
