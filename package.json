@@ -11,7 +11,7 @@
     "dev": "vite",
     "build": "vite build",
     "start": "node server.js",
-    "check": "node --check app.js && node --check sw.js && node --check lib/validation.mjs && node --check lib/arkesel.mjs && node --check netlify/functions/operations-webhook.mjs && node --check netlify/functions/supply-bridge.mjs && node --check netlify/functions/create-order.mjs && node --check server/operations-webhook.mjs && node --check server/railway.mjs && node scripts/check-build.mjs && npm run check:netlify",
+    "check": "node --check lib/validation.mjs && node --check lib/arkesel.mjs && node --check netlify/functions/operations-webhook.mjs && node --check netlify/functions/supply-bridge.mjs && node --check netlify/functions/create-order.mjs && node --check server/operations-webhook.mjs && node --check server/railway.mjs && node scripts/check-build.mjs && npm run check:netlify",
     "check:netlify": "node scripts/check-netlify.mjs",
     "check:render": "node scripts/check-render.mjs",
     "start:webhook": "node server/operations-webhook.mjs",

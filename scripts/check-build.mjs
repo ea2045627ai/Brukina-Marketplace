@@ -4,13 +4,11 @@ import { resolve } from 'node:path';
 const root = resolve(import.meta.dirname, '..');
 const requiredFiles = [
   'index.html',
-  'styles.css',
-  'app.js',
   'src/main.jsx',
   'src/App.jsx',
   'src/styles.css',
-  'sw.js',
   'manifest.webmanifest',
+  'public/sw.js',
   'icon.svg',
   'netlify.toml',
   '_headers',
@@ -56,8 +54,8 @@ if (!manifest.name || !manifest.start_url || !manifest.icons?.length) {
   throw new Error('Manifest is missing required PWA fields');
 }
 
-for (const anchor of ['product-grid', 'search-input', 'auth-form', 'dispatch-request', 'vendor-b2b-leads', 'wallet-balance', 'wallet-transactions', 'tracking-order-label', 'delivery-status']) {
-  if (!html.includes(`id="${anchor}"`)) throw new Error(`Missing required page anchor: ${anchor}`);
+for (const anchor of ['id="root"', 'src/main.jsx']) {
+  if (!html.includes(anchor)) throw new Error(`Missing React application anchor: ${anchor}`);
 }
 
 const productionSql = readFileSync(resolve(root, 'supabase/production.sql'), 'utf8');
