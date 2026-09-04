@@ -2,6 +2,7 @@
   "name": "brukina-marketplace",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "description": "Static marketplace PWA for wholesale trade and local delivery operations.",
   "engines": {
     "node": ">=22.0.0"
