@@ -19,6 +19,9 @@
     },
     "SUPPLY_PARTNER_WEBHOOK_URL": {
       "description": "Optional verified HTTPS supply partner endpoint"
+    },
+    "SKILLBRIDGE_WEBHOOK_URL": {
+      "description": "Optional verified HTTPS SkillBridge partner endpoint"
     }
   },
   "formation": {
