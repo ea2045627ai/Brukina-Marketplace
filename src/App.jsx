@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { executeDatabaseLogin, validateSignupForm } from '../lib/validation.mjs';
 import { supabase, supabaseConfigMissing } from './lib/supabaseClient';
+import { useCourierLocation } from './lib/useCourierLocation';
 
 const roles = ['customer', 'vendor', 'driver', 'rider'];
 const pageForPath = (path) => {
@@ -84,6 +85,7 @@ function Auth({ mode, onNavigate, onSuccess }) {
 }
 
 function Workspace({ page, role, user, onNavigate, onLogout }) {
+  useCourierLocation(role);
   const [catalog, setCatalog] = useState([]);
   const [orders, setOrders] = useState([]);
   const [wallet, setWallet] = useState(null);

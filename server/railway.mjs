@@ -75,6 +75,24 @@ app.post('/api/v1/orders', async (request, response) => {
   }
 });
 
+app.post('/api/v1/couriers/location', async (request, response) => {
+  if (!supabase) return response.status(503).json({ error: 'Supabase server configuration is required' });
+  const token = request.get('authorization')?.replace(/^Bearer\s+/i, '');
+  if (!token) return response.status(401).json({ error: 'Authentication required' });
+  try {
+    const { data: userData, error: userError } = await supabase.auth.getUser(token);
+    const latitude = Number(request.body?.latitude);
+    const longitude = Number(request.body?.longitude);
+    if (userError || !userData.user) return response.status(401).json({ error: 'Authentication required' });
+    if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90 || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) return response.status(400).json({ error: 'Valid latitude and longitude are required' });
+    const { error } = await supabase.from('local_couriers').update({ current_lat: latitude, current_lng: longitude, is_online: true }).eq('user_id', userData.user.id);
+    if (error) throw error;
+    return response.json({ updated: true });
+  } catch (error) {
+    return response.status(500).json({ error: error.message || 'Courier location could not be saved' });
+  }
+});
+
 app.post('/api/v1/operations-webhook', async (request, response) => {
   if (!requireWebhookSecret(request, response)) return;
   if (!supabase) return response.status(503).json({ error: 'Supabase server configuration is required' });
