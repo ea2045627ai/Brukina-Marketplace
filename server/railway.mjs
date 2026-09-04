@@ -43,6 +43,32 @@ function verifyPaystackSignature(request) {
 
 app.get('/health', (request, response) => response.json({ ok: true, service: 'brukina-railway' }));
 
+app.post('/api/v1/orders', async (request, response) => {
+  if (!supabase) return response.status(503).json({ error: 'Supabase server configuration is required' });
+  const token = request.get('authorization')?.replace(/^Bearer\s+/i, '');
+  if (!token) return response.status(401).json({ error: 'Authentication required' });
+  try {
+    const { data: userData, error: userError } = await supabase.auth.getUser(token);
+    if (userError || !userData.user) return response.status(401).json({ error: 'Authentication required' });
+    const inventoryId = request.body?.inventory_id;
+    const quantity = Number(request.body?.quantity);
+    if (!inventoryId || !Number.isInteger(quantity) || quantity < 1 || quantity > 1000) return response.status(400).json({ error: 'A valid inventory item and quantity are required' });
+    const { data: item, error: inventoryError } = await supabase.from('marketplace_inventory').select('id, vendor_id, price, stock_quantity, minimum_order_quantity').eq('id', inventoryId).eq('active', true).single();
+    if (inventoryError || !item) return response.status(409).json({ error: 'Inventory item is no longer available' });
+    if (quantity < item.minimum_order_quantity || quantity > item.stock_quantity) return response.status(400).json({ error: 'Quantity is outside the available stock limits' });
+    const orderNumber = `BK-${Date.now().toString(36).toUpperCase()}`;
+    const { data: order, error: orderError } = await supabase.from('orders').insert({ order_number: orderNumber, customer_id: userData.user.id, vendor_id: item.vendor_id, total: Number(item.price) * quantity, status: 'pending' }).select('id, order_number').single();
+    if (orderError) throw orderError;
+    const { error: itemError } = await supabase.from('order_items').insert({ order_id: order.id, inventory_id: item.id, quantity, unit_price: item.price });
+    if (itemError) throw itemError;
+    const { error: stockError } = await supabase.from('marketplace_inventory').update({ stock_quantity: item.stock_quantity - quantity }).eq('id', item.id).eq('stock_quantity', item.stock_quantity);
+    if (stockError) throw stockError;
+    return response.status(201).json({ accepted: true, order_id: order.id, order_number: order.order_number });
+  } catch (error) {
+    return response.status(500).json({ error: error.message || 'Order could not be created' });
+  }
+});
+
 app.post('/api/v1/operations-webhook', async (request, response) => {
   if (!requireWebhookSecret(request, response)) return;
   if (!supabase) return response.status(503).json({ error: 'Supabase server configuration is required' });
