@@ -369,6 +369,7 @@ document.querySelector('#auth-close').addEventListener('click', closeAuth);
 document.querySelector('#admin-close').addEventListener('click', () => { adminBackdrop.hidden = true; });
 document.querySelector('#admin-login-button').addEventListener('click', openAdmin);
 document.querySelector('#admin-auth-button').addEventListener('click', openAdmin);
+document.querySelector('#login-auth-button').addEventListener('click', () => { closeAuth(); navigate('login'); history.replaceState(null,'','#login'); });
 [authBackdrop, adminBackdrop].forEach(backdrop => backdrop.addEventListener('click', event => { if (event.target === backdrop) backdrop.hidden = true; }));
 document.querySelectorAll('.role-choice').forEach(choice => choice.addEventListener('click', () => { document.querySelectorAll('.role-choice').forEach(item => item.classList.remove('selected')); choice.classList.add('selected'); currentRole = choice.dataset.role; }));
 
