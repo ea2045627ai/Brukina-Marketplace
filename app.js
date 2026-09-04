@@ -1,5 +1,5 @@
-const SUPABASE_URL = 'https://lhpdxsnsepvlhwkwsvel.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_f21PTSo3zKr1oayFCTTyxA_yn6C7QKo';
+const SUPABASE_URL = 'https://pkkocdzqcihfjebpojjb.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBra29jZHpxY2loZmplYnBvampiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg0OTEzOTgsImV4cCI6MjEwNDA2NzM5OH0.iKt2mbzQ3ofBWAIsRvDUmuPvtp-g84oNalrgGKmv_-Q';
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const roleLabels = { customer:'Customer', vendor:'Vendor', driver:'Driver', rider:'Rider', admin:'Administrator' };
 let currentUser = null;
@@ -9,15 +9,16 @@ let activeCategory = 'All products';
 const grid = document.querySelector('#product-grid');
 const toast = document.querySelector('#toast');
 const installButton = document.querySelector('#install-button');
+const search = document.querySelector('#search-input');
 let toastTimer;
 function showToast(message){ toast.textContent = message; toast.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => toast.classList.remove('show'), 2800); }
 const fallbackCatalog = [
-  {name:'Premium roofing sheets',vendor:'Akosombo Materials',category:'Building materials',source:'Made in Ghana',price:'GH₵ 1,850.00',tag:'WHOLESALE',image:'icon.svg'},
-  {name:'Leeknives utility knife set',vendor:'Leeknives Supply Co.',category:'Tools & equipment',source:'American market brand',price:'GH₵ 420.00',tag:'TRADE PRICE',image:'icon.svg'},
-  {name:'Solar power station 600W',vendor:'BrightGrid Devices',category:'Devices & gadgets',source:'Shopify partner',price:'GH₵ 3,280.00',tag:'BEST VALUE',image:'icon.svg'},
-  {name:'USB-C fast charge kit',vendor:'Northstar Accessories',category:'Accessories & body products',source:'American market brand',price:'GH₵ 185.00',tag:'BULK DEAL',image:'icon.svg'},
-  {name:'Unisex workwear overshirt',vendor:'Common Thread Co.',category:'Clothing',source:'Sourcing network',price:'GH₵ 290.00',tag:'NEW ARRIVAL',image:'icon.svg'},
-  {name:'Stainless kitchen tap',vendor:'Homeform Trade',category:'Home & living',source:'Made in China',price:'GH₵ 610.00',tag:'CONTAINER RATE',image:'icon.svg'}
+  {name:'Premium roofing sheets',vendor:'Akosombo Materials',category:'Building materials',source:'Made in Ghana',price:'GH₵ 1,850.00',tag:'WHOLESALE',image:'https://images.pexels.com/photos/48895/roof-plate-tiles-brick-black-48895.jpeg?auto=compress&cs=tinysrgb&h=650&w=940'},
+  {name:'Leeknives utility knife set',vendor:'Leeknives Supply Co.',category:'Tools & equipment',source:'American market brand',price:'GH₵ 420.00',tag:'TRADE PRICE',image:'https://images.pexels.com/photos/237997/pexels-photo-237997.jpeg?auto=compress&cs=tinysrgb&h=650&w=940'},
+  {name:'Solar power station 600W',vendor:'BrightGrid Devices',category:'Devices & gadgets',source:'Shopify partner',price:'GH₵ 3,280.00',tag:'BEST VALUE',image:'https://images.pexels.com/photos/9799719/pexels-photo-9799719.jpeg?auto=compress&cs=tinysrgb&h=650&w=940'},
+  {name:'USB-C fast charge kit',vendor:'Northstar Accessories',category:'Accessories & body products',source:'American market brand',price:'GH₵ 185.00',tag:'BULK DEAL',image:'https://images.pexels.com/photos/3921707/pexels-photo-3921707.jpeg?auto=compress&cs=tinysrgb&h=650&w=940'},
+  {name:'Unisex workwear overshirt',vendor:'Common Thread Co.',category:'Clothing',source:'Sourcing network',price:'GH₵ 290.00',tag:'NEW ARRIVAL',image:'https://images.pexels.com/photos/4483944/pexels-photo-4483944.jpeg?auto=compress&cs=tinysrgb&h=650&w=940'},
+  {name:'Stainless kitchen tap',vendor:'Homeform Trade',category:'Home & living',source:'Made in China',price:'GH₵ 610.00',tag:'CONTAINER RATE',image:'https://images.pexels.com/photos/37771020/pexels-photo-37771020.jpeg?auto=compress&cs=tinysrgb&h=650&w=940'}
 ];
 function mapInventoryRow(row){ return {id:row.id,name:row.product_name || row.name || 'Marketplace offer',vendor:row.vendor_name || row.vendor || 'Verified vendor',category:row.category || 'General',source:row.source_country || row.source || 'Verified supply',price:row.price_display || `GH₵ ${Number(row.price || 0).toLocaleString('en-GH',{minimumFractionDigits:2})}`,tag:row.badge || row.tag || 'TRADE PRICE',image:row.image_url || row.image || 'icon.svg',paystack_checkout_url:row.paystack_checkout_url}; }
 function renderProducts(list = products){ grid.innerHTML = list.length ? list.map(product => `<article class="product-card"><div class="product-image" style="background-image:url('${product.image}')"><span class="product-tag">${product.tag}</span></div><div class="product-info"><h3>${product.name}</h3><span class="vendor-name">${product.vendor}</span><small class="product-source">${product.source}</small><div class="price-row"><span class="price">${product.price}<small> / unit</small></span><button class="buy-button" data-inventory-id="${product.id || ''}" data-checkout="${product.paystack_checkout_url || ''}" data-product="${product.name}">Buy now</button></div></div></article>`).join('') : '<p class="empty-state">No offers match this market choice yet. Try another category or search.</p>'; }
@@ -76,7 +77,6 @@ async function loadDispatchProviders(){
 loadDispatchProviders();
 
 grid.addEventListener('click', async event => { const button = event.target.closest('[data-inventory-id]'); if (!button) return; if (!currentUser) { openAuth(); showToast('Sign in before placing an order.'); return; } if (!button.dataset.inventoryId) { showToast('This offer is available for inquiry while secure checkout is being connected.'); return; } button.disabled = true; const {data:{session}} = await supabaseClient.auth.getSession(); const response = await fetch('/.netlify/functions/create-order',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${session?.access_token || ''}`},body:JSON.stringify({inventory_id:button.dataset.inventoryId,quantity:1})}); const result = await response.json().catch(() => ({})); button.disabled = false; if(!response.ok){ showToast(result.error || 'Order could not be created.'); return; } showToast(`Order ${result.order_number} created successfully.`); navigate('tracking'); });
-const search = document.querySelector('#search-input');
 search.addEventListener('input', () => renderProducts(visibleProducts()));
 document.querySelectorAll('.geo-option').forEach(button => button.addEventListener('click', () => { document.querySelectorAll('.geo-option').forEach(item => item.classList.remove('selected')); button.classList.add('selected'); showToast(`${button.dataset.region === 'urban' ? 'Urban hub' : 'Rural market'} offers loaded`); }));
 document.querySelectorAll('.category').forEach(button => button.addEventListener('click', () => { document.querySelectorAll('.category').forEach(item => item.classList.remove('active')); button.classList.add('active'); activeCategory = button.textContent.trim(); renderProducts(visibleProducts()); showToast(`${activeCategory} deals loaded`); }));
@@ -217,17 +217,41 @@ installButton.addEventListener('click', async () => {
 });
 window.addEventListener('appinstalled', () => { installButton.hidden = true; showToast('Brukina installed successfully'); });
 navigate(location.hash.slice(1) || 'home');
+updateProfileButton();
 
 const authBackdrop = document.querySelector('#auth-backdrop');
 const adminBackdrop = document.querySelector('#admin-backdrop');
-const openAuth = () => { authBackdrop.hidden = false; document.querySelector('#auth-name').focus(); };
+let authMode = 'signup';
+function setAuthMode(mode){
+  authMode = mode;
+  document.querySelectorAll('.auth-mode-tab').forEach(tab => tab.classList.toggle('selected', tab.dataset.authMode === mode));
+  const isSignup = mode === 'signup';
+  document.querySelector('#auth-title').textContent = isSignup ? 'Create your workspace' : 'Welcome back';
+  document.querySelector('.auth-intro').textContent = isSignup ? 'Choose how you participate in the marketplace. Your dashboard adapts to your role.' : 'Sign in to continue to your Brukina workspace.';
+  document.querySelector('#role-picker').style.display = isSignup ? '' : 'none';
+  document.querySelector('#auth-name-label').style.display = isSignup ? '' : 'none';
+  document.querySelector('#auth-submit').innerHTML = isSignup ? 'Create account <span>→</span>' : 'Log in <span>→</span>';
+  if(!isSignup) document.querySelector('#auth-email').focus();
+  else document.querySelector('#auth-name').focus();
+}
+document.querySelectorAll('.auth-mode-tab').forEach(tab => tab.addEventListener('click', () => setAuthMode(tab.dataset.authMode)));
+const openAuth = () => { authBackdrop.hidden = false; setAuthMode(authMode); };
 const closeAuth = () => { authBackdrop.hidden = true; };
 const openAdmin = () => { closeAuth(); adminBackdrop.hidden = false; adminBackdrop.querySelector('input').focus(); };
+function updateProfileButton(){
+  const btn = document.querySelector('.profile-button');
+  const span = btn.querySelector('span');
+  if(currentUser){
+    const name = currentUser.user_metadata?.full_name || currentUser.email || 'U';
+    span.textContent = name.split(' ').map(p => p[0]).join('').slice(0,2).toUpperCase();
+  } else { span.textContent = 'EA'; }
+}
 document.querySelector('.profile-button').addEventListener('click', () => { if (currentUser) navigate('dashboard'); else openAuth(); });
 document.querySelector('#auth-close').addEventListener('click', closeAuth);
 document.querySelector('#admin-close').addEventListener('click', () => { adminBackdrop.hidden = true; });
 document.querySelector('#admin-login-button').addEventListener('click', openAdmin);
 document.querySelector('#admin-auth-button').addEventListener('click', openAdmin);
+document.querySelector('#signout-button').addEventListener('click', async () => { await supabaseClient.auth.signOut(); currentUser = null; currentRole = 'customer'; updateProfileButton(); navigate('home'); showToast('You have been signed out'); });
 [authBackdrop, adminBackdrop].forEach(backdrop => backdrop.addEventListener('click', event => { if (event.target === backdrop) backdrop.hidden = true; }));
 document.querySelectorAll('.role-choice').forEach(choice => choice.addEventListener('click', () => { document.querySelectorAll('.role-choice').forEach(item => item.classList.remove('selected')); choice.classList.add('selected'); currentRole = choice.dataset.role; }));
 
@@ -253,10 +277,35 @@ function renderDashboard(){
   document.querySelectorAll('[data-action]').forEach(action => action.addEventListener('click', () => navigate(action.dataset.action)));
 }
 
-document.querySelector('#auth-form').addEventListener('submit', async event => { event.preventDefault(); const form = event.currentTarget; const {data,error} = await supabaseClient.auth.signUp({email:document.querySelector('#auth-email').value.trim(),password:document.querySelector('#auth-password').value,options:{data:{full_name:document.querySelector('#auth-name').value.trim(),role:currentRole}}}); if(error){ showToast(error.message); return; } currentUser = data.user; closeAuth(); renderDashboard(); navigate('dashboard'); showToast(data.session ? `Welcome to Brukina, ${roleLabels[currentRole]}` : 'Check your email to confirm your Brukina account'); form.reset(); });
+document.querySelector('#auth-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const email = document.querySelector('#auth-email').value.trim();
+  const password = document.querySelector('#auth-password').value;
+  if(authMode === 'login'){
+    const {data,error} = await supabaseClient.auth.signInWithPassword({email,password});
+    if(error){ showToast(error.message); return; }
+    currentUser = data.user;
+    currentRole = data.user.app_metadata?.role || data.user.user_metadata?.role || 'customer';
+    closeAuth(); updateProfileButton(); renderDashboard(); navigate('dashboard'); showToast(`Welcome back to Brukina`); form.reset();
+  } else {
+    const {data,error} = await supabaseClient.auth.signUp({email,password,options:{data:{full_name:document.querySelector('#auth-name').value.trim(),role:currentRole}}});
+    if(error){ showToast(error.message); return; }
+    currentUser = data.user;
+    closeAuth(); updateProfileButton(); renderDashboard(); navigate('dashboard');
+    showToast(data.session ? `Welcome to Brukina, ${roleLabels[currentRole]}` : 'Check your email to confirm your Brukina account');
+    form.reset();
+  }
+});
 document.querySelector('#admin-form').addEventListener('submit', async event => { event.preventDefault(); const form = event.currentTarget; const {data,error} = await supabaseClient.auth.signInWithPassword({email:form.querySelector('input[type="email"]').value.trim(),password:form.querySelector('input[type="password"]').value}); if(error){ showToast(error.message); return; } const role = data.user.app_metadata?.role; if(role !== 'admin'){ await supabaseClient.auth.signOut(); showToast('This account does not have administrator access.'); return; } currentUser = data.user; currentRole = 'admin'; adminBackdrop.hidden = true; renderDashboard(); navigate('dashboard'); showToast('Administrator session opened'); });
 document.querySelector('#auth-form').addEventListener('reset', () => { currentRole = 'customer'; });
-supabaseClient.auth.getSession().then(({data}) => { if(data.session){ currentUser = data.session.user; currentRole = data.session.user.app_metadata?.role || data.session.user.user_metadata?.role || 'customer'; renderDashboard(); loadWallet(); if(document.querySelector('#tracking-view.active')) loadActiveDelivery(); if(document.querySelector('#hub-view.active')) initializeVendorDashboard(); } });
+supabaseClient.auth.getSession().then(({data}) => { if(data.session){ currentUser = data.session.user; currentRole = data.session.user.app_metadata?.role || data.session.user.user_metadata?.role || 'customer'; updateProfileButton(); renderDashboard(); loadWallet(); if(document.querySelector('#tracking-view.active')) loadActiveDelivery(); if(document.querySelector('#hub-view.active')) initializeVendorDashboard(); } });
+supabaseClient.auth.onAuthStateChange((event, session) => {
+  (async () => {
+    if(event === 'SIGNED_OUT'){ currentUser = null; currentRole = 'customer'; updateProfileButton(); navigate('home'); showToast('You have been signed out'); return; }
+    if(event === 'SIGNED_IN' && session?.user && !currentUser){ currentUser = session.user; currentRole = session.user.app_metadata?.role || session.user.user_metadata?.role || 'customer'; updateProfileButton(); renderDashboard(); loadWallet(); }
+  })();
+});
 document.querySelector('#dispatch-request').addEventListener('click', async () => {
   if(!currentUser){ openAuth(); showToast('Sign in to request backup dispatch.'); return; }
   if(!activeDispatchProvider){ showToast('No dispatch provider is currently available.'); return; }
