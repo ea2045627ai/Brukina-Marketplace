@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
 import { executeDatabaseLogin, validateSignupForm } from '../lib/validation.mjs';
+import { supabase, supabaseConfigMissing } from './lib/supabaseClient';
 
-const supabase = createClient(import.meta.env.VITE_SUPABASE_URL || 'https://lhpdxsnsepvlhwkwsvel.supabase.co', import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_f21PTSo3zKr1oayFCTTyxA_yn6C7QKo');
 const roles = ['customer', 'vendor', 'driver', 'rider'];
 const products = ['Premium roofing sheets', 'Utility knife set', 'Solar power station 600W', 'USB-C fast charge kit'];
 const pageForPath = path => path === '/login' ? 'login' : path === '/signup' ? 'signup' : path.includes('vendor') ? 'inventory' : path.includes('rider') || path.includes('driver') ? 'dispatch' : path.includes('wallet') ? 'wallet' : path.includes('profile') ? 'profile' : 'dashboard';
