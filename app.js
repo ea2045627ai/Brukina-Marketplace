@@ -164,6 +164,7 @@ export function navigateTo(urlPath){
 }
 document.querySelectorAll('[data-nav]').forEach(item => item.addEventListener('click', event => { event.preventDefault(); navigate(item.dataset.nav); history.replaceState(null,'',`#${item.dataset.nav}`); }));
 document.querySelectorAll('[data-page]').forEach(item => item.addEventListener('click', event => { event.preventDefault(); const page = item.dataset.page; if(page === 'signup'){ openAuth(); return; } if(navigate(page)) history.replaceState(null,'',`#${page}`); }));
+window.addEventListener('popstate', renderApp);
 document.querySelector('#login-form').addEventListener('submit', async event => {
   event.preventDefault();
   const form = event.currentTarget;
