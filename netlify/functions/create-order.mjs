@@ -30,6 +30,8 @@ export default async function handler(request) {
     if (!orderResponse.ok || !order) return json({ error: 'Order could not be created' }, 500);
     const itemResponse = await fetch(`${config.url}/rest/v1/order_items`, { method: 'POST', headers, body: JSON.stringify({ order_id: order.id, inventory_id: item.id, quantity, unit_price: item.price }) });
     if (!itemResponse.ok) return json({ error: 'Order item could not be recorded' }, 500);
+    const stockResponse = await fetch(`${config.url}/rest/v1/marketplace_inventory?id=eq.${encodeURIComponent(item.id)}&stock_quantity=eq.${item.stock_quantity}`, { method: 'PATCH', headers: { ...headers, Prefer: 'return=minimal' }, body: JSON.stringify({ stock_quantity: item.stock_quantity - quantity }) });
+    if (!stockResponse.ok) return json({ error: 'Inventory could not be reserved' }, 409);
     return json({ accepted: true, order_id: order.id, order_number: order.order_number }, 201);
   } catch (error) { return json({ error: error.message || 'Order service unavailable' }, 500); }
 }

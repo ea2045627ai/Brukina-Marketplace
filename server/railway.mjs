@@ -61,8 +61,9 @@ app.post('/api/v1/orders', async (request, response) => {
     if (orderError) throw orderError;
     const { error: itemError } = await supabase.from('order_items').insert({ order_id: order.id, inventory_id: item.id, quantity, unit_price: item.price });
     if (itemError) throw itemError;
-    const { error: stockError } = await supabase.from('marketplace_inventory').update({ stock_quantity: item.stock_quantity - quantity }).eq('id', item.id).eq('stock_quantity', item.stock_quantity);
+    const { data: reservedItem, error: stockError } = await supabase.from('marketplace_inventory').update({ stock_quantity: item.stock_quantity - quantity }).eq('id', item.id).eq('stock_quantity', item.stock_quantity).select('id').maybeSingle();
     if (stockError) throw stockError;
+    if (!reservedItem) return response.status(409).json({ error: 'Inventory could not be reserved' });
     return response.status(201).json({ accepted: true, order_id: order.id, order_number: order.order_number });
   } catch (error) {
     return response.status(500).json({ error: error.message || 'Order could not be created' });
