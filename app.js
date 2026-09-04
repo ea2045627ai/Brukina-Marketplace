@@ -83,8 +83,64 @@ const search = document.querySelector('#search-input');
 search.addEventListener('input', () => renderProducts(visibleProducts()));
 document.querySelectorAll('.geo-option').forEach(button => button.addEventListener('click', () => { document.querySelectorAll('.geo-option').forEach(item => item.classList.remove('selected')); button.classList.add('selected'); showToast(`${button.dataset.region === 'urban' ? 'Urban hub' : 'Rural market'} offers loaded`); }));
 document.querySelectorAll('.category').forEach(button => button.addEventListener('click', () => { document.querySelectorAll('.category').forEach(item => item.classList.remove('active')); button.classList.add('active'); activeCategory = button.textContent.trim(); renderProducts(visibleProducts()); showToast(`${activeCategory} deals loaded`); }));
-function navigate(viewName){ document.querySelectorAll('.view').forEach(view => view.classList.toggle('active', view.dataset.view === viewName)); document.querySelectorAll('.nav-item').forEach(item => item.classList.toggle('selected', item.dataset.nav === viewName)); if(viewName === 'tracking') loadActiveDelivery(); if(viewName === 'hub') initializeVendorDashboard(); if(viewName === 'wallet') loadWallet(); window.scrollTo({top:0,behavior:'smooth'}); }
+const pageRoles = { profile:null, settings:null, inventory:'vendor', orders:'customer', dispatch:null, verify:null, admin:'admin' };
+const sampleOrders = [
+  { id:'BRK-9901', detail:'Premium Millet Brukina Mix x2', total:'GH₵ 70.00', status:'In transit' },
+  { id:'BRK-9842', detail:'Organic Fresh Cow Milk Extract x1', total:'GH₵ 60.00', status:'Delivered' }
+];
+const dispatchQueue = [
+  { id:'BRK-9905', route:'Brukina Delights Hub (Osu) -> Labone Estate', fee:'GH₵ 25.00' },
+  { id:'BRK-9908', route:'Millet Blend Wholesale (East Legon) -> Airport Residential', fee:'GH₵ 40.00' }
+];
+let acceptedDispatch = [];
+let localProducts = [
+  { name:'Premium Millet Brukina Mix', detail:'45 units · GH₵ 35.00', status:'Active' },
+  { name:'Organic Fresh Cow Milk Extract', detail:'12 units · GH₵ 60.00', status:'Active' },
+  { name:'Traditional Sweetener Blend', detail:'0 units · GH₵ 15.00', status:'Out of stock' }
+];
+function requireSession(page){
+  if(currentUser) return true;
+  openAuth();
+  showToast('Sign in to open this workspace.');
+  return false;
+}
+function renderProfilePage(){
+  const name = currentUser?.user_metadata?.full_name || 'Emmanuel';
+  const email = currentUser?.email || 'Not available';
+  const initials = name.split(' ').map(part => part[0]).join('').slice(0,2).toUpperCase();
+  document.querySelector('#profile-name').textContent = name;
+  document.querySelector('#profile-email').textContent = email;
+  document.querySelector('#profile-avatar').textContent = initials;
+  document.querySelector('#profile-role').textContent = roleLabels[currentRole] || 'Customer';
+  document.querySelector('#profile-workspace').textContent = roleLabels[currentRole] || 'Customer';
+  document.querySelector('#settings-name').value = name;
+  document.querySelector('#settings-email').value = email;
+  document.querySelector('#settings-role').value = currentRole;
+  document.querySelector('#verify-email').textContent = email;
+}
+function renderDataRows(selector, rows){
+  document.querySelector(selector).innerHTML = rows.map(row => `<div class="data-row"><div class="data-row-main"><strong>${row.id || row.name}</strong><small>${row.detail || row.route}</small></div>${row.status ? `<span class="status-chip ${row.status.toLowerCase().includes('pending') || row.status.toLowerCase().includes('stock') ? 'pending' : ''}">${row.status}</span>` : ''}<b>${row.total || row.fee || ''}</b></div>`).join('');
+}
+function renderWorkspacePage(page){
+  if(!requireSession(page)) return false;
+  const requiredRole = pageRoles[page];
+  if(requiredRole && currentRole !== requiredRole){ showToast(`This page is for ${roleLabels[requiredRole]} accounts.`); return false; }
+  if(page === 'profile' || page === 'settings' || page === 'verify') renderProfilePage();
+  if(page === 'orders') renderDataRows('#orders-list', sampleOrders);
+  if(page === 'inventory'){ renderDataRows('#inventory-list', localProducts); document.querySelector('#inventory-count').textContent = `${localProducts.length} products`; }
+  if(page === 'dispatch'){ renderDataRows('#dispatch-queue', dispatchQueue); renderDataRows('#dispatch-manifest', acceptedDispatch); }
+  if(page === 'admin') renderDataRows('#admin-queue', [{id:'USR-2041',detail:'Tina Arthur · Vendor · Brukina Delights Hub',status:'Pending'}, {id:'USR-1988',detail:'Kofi Mensah · Driver · Motorcycle',status:'Pending'}, {id:'USR-3104',detail:'Ama Serwaa · Vendor · Millet Blend Wholesale',status:'Pending'}]);
+  return true;
+}
+function navigate(viewName){
+  if(pageRoles[viewName] && !renderWorkspacePage(viewName)) return;
+  document.querySelectorAll('.view').forEach(view => view.classList.toggle('active', view.dataset.view === viewName));
+  document.querySelectorAll('.nav-item').forEach(item => item.classList.toggle('selected', item.dataset.nav === viewName));
+  if(viewName === 'tracking') loadActiveDelivery(); if(viewName === 'hub') initializeVendorDashboard(); if(viewName === 'wallet') loadWallet();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
 document.querySelectorAll('[data-nav]').forEach(item => item.addEventListener('click', event => { event.preventDefault(); navigate(item.dataset.nav); history.replaceState(null,'',`#${item.dataset.nav}`); }));
+document.querySelectorAll('[data-page]').forEach(item => item.addEventListener('click', event => { event.preventDefault(); const page = item.dataset.page; if(navigate(page)) history.replaceState(null,'',`#${page}`); }));
 window.addEventListener('hashchange', () => navigate(location.hash.slice(1) || 'home'));
 
 document.querySelectorAll('.partner-tab').forEach(tab => tab.addEventListener('click', () => { document.querySelectorAll('.partner-tab').forEach(item => item.classList.remove('selected')); tab.classList.add('selected'); document.querySelectorAll('.partner-panel').forEach(panel => panel.classList.toggle('hidden', panel.id !== tab.dataset.panel)); }));
