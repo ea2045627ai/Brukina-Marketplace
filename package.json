@@ -19,6 +19,7 @@
     "check:webhook": "node scripts/check-webhook.mjs",
     "db:bundle": "node scripts/database.mjs --bundle",
     "db:apply": "node scripts/database.mjs --apply",
+      "db:verify": "node scripts/database.mjs --verify",
     "check:database": "node scripts/database.mjs --check",
     "check:all": "npm run check && npm run check:webhook && npm run check:render && npm run check:database"
   },

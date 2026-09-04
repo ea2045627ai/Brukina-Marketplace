@@ -36,6 +36,15 @@ npm run db:bundle
 DATABASE_URL="postgresql://..." npm run db:apply
 ```
 
+Verify the connection before applying migrations:
+
+```bash
+DATABASE_URL="postgresql://..." npm run db:verify
+```
+
+Use the Supabase **Database Settings → Connection string → URI** value. The
+direct host format is `postgresql://postgres:PASSWORD@db.PROJECT_REF.supabase.co:5432/postgres`; the Supabase pooler URI is also supported. The script enforces `sslmode=require`, uses `--no-password` so credentials must come from the URL or PostgreSQL environment, and applies the bundle with `ON_ERROR_STOP=1` in one transaction.
+
 The command applies `schema.sql`, `dispatch.sql`, `operations.sql`,
 `sourcing.sql`, `production.sql`, `complete_repair.sql`, and
 `supply_bridge.sql` in that order. `npm run check:database` verifies that all

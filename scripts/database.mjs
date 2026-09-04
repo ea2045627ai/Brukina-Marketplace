@@ -40,19 +40,38 @@ function check() {
   if (!process.env.DATABASE_URL) console.log('Database action pending: set DATABASE_URL to apply the bundle.');
 }
 
-function apply() {
+function connectionUrl() {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required. Use the Supabase Postgres connection string; never commit it.');
-  if (!existsSync(bundlePath)) bundle();
+  let url;
+  try { url = new URL(process.env.DATABASE_URL); } catch { throw new Error('DATABASE_URL must be a valid PostgreSQL connection URL'); }
+  if (!['postgres:', 'postgresql:'].includes(url.protocol) || !url.hostname) throw new Error('DATABASE_URL must use postgres:// or postgresql://');
+  if (!url.searchParams.has('sslmode')) url.searchParams.set('sslmode', 'require');
+  return url.toString();
+}
+
+function runPsql(args) {
   try {
-    execFileSync('psql', ['--set', 'ON_ERROR_STOP=1', '--dbname', process.env.DATABASE_URL, '--file', bundlePath], { stdio: 'inherit' });
+    execFileSync('psql', args, { env: { ...process.env, PGSSLMODE: 'require' }, stdio: 'inherit' });
   } catch (error) {
-    throw new Error(`Database apply failed. Ensure psql is installed and DATABASE_URL is valid. ${error.message}`);
+    throw new Error(`PostgreSQL command failed. Ensure psql is installed and DATABASE_URL is valid. ${error.message}`);
   }
+}
+
+function verify() {
+  runPsql(['--no-password', '--dbname', connectionUrl(), '--command', 'select current_database(), current_user;']);
+  console.log('Brukina Marketplace PostgreSQL connection verified.');
+}
+
+function apply() {
+  const url = connectionUrl();
+  if (!existsSync(bundlePath)) bundle();
+  runPsql(['--no-password', '--single-transaction', '--set', 'ON_ERROR_STOP=1', '--dbname', url, '--file', bundlePath]);
   console.log('Brukina Marketplace database applied successfully.');
 }
 
 const action = process.argv[2];
 if (action === '--bundle') bundle();
 else if (action === '--apply') apply();
+else if (action === '--verify') verify();
 else if (action === '--check') check();
-else throw new Error('Usage: node scripts/database.mjs --bundle|--apply|--check');
+else throw new Error('Usage: node scripts/database.mjs --bundle|--apply|--verify|--check');
