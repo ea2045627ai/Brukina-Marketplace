@@ -141,6 +141,27 @@ function navigate(viewName){
   window.scrollTo({top:0,behavior:'smooth'});
   return true;
 }
+const pathToView = {
+  '/': 'home',
+  '/signup': 'home',
+  '/login': 'login',
+  '/dashboard': 'dashboard',
+  '/dashboard/home': 'home',
+  '/dashboard/vendor': 'inventory',
+  '/dashboard/vendor/profile': 'profile',
+  '/dashboard/rider': 'dispatch',
+  '/dashboard/driver': 'dispatch',
+  '/dashboard/wallet': 'wallet'
+};
+export function renderApp(){
+  const requestedView = location.hash.slice(1) || pathToView[location.pathname] || 'home';
+  navigate(requestedView);
+}
+export function navigateTo(urlPath){
+  const [path, hash] = urlPath.split('#');
+  history.pushState(null, '', `${path}${hash ? `#${hash}` : ''}`);
+  renderApp();
+}
 document.querySelectorAll('[data-nav]').forEach(item => item.addEventListener('click', event => { event.preventDefault(); navigate(item.dataset.nav); history.replaceState(null,'',`#${item.dataset.nav}`); }));
 document.querySelectorAll('[data-page]').forEach(item => item.addEventListener('click', event => { event.preventDefault(); const page = item.dataset.page; if(page === 'signup'){ openAuth(); return; } if(navigate(page)) history.replaceState(null,'',`#${page}`); }));
 document.querySelector('#login-form').addEventListener('submit', async event => {
@@ -361,8 +382,7 @@ installButton.addEventListener('click', async () => {
   showToast(isAppleDevice ? 'Tap Share, then Add to Home Screen' : 'Use your browser menu to install Brukina');
 });
 window.addEventListener('appinstalled', () => { installButton.hidden = true; showToast('Brukina installed successfully'); });
-const pathnameView = location.pathname === '/login' ? 'login' : location.pathname.startsWith('/dashboard') ? 'dashboard' : 'home';
-navigate(location.hash.slice(1) || pathnameView);
+renderApp();
 
 const authBackdrop = document.querySelector('#auth-backdrop');
 const adminBackdrop = document.querySelector('#admin-backdrop');
