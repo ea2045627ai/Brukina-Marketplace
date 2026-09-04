@@ -3,6 +3,7 @@ import { executeDatabaseLogin, validateLogin, validateSignupForm } from './lib/v
 const SUPABASE_URL = 'https://lhpdxsnsepvlhwkwsvel.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_f21PTSo3zKr1oayFCTTyxA_yn6C7QKo';
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+globalThis.brukinaSupabase = supabaseClient;
 const roleLabels = { customer:'Customer', vendor:'Vendor', driver:'Driver', rider:'Rider', admin:'Administrator' };
 const selectableRoles = new Set(['customer', 'vendor', 'driver', 'rider']);
 let currentUser = null;
@@ -360,13 +361,15 @@ installButton.addEventListener('click', async () => {
   showToast(isAppleDevice ? 'Tap Share, then Add to Home Screen' : 'Use your browser menu to install Brukina');
 });
 window.addEventListener('appinstalled', () => { installButton.hidden = true; showToast('Brukina installed successfully'); });
-navigate(location.hash.slice(1) || 'home');
+const pathnameView = location.pathname === '/login' ? 'login' : location.pathname.startsWith('/dashboard') ? 'dashboard' : 'home';
+navigate(location.hash.slice(1) || pathnameView);
 
 const authBackdrop = document.querySelector('#auth-backdrop');
 const adminBackdrop = document.querySelector('#admin-backdrop');
 const openAuth = () => { authBackdrop.hidden = false; document.querySelector('#auth-name').focus(); };
 const closeAuth = () => { authBackdrop.hidden = true; };
 const openAdmin = () => { closeAuth(); adminBackdrop.hidden = false; adminBackdrop.querySelector('input').focus(); };
+if(location.pathname === '/signup' && !location.hash) openAuth();
 document.querySelector('.profile-button').addEventListener('click', () => { if (currentUser) navigate('dashboard'); else openAuth(); });
 document.querySelector('#auth-close').addEventListener('click', closeAuth);
 document.querySelector('#admin-close').addEventListener('click', () => { adminBackdrop.hidden = true; });
