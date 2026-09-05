@@ -1,16 +1,59 @@
-const CACHE_NAME = 'brukina-react-v1';
+const CACHE_NAME = 'brukina-access-v3';
 
-self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(['/','/index.html'])));
+const IMMUTABLE_APP_ASSETS = [
+  '/',
+  '/index.html',
+  '/manifest.webmanifest',
+  '/icon.svg'
+];
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.addAll(IMMUTABLE_APP_ASSETS);
+    })
+  );
   self.skipWaiting();
 });
 
-self.addEventListener('activate', event => {
-  event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key)))));
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) => {
+      return Promise.all(
+        keys.map((key) => {
+          if (key !== CACHE_NAME) {
+            return caches.delete(key);
+          }
+        })
+      );
+    })
+  );
   self.clients.claim();
 });
 
-self.addEventListener('fetch', event => {
-  if (new URL(event.request.url).origin !== self.location.origin) return;
-  event.respondWith(fetch(event.request).catch(() => caches.match(event.request).then(cached => cached || caches.match('/index.html'))));
+self.addEventListener('fetch', (event) => {
+  if (event.request.url.includes('.supabase.co') || event.request.url.includes('postgres_changes')) {
+    return;
+  }
+
+  event.respondWith(
+    fetch(event.request)
+      .then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
+        }
+        return networkResponse;
+      })
+      .catch(() => {
+        return caches.match(event.request).then((cachedResponse) => {
+          if (cachedResponse) return cachedResponse;
+          if (event.request.mode === 'navigate') {
+            return caches.match('/index.html');
+          }
+        });
+      })
+  );
 });

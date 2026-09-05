@@ -12,9 +12,7 @@ Brukina is a deployable PWA marketplace for wholesale and local delivery operati
 
 ## Supabase setup
 
-Run [`supabase/schema.sql`](supabase/schema.sql), then [`supabase/dispatch.sql`](supabase/dispatch.sql), then [`supabase/operations.sql`](supabase/operations.sql), in the Supabase SQL Editor. The frontend reads `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` through [`src/lib/supabaseClient.js`](src/lib/supabaseClient.js). Enable email/password authentication; sign-up stores `full_name` and the selected non-admin role in user metadata. Supported roles are `customer`, `vendor`, `driver`, `rider`, and `admin`.
-
-If the hosted project was only partially migrated, run [`supabase/complete_repair.sql`](supabase/complete_repair.sql) after all migrations. It creates missing order, wallet, dispatch, courier, quote, and support tables and reapplies their RLS policies safely.
+Run [`supabase/schema.sql`](supabase/schema.sql), then [`supabase/dispatch.sql`](supabase/dispatch.sql), then [`supabase/operations.sql`](supabase/operations.sql), in the Supabase SQL Editor. The frontend uses the Supabase project configured in `app.js`. Enable email/password authentication; sign-up stores `full_name` and the selected non-admin role in user metadata. Supported roles are `customer`, `vendor`, `driver`, `rider`, and `admin`.
 
 Administrator access is intentionally separate: only an authenticated user whose protected Supabase `app_metadata` contains `role: "admin"` can open the operations dashboard. Grant this server-side with the commented SQL at the end of the schema. Row Level Security is included in the schema and must be applied before production use. Financial ledger entries are trusted writes and must be created by an admin or server-side payment/operations worker.
 
@@ -27,29 +25,6 @@ Dispatch health is managed through `dispatch_providers`. Buyers can switch betwe
 ## Production support assistant
 
 Run [`supabase/production.sql`](supabase/production.sql) after the other migrations. It adds protected support preferences, conversation records, and consented callback requests. The web assistant supports typed questions and browser speech recognition/synthesis when the device and browser provide them. Language options include English, Twi/Akan, Ewe, Ga, Hausa, Swahili, French, and Portuguese; actual recognition and voice quality depend on the browser's installed language services.
-
-To create and apply the complete Brukina database bundle, use the tracked
-migration order with a Supabase Postgres connection string:
-
-```bash
-npm run db:bundle
-DATABASE_URL="postgresql://..." npm run db:apply
-```
-
-Verify the connection before applying migrations:
-
-```bash
-DATABASE_URL="postgresql://..." npm run db:verify
-```
-
-Use the Supabase **Database Settings → Connection string → URI** value. The
-direct host format is `postgresql://postgres:PASSWORD@db.PROJECT_REF.supabase.co:5432/postgres`; the Supabase pooler URI is also supported. The script enforces `sslmode=require`, uses `--no-password` so credentials must come from the URL or PostgreSQL environment, and applies the bundle with `ON_ERROR_STOP=1` in one transaction.
-
-The command applies `schema.sql`, `dispatch.sql`, `operations.sql`,
-`sourcing.sql`, `production.sql`, `complete_repair.sql`, and
-`supply_bridge.sql` in that order. `npm run check:database` verifies that all
-files are present and reports when `DATABASE_URL` is still pending. Do not put
-database URLs, service keys, or video-library credentials in source control.
 
 To route new sourcing requests to supply partners, run [`supabase/supply_bridge.sql`](supabase/supply_bridge.sql) after [`supabase/sourcing.sql`](supabase/sourcing.sql). Store your deployed Netlify function URL in Supabase Vault under `supply_bridge_url`, for example `https://YOUR-SITE.netlify.app/.netlify/functions/supply-bridge`. The trigger rejects missing or non-HTTPS bridge URLs. Set `SUPPLY_PARTNER_WEBHOOK_URL` in Netlify only when a verified partner endpoint is ready; otherwise the bridge acknowledges and records the event without forwarding it.
 
@@ -65,15 +40,6 @@ python3 -m http.server 4173
 
 Open <http://localhost:4173> in a browser.
 
-## Render deployment
-
-The tracked [`render.yaml`](render.yaml) blueprint provisions the Node web
-service and a Render PostgreSQL database named `brukina-marketplace-db`. The
-database connection is exposed as `DATABASE_URL` for future server-side data
-adapters. The current marketplace data layer remains Supabase, so apply the
-SQL migrations in the Supabase setup section before deploying production data.
-Validate the Render blueprint locally with `npm run check:render`.
-
 ## Netlify connection check
 
 Run the complete validation locally with:
@@ -86,9 +52,8 @@ When Netlify is not connected, the check passes the repository validation and
 prints a pending action. After connecting the repository in Netlify, its build
 environment sets `NETLIFY=true`; the same command then verifies the configured
 build command, functions directory, deploy context, and supply bridge file.
-The optional `SKILLBRIDGE_WEBHOOK_URL` remains pending until a verified partner
-endpoint is ready. `SUPPLY_PARTNER_WEBHOOK_URL` remains supported as a legacy
-fallback. Never commit either value or any provider secret.
+The optional `SUPPLY_PARTNER_WEBHOOK_URL` remains pending until a verified
+partner endpoint is ready. Never commit that value or any provider secret.
 Use the tracked [`.env.example`](.env.example) as the configuration checklist;
 copy its variable names into Netlify's environment settings rather than
 committing a real endpoint. When set, the check requires an HTTPS URL without

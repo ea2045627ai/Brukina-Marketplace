@@ -1,22 +1,35 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
-const blueprint = readFileSync(resolve(root, 'render.yaml'), 'utf8');
-const requiredEntries = [
-  'type: web',
-  'name: brukina-marketplace',
-  'runtime: node',
-  'buildCommand: npm install && npm run build',
-  'startCommand: npm start',
-  'healthCheckPath: /health',
-  'databases:',
-  'name: brukina-marketplace-db',
-  'property: connectionString'
+const requiredFiles = [
+  'render.yaml',
+  'vite.config.js',
+  'index.html',
+  'src/main.jsx',
+  'src/App.jsx',
+  'src/styles.css',
+  'src/lib/supabaseClient.js',
+  'src/hooks/useRealtimeCatalog.js',
+  'src/components/DynamicMarketplaceEngine.jsx',
+  'src/components/VendorInventoryPanel.jsx',
+  'src/components/RiderTrackPanel.jsx',
+  'src/components/WalletPanel.jsx',
+  'src/components/AdminLedgerPanel.jsx',
+  'src/components/AdminPriceController.jsx',
+  'src/components/AdminTerminalPanel.jsx',
+  'src/components/AdminApiLogger.jsx',
+  'src/components/AdminCategoryPanel.jsx',
+  'src/components/RiderWithdrawalPanel.jsx',
+  'src/components/OrderChatComponent.jsx'
 ];
 
-for (const entry of requiredEntries) {
-  if (!blueprint.includes(entry)) throw new Error(`Render blueprint is missing: ${entry}`);
+for (const file of requiredFiles) {
+  if (!existsSync(resolve(root, file))) throw new Error(`Missing required file: ${file}`);
 }
 
-console.log('Render blueprint check passed');
+const html = readFileSync(resolve(root, 'index.html'), 'utf8');
+if (!html.includes('id="root"')) throw new Error('index.html must contain a root div for React');
+if (!html.includes('/src/main.jsx')) throw new Error('index.html must reference /src/main.jsx');
+
+console.log('Render deployment check passed');

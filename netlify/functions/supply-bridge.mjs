@@ -5,10 +5,8 @@ export default async function handler(request) {
   try {
     const event = await request.json();
     if (event.table !== 'sourcing_requests' || !allowedTypes.has(event.type) || !event.record || typeof event.record !== 'object') throw new Error('Invalid sourcing event');
-    const partnerUrl = process.env.SKILLBRIDGE_WEBHOOK_URL || process.env.SUPPLY_PARTNER_WEBHOOK_URL;
+    const partnerUrl = process.env.SUPPLY_PARTNER_WEBHOOK_URL;
     if (partnerUrl) {
-      const parsedUrl = new URL(partnerUrl);
-      if (parsedUrl.protocol !== 'https:' || parsedUrl.username || parsedUrl.password) throw new Error('SkillBridge endpoint must be an HTTPS URL without embedded credentials');
       const forwarded = await fetch(partnerUrl, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Brukina-Event': 'sourcing_request.created' }, body: JSON.stringify(event) });
       if (!forwarded.ok) throw new Error(`Supply partner returned ${forwarded.status}`);
     }

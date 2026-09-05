@@ -1,31 +1,35 @@
-import { useEffect } from 'react';
-import { supabase } from './supabaseClient';
+import { useEffect, useState } from 'react';
+import { supabase } from '../lib/supabaseClient';
 
-export function useCourierLocation(role) {
+export function useCourierLocation(riderId) {
+  const [location, setLocation] = useState(null);
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
-    if (!supabase || !['driver', 'rider'].includes(role) || !navigator.geolocation) return undefined;
-    let active = true;
+    if (!riderId) return;
 
-    const publishLocation = async ({ latitude, longitude }) => {
-      if (!active) return;
-      const { data } = await supabase.auth.getSession();
-      const token = data.session?.access_token;
-      if (!token) return;
-      await fetch('/api/v1/couriers/location', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ latitude, longitude })
-      });
-    };
+    async function fetchLocation() {
+      const { data } = await supabase
+        .from('local_couriers')
+        .select('current_lat, current_lng, is_online, full_name')
+        .eq('user_id', riderId)
+        .maybeSingle();
+      if (data) setLocation(data);
+      setLoading(false);
+    }
+    fetchLocation();
 
-    const watchId = navigator.geolocation.watchPosition(
-      ({ coords }) => publishLocation(coords),
-      () => undefined,
-      { enableHighAccuracy: false, maximumAge: 60000, timeout: 15000 }
-    );
-    return () => {
-      active = false;
-      navigator.geolocation.clearWatch(watchId);
-    };
-  }, [role]);
+    const channel = supabase
+      .channel(`courier-location-${riderId}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'local_couriers', filter: `user_id=eq.${riderId}` },
+        (payload) => setLocation(payload.new)
+      )
+      .subscribe();
+
+    return () => supabase.removeChannel(channel);
+  }, [riderId]);
+
+  return { location, loading };
 }
