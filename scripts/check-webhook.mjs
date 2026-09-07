@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 
-const server = spawn(process.execPath, ['server/operations-webhook.mjs'], { stdio: 'ignore' });
+const server = spawn(process.execPath, ['server/operations-webhook.mjs'], { stdio: 'ignore', env: { ...process.env, PORT: '8888' } });
 const baseUrl = 'http://127.0.0.1:8888';
 
 try {
