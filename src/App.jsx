@@ -4,7 +4,7 @@ import { supabase, supabaseConfigMissing } from './lib/supabaseClient';
 import { useCourierLocation } from './lib/useCourierLocation';
 
 // Import our shared catalog module
-import ProductCatalog from "./ProductCard"; 
+import ProductCatalog from "./pages/ProductCard";
 
 const roles = ['customer', 'vendor', 'driver', 'rider'];
 
