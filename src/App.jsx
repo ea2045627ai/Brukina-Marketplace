@@ -1,22 +1,19 @@
 import { useEffect, useState } from 'react';
-import { executeDatabaseLogin, validateSignupForm } from '../lib/validation.mjs';
+import { executeDatabaseLogin, validateSignupForm } from './lib/validation.mjs';
 import { supabase, supabaseConfigMissing } from './lib/supabaseClient';
 import { useCourierLocation } from './lib/useCourierLocation';
 
-// Import our shared catalog module
-import ProductCatalog from "./pages/ProductCard";
+// Direct path to your component file sitting right next to App.jsx in src/
+import ProductCatalog from './ProductCard'; 
 
 const roles = ['customer', 'vendor', 'driver', 'rider'];
 
+// Synced with your catalog categories to ensure accurate tab filtering
 const CATEGORIES = [
   { id: 'dashboard', label: 'All products', path: '/' },
-  { id: 'heavy-machinery', label: 'Heavy Machinery', path: '/heavy-machinery' },
-  { id: 'mobile-usage', label: 'Mobile Usage', path: '/mobile-usage' },
-  { id: 'food-groceries', label: 'Food & Groceries', path: '/food-groceries' },
-  { id: 'home-appliances', label: 'Appliances', path: '/home-appliances' },
-  { id: 'building-materials', label: 'Building Materials', path: '/building-materials' },
-  { id: 'electricals', label: 'Electricals', path: '/electricals' },
-  { id: 'accessories', label: 'All Accessories', path: '/accessories' }
+  { id: 'grain', label: 'Grains & Cereals', path: '/grain' },
+  { id: 'vegetable', label: 'Vegetables', path: '/vegetable' },
+  { id: 'fruit', label: 'Fruits', path: '/fruit' }
 ];
 
 const pageForPath = (path) => {
@@ -211,7 +208,7 @@ function Workspace({ page, role, user, onNavigate, onLogout }) {
           setDeliveries(deliveryResult.data || []);
         }
       } catch (err) {
-        console.error("Error loading workspace data collections:", err);
+        console.error("Error loading marketplace data:", err);
       } finally {
         if (active) setLoading(false);
       }
@@ -221,7 +218,7 @@ function Workspace({ page, role, user, onNavigate, onLogout }) {
   }, [user.id]);
 
   if (loading) {
-    return <div style={{ padding: '40px', textAlign: 'center', color: '#999' }}>Loading your marketplace layout...</div>;
+    return <div style={{ padding: '40px', textAlign: 'center', color: '#999' }}>Loading marketplace modules...</div>;
   }
 
   return (

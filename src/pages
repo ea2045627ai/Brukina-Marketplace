@@ -1,235 +1,100 @@
-import { useEffect, useState } from 'react';
-import { executeDatabaseLogin, validateSignupForm } from '../lib/validation.mjs';
-import { supabase, supabaseConfigMissing } from './lib/supabaseClient';
-import { useCourierLocation } from './lib/useCourierLocation';
+import React from 'react';
 
-// FIXED PATH: Added "./pages/" so Vite can locate the component
-import ProductCatalog from './pages/ProductCard'; 
+export default function ProductCatalog({ 
+  catalog = [], 
+  query = '', 
+  page = 'dashboard', 
+  onNavigate, 
+  user, 
+  role, 
+  onLogout 
+}) {
+  const filteredCatalog = catalog.filter(item => {
+    const matchesSearch = `${item.product_name || ''} ${item.description || ''} ${item.vendor_name || ''}`
+      .toLowerCase()
+      .includes(query.toLowerCase());
 
-const roles = ['customer', 'vendor', 'driver', 'rider'];
-
-// Synced with your catalog categories to ensure accurate tab filtering
-const CATEGORIES = [
-  { id: 'dashboard', label: 'All products', path: '/' },
-  { id: 'grain', label: 'Grains & Cereals', path: '/grain' },
-  { id: 'vegetable', label: 'Vegetables', path: '/vegetable' },
-  { id: 'fruit', label: 'Fruits', path: '/fruit' }
-];
-
-const pageForPath = (path) => {
-  if (path === '/login') return 'login';
-  if (path === '/signup') return 'signup';
-  if (path.includes('vendor')) return 'inventory';
-  if (path.includes('rider') || path.includes('driver')) return 'dispatch';
-  if (path.includes('wallet')) return 'wallet';
-  if (path.includes('orders')) return 'orders';
-  if (path.includes('profile')) return 'profile';
-  
-  const segment = path.split('/').pop();
-  if (CATEGORIES.some(cat => cat.id === segment)) {
-    return segment;
-  }
-  return 'dashboard';
-};
-
-export default function App() {
-  const [page, setPage] = useState(() => pageForPath(location.pathname));
-  const [user, setUser] = useState(null);
-  const [role, setRole] = useState('customer');
-  
-  const navigate = (next) => {
-    const path = ['login', 'signup'].includes(next) ? `/${next}` : `/dashboard/${next}`;
-    history.pushState({}, '', path);
-    setPage(next);
-  };
-
-  useEffect(() => {
-    const onPopState = () => setPage(pageForPath(location.pathname));
-    window.addEventListener('popstate', onPopState);
-    if (supabase) {
-      supabase.auth.getSession().then(({ data }) => {
-        if (data.session) {
-          setUser(data.session.user);
-          setRole(data.session.user.user_metadata?.role || 'customer');
-        }
-      });
+    if (page === 'dashboard' || page === 'all') {
+      return matchesSearch;
     }
-    return () => window.removeEventListener('popstate', onPopState);
-  }, []);
-
-  if (supabaseConfigMissing) return <ConfigurationNotice />;
-  
-  if (page === 'login' || page === 'signup') {
-    return (
-      <Auth 
-        mode={page} 
-        onNavigate={navigate} 
-        onSuccess={(nextUser, nextRole) => { 
-          setUser(nextUser); 
-          setRole(nextRole); 
-          navigate('dashboard'); 
-        }} 
-      />
-    );
-  }
-  
-  if (!user) {
-    return (
-      <Auth 
-        mode="login" 
-        onNavigate={navigate} 
-        onSuccess={(nextUser, nextRole) => { 
-          setUser(nextUser); 
-          setRole(nextRole); 
-          navigate('dashboard'); 
-        }} 
-      />
-    );
-  }
-  
-  return (
-    <Workspace 
-      page={page} 
-      role={role} 
-      user={user} 
-      onNavigate={navigate} 
-      onLogout={async () => { 
-        await supabase.auth.signOut(); 
-        setUser(null); 
-        navigate('login'); 
-      }} 
-    />
-  );
-}
-
-function ConfigurationNotice() {
-  return (
-    <main className="auth-page">
-      <section className="auth-card">
-        <span className="eyebrow">BRUKINA ACCESS</span>
-        <h1>Workspace not configured</h1>
-        <p>Add <strong>VITE_SUPABASE_URL</strong> and <strong>VITE_SUPABASE_ANON_KEY</strong> to the deployment environment, then reload the app.</p>
-      </section>
-    </main>
-  );
-}
-
-function Auth({ mode, onNavigate, onSuccess }) {
-  const isSignup = mode === 'signup';
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [selectedRole, setSelectedRole] = useState('customer');
-  const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
-
-  const submit = async (event) => {
-    event.preventDefault();
-    setError('');
-    const validation = isSignup ? validateSignupForm({ fullName: name, email, password }) : null;
-    if (validation && !validation.isValid) return setError(Object.values(validation.errors));
-    if (!isSignup && (!email.trim() || !password)) return setError('Enter your email address and password.');
-    setBusy(true);
-    try {
-      if (!isSignup) {
-        const result = await executeDatabaseLogin(supabase, email, password);
-        if (!result.success) throw new Error(result.error);
-        onSuccess(result.user, result.role);
-      } else {
-        const { data, error: authError } = await supabase.auth.signUp({ 
-          email: email.trim(), 
-          password, 
-          options: { data: { full_name: name.trim(), role: selectedRole } } 
-        });
-        if (authError) throw authError;
-        if (!data.session) return setError('Check your email to confirm your account before signing in.');
-        onSuccess(data.user, selectedRole);
-      }
-    } catch (errorValue) {
-      setError(errorValue.message || 'Authentication failed.');
-    } finally {
-      setBusy(false);
-    }
-  };
+    return matchesSearch && item.category === page;
+  });
 
   return (
-    <main className="auth-page">
-      <section className="auth-card">
-        <span className="eyebrow">BRUKINA ACCESS</span>
-        <h1>{isSignup ? 'Create your workspace' : 'Welcome back'}</h1>
-        <p>{isSignup ? 'Choose how you participate in the marketplace.' : 'Sign in to resume managing your marketplace workspace.'}</p>
-        {error && <div className="error">{error}</div>}
-        {isSignup && (
-          <div className="role-grid">
-            {roles.map(item => (
-              <button className={selectedRole === item ? 'role selected' : 'role'} type="button" key={item} onClick={() => setSelectedRole(item)}>
-                {item}<small>{item === 'customer' ? 'Shop and track' : item === 'vendor' ? 'Sell inventory' : 'Move orders'}</small>
-              </button>
-            ))}
+    <div className="container" style={{ maxWidth: '1200px', margin: '0 auto', padding: '16px' }}>
+      
+      {/* Top Banner Row */}
+      <div className="hub-banner" style={{ display: 'flex', gap: '16px', marginBottom: '24px' }}>
+        <div className="hub-card" onClick={() => onNavigate('dashboard')} style={{ flex: 1, background: '#231F20', color: '#fff', padding: '16px', borderRadius: '12px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h3>Urban hubs</h3>
+            <small style={{ color: '#aaa' }}>Best wholesale rates</small>
+          </div>
+          <span>&gt;</span>
+        </div>
+        
+        <div className="hub-card rural" onClick={() => onNavigate('dashboard')} style={{ flex: 1, background: '#FFFDFC', color: '#333', border: '1px solid #EAE0D5', padding: '16px', borderRadius: '12px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h3>Rural markets</h3>
+            <small style={{ color: '#777' }}>Local & regional supply</small>
+          </div>
+          <span>&gt;</span>
+        </div>
+      </div>
+
+      <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        <h2>Browse categories</h2>
+        <span style={{ color: '#C85A32', cursor: 'pointer', fontSize: '14px' }} onClick={() => onNavigate('dashboard')}>View all &rarr;</span>
+      </div>
+
+      {/* Modern Filter Tabs Layout Scroll bar */}
+      <div className="tab-container" style={{ display: 'flex', gap: '10px', marginBottom: '24px', overflowX: 'auto', paddingBottom: '8px' }}>
+        <button className={`tab-btn ${page === 'dashboard' ? 'active' : ''}`} onClick={() => onNavigate('dashboard')}>
+          All products
+        </button>
+        <button className={`tab-btn ${page === 'grain' ? 'active' : ''}`} onClick={() => onNavigate('grain')}>
+          Grains & Cereals
+        </button>
+        <button className={`tab-btn ${page === 'vegetable' ? 'active' : ''}`} onClick={() => onNavigate('vegetable')}>
+          Vegetables
+        </button>
+        <button className={`tab-btn ${page === 'fruit' ? 'active' : ''}`} onClick={() => onNavigate('fruit')}>
+          Fruits
+        </button>
+      </div>
+
+      {/* Deals Grid Layout */}
+      <div className="deals-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '16px', marginBottom: '48px', color: '#333' }}>
+        {filteredCatalog && filteredCatalog.length > 0 ? (
+          filteredCatalog.map(item => (
+            <div 
+              key={item.id || item.product_name} 
+              className="product-card" 
+              style={{ border: '1px solid #EAE0D5', borderRadius: '12px', padding: '16px', background: '#fff' }}
+            >
+              <h4 style={{ margin: '0 0 8px 0' }}>{item.product_name}</h4>
+              <p style={{ fontSize: '14px', color: '#666', margin: '0 0 12px 0' }}>{item.description}</p>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontWeight: 'bold', color: '#C85A32' }}>${item.price}</span>
+                <span style={{ fontSize: '12px', color: '#999' }}>{item.vendor_name}</span>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div style={{ gridColumn: '1 / -1', textAlign: 'center', color: '#999', padding: '40px 0' }}>
+            No products found matching your search.
           </div>
         )}
-        <form onSubmit={submit}>
-          {isSignup && <label>Full name<input value={name} onChange={event => setName(event.target.value)} required /></label>}
-          <label>Email address<input type="email" value={email} onChange={event => setEmail(event.target.value)} required /></label>
-          <label>Password<input type="password" value={password} onChange={event => setPassword(event.target.value)} required /></label>
-          <button className="primary" disabled={busy}>{busy ? 'Connecting...' : isSignup ? 'Create account' : 'Sign in to workspace'} <span>→</span></button>
-        </form>
-        <button className="link" onClick={() => onNavigate(isSignup ? 'login' : 'signup')}>{isSignup ? 'Already have an account? Sign in' : 'Create account'} ↗</button>
-      </section>
-    </main>
-  );
-}
+      </div>
 
-function Workspace({ page, role, user, onNavigate, onLogout }) {
-  useCourierLocation(role);
-  const [catalog, setCatalog] = useState([]);
-  const [orders, setOrders] = useState([]);
-  const [wallet, setWallet] = useState(null);
-  const [deliveries, setDeliveries] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [query, setQuery] = useState('');
+      {/* Control Area Footer Panel */}
+      <footer style={{ marginTop: '48px', paddingTop: '16px', borderTop: '1px solid #EAE0D5', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span>Connected: <strong>{user?.email || 'Guest'}</strong> ({role || 'User'})</span>
+        <button onClick={onLogout} style={{ background: 'none', border: 'none', color: '#C85A32', cursor: 'pointer', fontWeight: 'bold' }}>
+          Logout
+        </button>
+      </footer>
 
-  useEffect(() => {
-    let active = true;
-    async function loadWorkspace() {
-      setLoading(true);
-      try {
-        const [catalogResult, orderResult, walletResult, deliveryResult] = await Promise.all([
-          supabase.from('marketplace_inventory').select('*').eq('active', true).order('created_at', { ascending: false }),
-          supabase.from('orders').select('id, order_number, status, total, created_at').order('created_at', { ascending: false }).limit(20),
-          supabase.from('wallets').select('balance, escrow_balance').eq('user_id', user.id).maybeSingle(),
-          supabase.from('deliveries').select('id, order_id, status, eta_minutes, updated_at').order('updated_at', { ascending: false }).limit(20)
-        ]);
-
-        if (active) {
-          setCatalog(catalogResult.data || []);
-          setOrders(orderResult.data || []);
-          setWallet(walletResult.data || null);
-          setDeliveries(deliveryResult.data || []);
-        }
-      } catch (err) {
-        console.error("Error loading marketplace data:", err);
-      } finally {
-        if (active) setLoading(false);
-      }
-    }
-    loadWorkspace();
-    return () => { active = false; };
-  }, [user.id]);
-
-  if (loading) {
-    return <div style={{ padding: '40px', textAlign: 'center', color: '#999' }}>Loading marketplace modules...</div>;
-  }
-
-  return (
-    <ProductCatalog 
-      catalog={catalog}
-      query={query}
-      page={page}
-      onNavigate={onNavigate}
-      user={user}
-      role={role}
-      onLogout={onLogout}
-    />
+    </div>
   );
 }
