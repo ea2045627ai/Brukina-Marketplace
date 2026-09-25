@@ -6,17 +6,17 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from './lib/supabaseClient';
-import AccessibilityErrorBoundary from './components/AccessibilityErrorBoundary';
-import DynamicMarketplaceEngine from './components/DynamicMarketplaceEngine';
-import VendorInventoryPanel from './components/VendorInventoryPanel';
-import RiderTrackPanel from './components/RiderTrackPanel';
-import WalletPanel from './components/WalletPanel';
-import RiderWithdrawalPanel from './components/RiderWithdrawalPanel';
-import AdminLedgerPanel from './components/AdminLedgerPanel';
-import AdminPriceController from './components/AdminPriceController';
-import AdminTerminalPanel from './components/AdminTerminalPanel';
-import AdminApiLogger from './components/AdminApiLogger';
-import AdminCategoryPanel from './components/AdminCategoryPanel';
+import AccessibilityErrorBoundary from './components/AccessibilityErrorBoundary.jsx';
+import DynamicMarketplaceEngine from './components/DynamicMarketplaceEngine.jsx';
+import VendorInventoryPanel from './components/VendorInventoryPanel.jsx';
+import RiderTrackPanel from './components/RiderTrackPanel.jsx';
+import WalletPanel from './components/WalletPanel.jsx';
+import RiderWithdrawalPanel from './components/RiderWithdrawalPanel.jsx';
+import AdminLedgerPanel from './components/AdminLedgerPanel.jsx';
+import AdminPriceController from './components/AdminPriceController.jsx';
+import AdminTerminalPanel from './components/AdminTerminalPanel.jsx';
+import AdminApiLogger from './components/AdminApiLogger.jsx';
+import AdminCategoryPanel from './components/AdminCategoryPanel.jsx';
 
 export default function App() {
   const [activeRole, setActiveRole] = useState('Customer');
@@ -85,7 +85,7 @@ export default function App() {
           </div>
         </section>
 
-        {/* FIXED: Administrative Submenu wrapped in semantic navigational landmarks */}
+        {/* Administrative Submenu wrapped in semantic navigational landmarks */}
         {activeRole === 'Admin' && (
           <nav className="admin-submenu" role="navigation" aria-label="System Executive Control Submenu">
             <ul role="tablist" style={{ listStyle: 'none', display: 'flex', padding: 0, margin: 0 }}>
@@ -113,7 +113,7 @@ export default function App() {
           {activeTab === 'categories' && <AdminCategoryPanel />}
         </main>
 
-        {/* FIXED: Bottom Nav redesigned with explicit ARIA selectors and icon concealment maps */}
+        {/* Bottom Nav redesigned with explicit ARIA selectors and icon concealment maps */}
         <nav className="bottom-nav" role="navigation" aria-label="Ecosystem Feature Channel Modules">
           <ul role="tablist" style={{ listStyle: 'none', display: 'flex', width: '100%', padding: 0, margin: 0 }}>
             <li role="presentation" style={{ flex: 1 }}>
