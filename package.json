@@ -4,21 +4,19 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "prebuild": "npm run security-audit && npm run access-audit",
-    "check": "npm run security-audit && npm run access-audit && node scripts/check-build.mjs && npm run check:netlify && npm run check:render",
-    "check:netlify": "node scripts/check-netlify.mjs",
-    "check:render": "node scripts/check-render.mjs",
-    "start:webhook": "node server/operations-webhook.mjs",
-    "start:railway": "node server/railway.mjs",
-    "check:webhook": "node scripts/check-webhook.mjs",
-    "check:all": "npm run check && npm run check:webhook"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",
     "cors": "^2.8.5",
-    "express": "^5.1.0",
-    "react": "^19.1.1"
+    "express": "^4.21.2",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^7.1.4"
   }
 }
