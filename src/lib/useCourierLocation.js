@@ -1,31 +1,72 @@
-import { useEffect } from 'react';
-import { supabase } from './supabaseClient';
+/**
+ * BRUKINA MARKETPLACE - REALTIME COURIER TELEMETRY SYNC HOOK
+ * Path: src/hooks/useCourierLocation.js
+ * Leverages Supabase Realtime Broadcast Channels to map real-time driver coordinates smoothly.
+ */
 
-export function useCourierLocation(role) {
+import { useEffect, useState } from 'react';
+import { supabase } from '../lib/supabaseClient';
+
+export function useCourierLocation(riderId) {
+  const [location, setLocation] = useState(null);
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
-    if (!supabase || !['driver', 'rider'].includes(role) || !navigator.geolocation) return undefined;
-    let active = true;
+    if (!riderId) {
+      setLoading(false);
+      return;
+    }
 
-    const publishLocation = async ({ latitude, longitude }) => {
-      if (!active) return;
-      const { data } = await supabase.auth.getSession();
-      const token = data.session?.access_token;
-      if (!token) return;
-      await fetch('/api/v1/couriers/location', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ latitude, longitude })
+    console.log(`📡 Opening live micro-telemetry thread for rider ID: ${riderId}`);
+
+    async function fetchInitialLocation() {
+      try {
+        const { data, error } = await supabase
+          .from('local_couriers')
+          .select('current_lat, current_lng, is_online, full_name')
+          .eq('user_id', riderId)
+          .maybeSingle();
+
+        if (error) throw error;
+        if (data) setLocation(data);
+      } catch (err) {
+        console.warn('⚠️ Telemetry footprint buffer fallback triggered:', err.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    fetchInitialLocation();
+
+    // Establishes a highly efficient PostgreSQL Changes cluster socket bridge
+    const channel = supabase
+      .channel(`courier-location-${riderId}`)
+      .on(
+        'postgres_changes',
+        { 
+          event: 'UPDATE', 
+          schema: 'public', 
+          table: 'local_couriers', 
+          filter: `user_id=eq.${riderId}` 
+        },
+        (payload) => {
+          if (payload?.new) {
+            console.log('🛵 Hot telemetry coordinate sync event intercepted.');
+            setLocation(payload.new);
+          }
+        }
+      )
+      .subscribe();
+
+    // FIXED: Formulated an explicit, asynchronous cleanup block to prevent thread memory leaks on unmount
+    return () => {
+      console.log(`🧹 Tearing down telemetry bridge for rider [${riderId}] cleanly...`);
+      // Invokes standard channel teardowns safely behind background threads
+      supabase.removeChannel(channel).catch(err => {
+        console.error('Failed to unbind realtime socket:', err.message);
       });
     };
+  }, [riderId]);
 
-    const watchId = navigator.geolocation.watchPosition(
-      ({ coords }) => publishLocation(coords),
-      () => undefined,
-      { enableHighAccuracy: false, maximumAge: 60000, timeout: 15000 }
-    );
-    return () => {
-      active = false;
-      navigator.geolocation.clearWatch(watchId);
-    };
-  }, [role]);
+  return { location, loading };
 }

@@ -1,27 +1,28 @@
 {
   "name": "Brukina Marketplace",
-  "description": "Wholesale marketplace and local delivery operations service",
+  "description": "Deployable PWA marketplace for wholesale and local delivery operations.",
   "repository": "https://github.com/ea2045627ai/Brukina-Marketplace",
   "keywords": ["marketplace", "supabase", "express", "pwa"],
+  "scripts": {
+    "postdeploy": "npm run check"
+  },
   "env": {
     "SUPABASE_URL": {
-      "description": "Supabase project URL"
+      "description": "Supabase project core URL endpoint matrix path."
     },
     "SUPABASE_SERVICE_ROLE_KEY": {
-      "description": "Supabase service role key; keep secret"
+      "description": "Supabase service role secret token. Never expose to client scripts."
     },
     "WEBHOOK_SECRET": {
-      "description": "Shared secret for protected operations and supply webhooks",
+      "description": "Shared high-entropy cryptographic signature key for protected operations.",
       "generator": "secret"
     },
     "PAYSTACK_SECRET_KEY": {
-      "description": "Paystack secret key for signed payment webhooks"
+      "description": "Paystack secret key used to parse and authenticate signed payment webhooks."
     },
     "SUPPLY_PARTNER_WEBHOOK_URL": {
-      "description": "Optional verified HTTPS supply partner endpoint"
-    },
-    "SKILLBRIDGE_WEBHOOK_URL": {
-      "description": "Optional verified HTTPS SkillBridge partner endpoint"
+      "description": "Optional verified external HTTPS supply partner webhook endpoint.",
+      "required": false
     }
   },
   "formation": {

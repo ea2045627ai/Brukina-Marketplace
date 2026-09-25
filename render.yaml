@@ -1,42 +1,37 @@
+# ==========================================================================
+# BRUKINA ACCESS MARKETPLACE - MASTER RENDER ORCHESTRATION BLUEPRINT
+# Path: render.yaml
+# Configures the free-tier web container runner instance, Node environments, and build gates.
+# ==========================================================================
+
 services:
   - type: web
     name: brukina-marketplace
     runtime: node
     plan: free
-    autoDeploy: true
-    buildCommand: npm install && npm run build
+    # FIXED: Chained the required validation sweeps prior to building dist directories to prevent dirty deployments
+    buildCommand: npm ci && npm run check && npm run build
     startCommand: npm start
-    healthCheckPath: /health
     envVars:
-      - key: SUPABASE_URL
-        sync: false
-      - key: SUPABASE_ANON_KEY
-        sync: false
+      - key: NODE_VERSION
+        value: "22.12.0"
+      
+      # Frontend Client Access Keys (Exposed to Vite bundle)
       - key: VITE_SUPABASE_URL
         sync: false
       - key: VITE_SUPABASE_ANON_KEY
         sync: false
-      - key: SUPABASE_SERVICE_ROLE_KEY
+
+      # Server-Side Administrative Keys (Gated safely away from browser scripts)
+      - key: SUPABASE_URL
         sync: false
-      - key: WEBHOOK_SECRET
+      - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
       - key: PAYSTACK_SECRET_KEY
         sync: false
       - key: TELEPHONY_PROVIDER_API_KEY
         sync: false
       - key: TELEPHONY_PROVIDER_VOICE_URL
+        value: "https://arkesel.com"
+      - key: WEBHOOK_SECRET
         sync: false
-      - key: ARKESEL_DEFAULT_PHONE
-        sync: false
-      - key: SUPPLY_PARTNER_WEBHOOK_URL
-        sync: false
-      - key: SKILLBRIDGE_WEBHOOK_URL
-        sync: false
-      - key: DATABASE_URL
-        fromDatabase:
-          name: brukina-marketplace-db
-          property: connectionString
-
-databases:
-  - name: brukina-marketplace-db
-    plan: free

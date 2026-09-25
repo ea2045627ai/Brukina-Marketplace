@@ -35,14 +35,22 @@ const server = createServer(async (request, response) => {
   try {
     const event = await readJson(request);
     validateEvent(event);
-    if (event.table === 'telephony_calls' && event.type === 'INSERT') await triggerArkeselVoiceCall(event.record);
+    
+    if (event.table === 'telephony_calls' && event.type === 'INSERT') {
+      await triggerArkeselVoiceCall(event.record);
+    }
+    
     const stored = { received_at: new Date().toISOString(), ...event };
     await mkdir(dirname(eventsFile), { recursive: true });
     await appendFile(eventsFile, `${JSON.stringify(stored)}\n`);
+    
     return send(response, 202, { accepted: true, table: event.table, type: event.type });
   } catch (error) {
     return send(response, 400, { accepted: false, error: error.message || 'Invalid request' });
   }
 });
 
-server.listen(port, '127.0.0.1', () => console.log(`Operations webhook listening on http://localhost:${port}`));
+// FIXED: Bound to 0.0.0.0 instead of 127.0.0.1 to allow production network routing structures
+server.listen(port, '0.0.0.0', () => {
+  console.log(`[OPERATIONS WEBHOOK ACTIVE] Node instance operational on port ${port}`);
+});

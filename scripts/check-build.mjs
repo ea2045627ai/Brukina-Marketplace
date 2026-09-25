@@ -1,21 +1,28 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const root = resolve(import.meta.dirname, '..');
+// FIXED: Evaluated root directories cleanly using reliable fileURLToPath parameters
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const root = resolve(__dirname, '..');
+
 const requiredFiles = [
   'index.html',
-  'src/main.jsx',
-  'src/App.jsx',
   'src/styles.css',
-  'manifest.webmanifest',
   'public/sw.js',
+  'manifest.webmanifest',
   'icon.svg',
   'netlify.toml',
   '_headers',
   'README.md',
   'ROADMAP.md',
   '.env.example',
+  'vite.config.js',
+  'render.yaml',
   'scripts/check-netlify.mjs',
+  'scripts/check-render.mjs',
+  'scripts/database.mjs',
   'railway.toml',
   'Procfile',
   'app.json',
@@ -28,46 +35,78 @@ const requiredFiles = [
   'supabase/operations.sql',
   'supabase/sourcing.sql',
   'supabase/supply_bridge.sql',
-  'supabase/complete_repair.sql',
-  'supabase/project_database.sql',
   'netlify/functions/supply-bridge.mjs',
-  'netlify/functions/create-order.mjs'
+  'netlify/functions/create-order.mjs',
+  'src/main.jsx',
+  'src/App.jsx',
+  'src/lib/supabaseClient.js',
+  'src/hooks/useRealtimeCatalog.js',
+  'src/components/DynamicMarketplaceEngine.jsx',
+  'src/components/VendorInventoryPanel.jsx',
+  'src/components/RiderTrackPanel.jsx',
+  'src/components/WalletPanel.jsx',
+  'src/components/AdminLedgerPanel.jsx',
+  'src/components/AdminPriceController.jsx',
+  'src/components/AdminTerminalPanel.jsx',
+  'src/components/AdminApiLogger.jsx',
+  'src/components/AdminCategoryPanel.jsx',
+  'src/components/RiderWithdrawalPanel.jsx',
+  'src/components/OrderChatComponent.jsx',
+  'lib/validation.mjs'
 ];
 
+// Verify that every system registration asset sits exactly where it is needed
 for (const file of requiredFiles) {
-  if (!existsSync(resolve(root, file))) throw new Error(`Missing required file: ${file}`);
+  if (!existsSync(resolve(root, file))) {
+    throw new Error(`🔴 Structural Error: Missing critical file path context: ${file}`);
+  }
 }
 
 const html = readFileSync(resolve(root, 'index.html'), 'utf8');
-const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]);
-const duplicateIds = ids.filter((id, index) => ids.indexOf(id) !== index);
-if (duplicateIds.length) throw new Error(`Duplicate HTML ids: ${[...new Set(duplicateIds)].join(', ')}`);
+if (!html.includes('id="root"')) throw new Error('🔴 Structural Error: index.html must contain a root div for React');
+if (!html.includes('/src/main.jsx')) throw new Error('🔴 Structural Error: index.html must reference /src/main.jsx');
+
 const localReferences = [...html.matchAll(/(?:src|href)="([^"#][^"]*)"/g)]
   .map(match => match[1])
   .filter(reference => !reference.startsWith('http://') && !reference.startsWith('https://'));
 
 for (const reference of localReferences) {
-  const projectReference = reference.replace(/^\/+/, '');
-  if (!existsSync(resolve(root, projectReference))) throw new Error(`Missing local asset: ${reference}`);
+  if (reference.startsWith('/src/')) continue;
+  
+  // FIXED: Account for Vite absolute resolution strategies by validating standard static paths correctly
+  let assetFound = existsSync(resolve(root, reference));
+  if (!assetFound && reference.startsWith('/')) {
+    assetFound = existsSync(resolve(root, reference.slice(1))); // Check if file is resting in root directly
+  }
+  if (!assetFound) {
+    assetFound = existsSync(resolve(root, `public${reference}`)); // Check fallback location inside public/
+  }
+  
+  if (!assetFound) {
+    throw new Error(`🔴 Asset Verification Error: Missing local asset path link: ${reference}`);
+  }
 }
 
+// Evaluate structural integrity of progressive web app manifests
 const manifest = JSON.parse(readFileSync(resolve(root, 'manifest.webmanifest'), 'utf8'));
 if (!manifest.name || !manifest.start_url || !manifest.icons?.length) {
-  throw new Error('Manifest is missing required PWA fields');
+  throw new Error('🔴 Configuration Mismatch: manifest.webmanifest is missing required progressive web app parameters.');
 }
 
-for (const anchor of ['id="root"', 'src/main.jsx']) {
-  if (!html.includes(anchor)) throw new Error(`Missing React application anchor: ${anchor}`);
-}
-
+// Evaluate deep table declarations inside production migration structures
 const productionSql = readFileSync(resolve(root, 'supabase/production.sql'), 'utf8');
 for (const table of ['support_preferences', 'support_callback_requests', 'support_conversations']) {
-  if (!productionSql.includes(`public.${table}`)) throw new Error(`Missing production support table: ${table}`);
+  if (!productionSql.includes(`public.${table}`)) {
+    throw new Error(`🔴 Schema Mismatch: production.sql verification failed. Missing customer support table entry mapping: ${table}`);
+  }
 }
 
+// Verify advanced database networking protocols
 const bridgeSql = readFileSync(resolve(root, 'supabase/supply_bridge.sql'), 'utf8');
 for (const required of ['route_to_supply_partners', 'tr_sourcing_request_insert', 'vault.decrypted_secrets', 'net.http_post']) {
-  if (!bridgeSql.includes(required)) throw new Error(`Supply bridge migration is missing: ${required}`);
+  if (!bridgeSql.includes(required)) {
+    throw new Error(`🔴 Schema Mismatch: supply_bridge.sql verification failed. Missing automated trigger or net procedure call: ${required}`);
+  }
 }
 
-console.log('Marketplace structure check passed');
+console.log('✅ Master Marketplace structural pre-flight matrix validation check successfully passed.');

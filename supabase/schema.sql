@@ -69,7 +69,6 @@ create table if not exists public.orders (
   order_number text unique not null,
   customer_id uuid not null references auth.users(id) on delete restrict,
   vendor_id uuid references public.global_vendors(id) on delete set null,
-  idempotency_key text,
   status text not null default 'pending' check (status in ('pending', 'confirmed', 'packed', 'out_for_delivery', 'delivered', 'cancelled')),
   total numeric(12,2) not null default 0 check (total >= 0),
   delivery_address text,
@@ -119,7 +118,6 @@ create table if not exists public.wallet_transactions (
 create index if not exists inventory_active_idx on public.marketplace_inventory(active, category);
 create index if not exists inventory_source_idx on public.marketplace_inventory(source_channel, source_country);
 create index if not exists orders_customer_idx on public.orders(customer_id, created_at desc);
-create unique index if not exists orders_customer_idempotency_idx on public.orders(customer_id, idempotency_key) where idempotency_key is not null;
 create index if not exists order_items_order_idx on public.order_items(order_id);
 create index if not exists vendors_owner_idx on public.global_vendors(owner_id);
 create index if not exists deliveries_rider_idx on public.deliveries(rider_id, status);
