@@ -1,0 +1,20 @@
+{
+  "name": "Brukina Marketplace",
+  "short_name": "Brukina",
+  "description": "Better wholesale and retail trade, connected.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f1eb",
+  "theme_color": "#f6f1eb",
+  "orientation": "any",
+  "categories": ["shopping", "business"],
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
