@@ -6,7 +6,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from './lib/supabaseClient';
-import AccessibilityErrorBoundary from './components/AccessibilityErrorBoundary.jsx';
+import AccessibilityErrorBoundary from './AccessibilityErrorBoundary.jsx';
 import DynamicMarketplaceEngine from './components/DynamicMarketplaceEngine.jsx';
 import VendorInventoryPanel from './components/VendorInventoryPanel.jsx';
 import RiderTrackPanel from './components/RiderTrackPanel.jsx';
