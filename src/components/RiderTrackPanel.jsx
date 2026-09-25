@@ -7,33 +7,68 @@ export default function RiderTrackPanel() {
   const [syncing, setSyncing] = useState(true);
   const [actionId, setActionId] = useState(null);
 
-  useEffect(() => {
-    async function fetchLogisticsQueue() {
-      try {
-        const { data, error } = await supabase
-          .from('orders')
-          .select('id, quantity, total_amount, order_status, created_at, products(name, description)')
-          .eq('order_status', 'Processing')
-          .order('created_at', { ascending: true });
-        if (error) throw error;
-        setOpenJobs(data || []);
-      } catch (err) {
-        console.error('Logistics sync failure:', err.message);
-      } finally {
-        setSyncing(false);
-      }
+  // Core orchestration engine to download clear contextual lines from Supabase
+  async function fetchLogisticsQueue() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // 1. Fetch available jobs that haven't been claimed by any dispatch rider yet
+      const { data: available, error: availableError } = await supabase
+        .from('orders')
+        .select('id, quantity, total_amount, order_status, created_at, products(name, description)')
+        .eq('order_status', 'Processing')
+        .order('created_at', { ascending: true });
+      if (availableError) throw availableError;
+
+      // 2. Hydrate active manifest dynamically from database logs to survive browser reloads
+      const { data: locked, error: lockedError } = await supabase
+        .from('orders')
+        .select('id, quantity, total_amount, order_status, created_at, products(name, description)')
+        .eq('order_status', 'In Transit')
+        .eq('rider_id', user.id) // Ensure explicit data boundary matching your auth framework
+        .order('created_at', { ascending: true });
+      if (lockedError) throw lockedError;
+
+      setOpenJobs(available || []);
+      setMyManifest(locked || []);
+    } catch (err) {
+      console.error('Logistics sync failure:', err.message);
+    } finally {
+      setSyncing(false);
     }
+  }
+
+  useEffect(() => {
     fetchLogisticsQueue();
   }, []);
 
   const handleAcceptShipment = async (job) => {
     setActionId(job.id);
     try {
-      const { error } = await supabase.from('orders').update({ order_status: 'In Transit' }).eq('id', job.id);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Authentication expired. Sign in again.');
+
+      // CRITICAL FIX: Ensure we only update if it is STILL processing to prevent double-claiming
+      const { data, error } = await supabase
+        .from('orders')
+        .update({ 
+          order_status: 'In Transit',
+          rider_id: user.id 
+        })
+        .eq('id', job.id)
+        .eq('order_status', 'Processing') // Conditional constraint protects ledger against race mutations
+        .select();
+
       if (error) throw error;
+
+      // If data array comes back empty, another rider has claimed it milliseconds prior
+      if (!data || data.length === 0) {
+        throw new Error('This shipment has already been locked by another dispatcher.');
+      }
+
       alert(`Route locked! Dispatch ${job.id.slice(0,8)} added to your manifest.`);
-      setOpenJobs(openJobs.filter(item => item.id !== job.id));
-      setMyManifest([{ ...job, order_status: 'In Transit' }, ...myManifest]);
+      await fetchLogisticsQueue(); // Re-sync ground-truth data cleanly
     } catch (err) {
       alert(`Error claiming route: ${err.message}`);
     } finally {
@@ -44,10 +79,20 @@ export default function RiderTrackPanel() {
   const handleCompleteDelivery = async (orderId) => {
     setActionId(orderId);
     try {
-      const { error } = await supabase.from('orders').update({ order_status: 'Delivered' }).eq('id', orderId);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Authentication expired.');
+
+      // Secure payload update targeting specific order rows matching current rider account
+      const { error } = await supabase
+        .from('orders')
+        .update({ order_status: 'Delivered' })
+        .eq('id', orderId)
+        .eq('rider_id', user.id);
+        
       if (error) throw error;
+
       alert('Shipment confirmed! Earnings credited to your wallet.');
-      setMyManifest(myManifest.filter(item => item.id !== orderId));
+      await fetchLogisticsQueue();
     } catch (err) {
       alert(`Fulfillment error: ${err.message}`);
     } finally {
@@ -87,7 +132,9 @@ export default function RiderTrackPanel() {
                   disabled={actionId !== null}
                   onClick={() => handleAcceptShipment(job)}
                   className="btn-primary"
-                >{actionId === job.id ? 'Securing route...' : 'Accept Delivery'}</button>
+                >
+                  {actionId === job.id ? 'Securing route...' : 'Accept Delivery'}
+                </button>
               </div>
             ))
           )}
@@ -115,7 +162,9 @@ export default function RiderTrackPanel() {
                   disabled={actionId !== null}
                   onClick={() => handleCompleteDelivery(delivery.id)}
                   className="btn-success"
-                >{actionId === delivery.id ? 'Confirming...' : 'Confirm Delivered'}</button>
+                >
+                  {actionId === delivery.id ? 'Confirming...' : 'Confirm Delivered'}
+                </button>
               </div>
             ))
           )}
