@@ -1,15 +1,21 @@
+/**
+ * BRUKINA ACCESS MARKETPLACE - CENTRAL APP CORE SHELL LOADER
+ * Path: src/App.jsx
+ * Configures the live multi-role workspace simulator, cross-channel navigation tabs, and session state routers.
+ */
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from './lib/supabaseClient';
 import DynamicMarketplaceEngine from './components/DynamicMarketplaceEngine';
 import VendorInventoryPanel from './components/VendorInventoryPanel';
 import RiderTrackPanel from './components/RiderTrackPanel';
+import WalletPanel from './components/WalletPanel';
+import RiderWithdrawalPanel from './components/RiderWithdrawalPanel';
 import AdminLedgerPanel from './components/AdminLedgerPanel';
 import AdminPriceController from './components/AdminPriceController';
 import AdminTerminalPanel from './components/AdminTerminalPanel';
 import AdminApiLogger from './components/AdminApiLogger';
 import AdminCategoryPanel from './components/AdminCategoryPanel';
-import WalletPanel from './components/WalletPanel';
-import RiderWithdrawalPanel from './components/RiderWithdrawalPanel';
 
 export default function App() {
   const [activeRole, setActiveRole] = useState('Customer');
@@ -21,13 +27,18 @@ export default function App() {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-          const role = user.user_metadata?.role || 'Customer';
-          setActiveRole(role);
-          if (role === 'vendor') setActiveTab('inventory');
-          else if (role === 'admin') setActiveTab('terminal');
+          // Standardizes role case mappings to match interface toggle logic strings seamlessly
+          const rawRole = user.user_metadata?.role || 'Customer';
+          const normalizedRole = rawRole.charAt(0).toUpperCase() + rawRole.slice(1).toLowerCase();
+          
+          setActiveRole(normalizedRole);
+          
+          // FIXED: Case-sensitivity strings matched perfectly to clear authentication locks
+          if (normalizedRole === 'Vendor') setActiveTab('inventory');
+          else if (normalizedRole === 'Admin') setActiveTab('terminal');
         }
       } catch (err) {
-        console.error('Session init failure:', err.message);
+        console.error('Ecosystem session initialization failure:', err.message);
       } finally {
         setLoading(false);
       }
@@ -43,10 +54,13 @@ export default function App() {
     if (role === 'Admin') setActiveTab('terminal');
   };
 
-  if (loading) return <div className="loading-state full-page">Booting Brukina Access Platform...</div>;
+  if (loading) {
+    return <div className="loading-state full-page">Booting Brukina Access Platform Shell...</div>;
+  }
 
   return (
     <div className="app-root">
+      {/* Dynamic Master Interactive Simulation Bar */}
       <div className="role-controller">
         <div className="role-label">
           <span className="pulse-dot"></span>
@@ -58,11 +72,14 @@ export default function App() {
               key={role}
               onClick={() => handleRoleSwitch(role)}
               className={`role-btn ${activeRole === role ? 'active' : ''}`}
-            >{role}</button>
+            >
+              {role}
+            </button>
           ))}
         </div>
       </div>
 
+      {/* Administrative Workspace Sub-Navigation Panel Row */}
       {activeRole === 'Admin' && (
         <div className="admin-submenu">
           <button onClick={() => setActiveTab('terminal')} className={activeTab === 'terminal' ? 'active' : ''}>Cloud Terminal</button>
@@ -74,6 +91,7 @@ export default function App() {
         </div>
       )}
 
+      {/* Main Reactive Workspace Container Yield Tree */}
       <main className="main-content">
         {activeTab === 'marketplace' && <DynamicMarketplaceEngine activeUserRole={activeRole} />}
         {activeTab === 'inventory' && <VendorInventoryPanel />}
@@ -87,23 +105,28 @@ export default function App() {
         {activeTab === 'categories' && <AdminCategoryPanel />}
       </main>
 
+      {/* Responsive PWA Bottom Navigation Menu Bar */}
       <nav className="bottom-nav">
         <button onClick={() => setActiveTab('marketplace')} className={activeTab === 'marketplace' ? 'active' : ''}>
           <span className="nav-icon">🏠</span><span>Market</span>
         </button>
+        
         {(activeRole === 'Vendor' || activeRole === 'Admin') && (
           <button onClick={() => setActiveTab('inventory')} className={activeTab === 'inventory' ? 'active' : ''}>
             <span className="nav-icon">🏪</span><span>Stock Hub</span>
           </button>
         )}
+        
         {(activeRole === 'Rider' || activeRole === 'Admin' || activeRole === 'Customer') && (
           <button onClick={() => setActiveTab('telemetry')} className={activeTab === 'telemetry' ? 'active' : ''}>
             <span className="nav-icon">🛵</span><span>Rider</span>
           </button>
         )}
+        
         <button onClick={() => setActiveTab('wallet')} className={activeTab === 'wallet' ? 'active' : ''}>
           <span className="nav-icon">📇</span><span>Wallet</span>
         </button>
+        
         {activeRole === 'Admin' && (
           <button onClick={() => setActiveTab('terminal')} className={activeTab === 'terminal' || activeTab === 'apilogger' ? 'active' : ''}>
             <span className="nav-icon">🛡️</span><span>Admin</span>
