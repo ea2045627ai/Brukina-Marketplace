@@ -272,6 +272,5 @@ export default function ProductCatalog({
         <button onClick={onLogout} style={{ background: 'none', border: 'none', color: '#C85A32', cursor: 'pointer', fontWeight: 'bold' }}>Logout</button>
       </footer>
     </div>
-    </div>
   );
 }
