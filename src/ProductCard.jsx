@@ -159,6 +159,7 @@ export default function ProductCatalog({
             </button>
           </form>
         </div>
+      )}
 
       {/* 🚚 COURIER LIVE TRACKING DISPATCH PANEL */}
       {isCourier && (
