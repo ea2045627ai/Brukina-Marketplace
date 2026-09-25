@@ -6,6 +6,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from './lib/supabaseClient';
+import AccessibilityErrorBoundary from './components/AccessibilityErrorBoundary';
 import DynamicMarketplaceEngine from './components/DynamicMarketplaceEngine';
 import VendorInventoryPanel from './components/VendorInventoryPanel';
 import RiderTrackPanel from './components/RiderTrackPanel';
@@ -27,13 +28,11 @@ export default function App() {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-          // Standardizes role case mappings to match interface toggle logic strings seamlessly
           const rawRole = user.user_metadata?.role || 'Customer';
           const normalizedRole = rawRole.charAt(0).toUpperCase() + rawRole.slice(1).toLowerCase();
           
           setActiveRole(normalizedRole);
           
-          // FIXED: Case-sensitivity strings matched perfectly to clear authentication locks
           if (normalizedRole === 'Vendor') setActiveTab('inventory');
           else if (normalizedRole === 'Admin') setActiveTab('terminal');
         }
@@ -55,84 +54,106 @@ export default function App() {
   };
 
   if (loading) {
-    return <div className="loading-state full-page">Booting Brukina Access Platform Shell...</div>;
+    return (
+      <div className="loading-state full-page" role="status" aria-live="polite">
+        Booting Brukina Access Platform Shell...
+      </div>
+    );
   }
 
   return (
-    <div className="app-root">
-      {/* Dynamic Master Interactive Simulation Bar */}
-      <div className="role-controller">
-        <div className="role-label">
-          <span className="pulse-dot"></span>
-          <span>SYSTEM CONTROLLER:</span> Switch workspace:
-        </div>
-        <div className="role-buttons">
-          {['Customer', 'Vendor', 'Rider', 'Admin'].map(role => (
-            <button
-              key={role}
-              onClick={() => handleRoleSwitch(role)}
-              className={`role-btn ${activeRole === role ? 'active' : ''}`}
-            >
-              {role}
-            </button>
-          ))}
-        </div>
-      </div>
+    <AccessibilityErrorBoundary>
+      <div className="app-root">
+        {/* Dynamic Master Interactive Simulation Bar */}
+        <section className="role-controller" aria-label="Workspace Simulator Dashboard Tools">
+          <div className="role-label">
+            <span className="pulse-dot" aria-hidden="true"></span>
+            <span>SYSTEM CONTROLLER:</span> Switch workspace:
+          </div>
+          <div className="role-buttons" role="tablist" aria-label="Ecosystem Working Roles">
+            {['Customer', 'Vendor', 'Rider', 'Admin'].map(role => (
+              <button
+                key={role}
+                role="tab"
+                aria-selected={activeRole === role}
+                onClick={() => handleRoleSwitch(role)}
+                className={`role-btn ${activeRole === role ? 'active' : ''}`}
+              >
+                {role} Panel
+              </button>
+            ))}
+          </div>
+        </section>
 
-      {/* Administrative Workspace Sub-Navigation Panel Row */}
-      {activeRole === 'Admin' && (
-        <div className="admin-submenu">
-          <button onClick={() => setActiveTab('terminal')} className={activeTab === 'terminal' ? 'active' : ''}>Cloud Terminal</button>
-          <button onClick={() => setActiveTab('apilogger')} className={activeTab === 'apilogger' ? 'active' : ''}>API Logs</button>
-          <button onClick={() => setActiveTab('accounting')} className={activeTab === 'accounting' ? 'active' : ''}>Sales Ledger</button>
-          <button onClick={() => setActiveTab('economics')} className={activeTab === 'economics' ? 'active' : ''}>Price Controls</button>
-          <button onClick={() => setActiveTab('categories')} className={activeTab === 'categories' ? 'active' : ''}>Categories</button>
-          <button onClick={() => setActiveTab('marketplace')} className={activeTab === 'marketplace' ? 'active' : ''}>Public View</button>
-        </div>
-      )}
-
-      {/* Main Reactive Workspace Container Yield Tree */}
-      <main className="main-content">
-        {activeTab === 'marketplace' && <DynamicMarketplaceEngine activeUserRole={activeRole} />}
-        {activeTab === 'inventory' && <VendorInventoryPanel />}
-        {activeTab === 'telemetry' && <RiderTrackPanel />}
-        {activeTab === 'wallet' && <WalletPanel />}
-        {activeTab === 'withdrawal' && <RiderWithdrawalPanel />}
-        {activeTab === 'terminal' && <AdminTerminalPanel />}
-        {activeTab === 'apilogger' && <AdminApiLogger />}
-        {activeTab === 'accounting' && <AdminLedgerPanel />}
-        {activeTab === 'economics' && <AdminPriceController />}
-        {activeTab === 'categories' && <AdminCategoryPanel />}
-      </main>
-
-      {/* Responsive PWA Bottom Navigation Menu Bar */}
-      <nav className="bottom-nav">
-        <button onClick={() => setActiveTab('marketplace')} className={activeTab === 'marketplace' ? 'active' : ''}>
-          <span className="nav-icon">🏠</span><span>Market</span>
-        </button>
-        
-        {(activeRole === 'Vendor' || activeRole === 'Admin') && (
-          <button onClick={() => setActiveTab('inventory')} className={activeTab === 'inventory' ? 'active' : ''}>
-            <span className="nav-icon">🏪</span><span>Stock Hub</span>
-          </button>
-        )}
-        
-        {(activeRole === 'Rider' || activeRole === 'Admin' || activeRole === 'Customer') && (
-          <button onClick={() => setActiveTab('telemetry')} className={activeTab === 'telemetry' ? 'active' : ''}>
-            <span className="nav-icon">🛵</span><span>Rider</span>
-          </button>
-        )}
-        
-        <button onClick={() => setActiveTab('wallet')} className={activeTab === 'wallet' ? 'active' : ''}>
-          <span className="nav-icon">📇</span><span>Wallet</span>
-        </button>
-        
+        {/* FIXED: Administrative Submenu wrapped in semantic navigational landmarks */}
         {activeRole === 'Admin' && (
-          <button onClick={() => setActiveTab('terminal')} className={activeTab === 'terminal' || activeTab === 'apilogger' ? 'active' : ''}>
-            <span className="nav-icon">🛡️</span><span>Admin</span>
-          </button>
+          <nav className="admin-submenu" role="navigation" aria-label="System Executive Control Submenu">
+            <ul role="tablist" style={{ listStyle: 'none', display: 'flex', padding: 0, margin: 0 }}>
+              <li role="presentation"><button role="tab" aria-selected={activeTab === 'terminal'} onClick={() => setActiveTab('terminal')} className={activeTab === 'terminal' ? 'active' : ''}>Cloud Terminal</button></li>
+              <li role="presentation"><button role="tab" aria-selected={activeTab === 'apilogger'} onClick={() => setActiveTab('apilogger')} className={activeTab === 'apilogger' ? 'active' : ''}>API Logs</button></li>
+              <li role="presentation"><button role="tab" aria-selected={activeTab === 'accounting'} onClick={() => setActiveTab('accounting')} className={activeTab === 'accounting' ? 'active' : ''}>Sales Ledger</button></li>
+              <li role="presentation"><button role="tab" aria-selected={activeTab === 'economics'} onClick={() => setActiveTab('economics')} className={activeTab === 'economics' ? 'active' : ''}>Price Controls</button></li>
+              <li role="presentation"><button role="tab" aria-selected={activeTab === 'categories'} onClick={() => setActiveTab('categories')} className={activeTab === 'categories' ? 'active' : ''}>Categories</button></li>
+              <li role="presentation"><button role="tab" aria-selected={activeTab === 'marketplace'} onClick={() => setActiveTab('marketplace')} className={activeTab === 'marketplace' ? 'active' : ''}>Public View</button></li>
+            </ul>
+          </nav>
         )}
-      </nav>
-    </div>
+
+        {/* Main Reactive Workspace Container Yield Tree */}
+        <main className="main-content" id="main-content-focus-node">
+          {activeTab === 'marketplace' && <DynamicMarketplaceEngine activeUserRole={activeRole} />}
+          {activeTab === 'inventory' && <VendorInventoryPanel />}
+          {activeTab === 'telemetry' && <RiderTrackPanel />}
+          {activeTab === 'wallet' && <WalletPanel />}
+          {activeTab === 'withdrawal' && <RiderWithdrawalPanel />}
+          {activeTab === 'terminal' && <AdminTerminalPanel />}
+          {activeTab === 'apilogger' && <AdminApiLogger />}
+          {activeTab === 'accounting' && <AdminLedgerPanel />}
+          {activeTab === 'economics' && <AdminPriceController />}
+          {activeTab === 'categories' && <AdminCategoryPanel />}
+        </main>
+
+        {/* FIXED: Bottom Nav redesigned with explicit ARIA selectors and icon concealment maps */}
+        <nav className="bottom-nav" role="navigation" aria-label="Ecosystem Feature Channel Modules">
+          <ul role="tablist" style={{ listStyle: 'none', display: 'flex', width: '100%', padding: 0, margin: 0 }}>
+            <li role="presentation" style={{ flex: 1 }}>
+              <button role="tab" aria-selected={activeTab === 'marketplace'} onClick={() => setActiveTab('marketplace')} className={activeTab === 'marketplace' ? 'active' : ''}>
+                <span className="nav-icon" aria-hidden="true">🏠</span><span>Market</span>
+              </button>
+            </li>
+            
+            {(activeRole === 'Vendor' || activeRole === 'Admin') && (
+              <li role="presentation" style={{ flex: 1 }}>
+                <button role="tab" aria-selected={activeTab === 'inventory'} onClick={() => setActiveTab('inventory')} className={activeTab === 'inventory' ? 'active' : ''}>
+                  <span className="nav-icon" aria-hidden="true">🏪</span><span>Stock Hub</span>
+                </button>
+              </li>
+            )}
+            
+            {(activeRole === 'Rider' || activeRole === 'Admin' || activeRole === 'Customer') && (
+              <li role="presentation" style={{ flex: 1 }}>
+                <button role="tab" aria-selected={activeTab === 'telemetry'} onClick={() => setActiveTab('telemetry')} className={activeTab === 'telemetry' ? 'active' : ''}>
+                  <span className="nav-icon" aria-hidden="true">🛵</span><span>Rider</span>
+                </button>
+              </li>
+            )}
+            
+            <li role="presentation" style={{ flex: 1 }}>
+              <button role="tab" aria-selected={activeTab === 'wallet'} onClick={() => setActiveTab('wallet')} className={activeTab === 'wallet' ? 'active' : ''}>
+                <span className="nav-icon" aria-hidden="true">📇</span><span>Wallet</span>
+              </button>
+            </li>
+            
+            {activeRole === 'Admin' && (
+              <li role="presentation" style={{ flex: 1 }}>
+                <button role="tab" aria-selected={activeTab === 'terminal' || activeTab === 'apilogger'} onClick={() => setActiveTab('terminal')} className={activeTab === 'terminal' || activeTab === 'apilogger' ? 'active' : ''}>
+                  <span className="nav-icon" aria-hidden="true">🛡️</span><span>Admin</span>
+                </button>
+              </li>
+            )}
+          </ul>
+        </nav>
+      </div>
+    </AccessibilityErrorBoundary>
   );
 }
