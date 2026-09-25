@@ -106,7 +106,6 @@ export default function ProductCatalog({
         <div style={{ position: 'fixed', top: '20px', right: '20px', background: '#231F20', color: '#fff', padding: '16px 24px', borderRadius: '8px', zIndex: 2000, boxShadow: '0 4px 12px rgba(0,0,0,0.15)', fontWeight: 'bold' }}>
           {notice}
         </div>
-      )}
 
       {/* Top Banner Row */}
       <div className="hub-banner" style={{ display: 'flex', gap: '16px', marginBottom: '24px' }}>
@@ -159,7 +158,6 @@ export default function ProductCatalog({
             </button>
           </form>
         </div>
-      )}
 
       {/* 🚚 COURIER LIVE TRACKING DISPATCH PANEL */}
       {isCourier && (
@@ -180,13 +178,11 @@ export default function ProductCatalog({
                     >
                       Accept Route
                     </button>
-                  )}
                 </div>
               </div>
             ))}
           </div>
         </div>
-      )}
 
       {/* Main Grid Header Title */}
       <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
@@ -217,13 +213,11 @@ export default function ProductCatalog({
                   <button onClick={() => { setSelectedProduct(item); setQuantity(1); }} style={{ width: '100%', padding: '10px', background: '#231F20', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>
                     Buy Now
                   </button>
-                )}
               </div>
             </div>
           ))
         ) : (
           <div style={{ gridColumn: '1 / -1', textAlign: 'center', color: '#999', padding: '40px 0' }}>No products found matching your search.</div>
-        )}
       </div>
 
       {selectedProduct && !isVendor && !isCourier && (
@@ -265,7 +259,6 @@ export default function ProductCatalog({
             </div>
           </div>
         </div>
-      )}
 
       <footer style={{ marginTop: '48px', paddingTop: '16px', borderTop: '1px solid #EAE0D5', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span>Connected: <strong>{user?.email || 'Guest'}</strong> ({role || 'User'})</span>
@@ -314,7 +307,6 @@ export default function ProductCatalog({
             </div>
           </div>
         </div>
-      )}
 
       {/* Control Area Footer Panel */}
       <footer style={{ marginTop: '48px', paddingTop: '16px', borderTop: '1px solid #EAE0D5', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -362,7 +354,6 @@ export default function ProductCatalog({
             </div>
           </div>
         </div>
-      )}
     </div>
   );
 }
