@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from './lib/supabaseClient.js';
 
-import { DynamicMarketplaceEngine } from './components/DynamicMarketplaceEngine.jsx';
+import DynamicMarketplaceEngine from './components/DynamicMarketplaceEngine.jsx';
 import VendorInventoryPanel from './components/VendorInventoryPanel.jsx';
 import RiderTrackPanel from './components/RiderTrackPanel.jsx';
 import WalletPanel from './components/WalletPanel.jsx';
@@ -136,7 +136,7 @@ export default function App() {
           fontFamily: 'Arial, sans-serif',
         }}
       >
-        Booting Marketplace...
+        Booting Brukina Platform...
       </div>
     );
   }
