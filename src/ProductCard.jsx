@@ -223,6 +223,7 @@ export default function ProductCatalog({
           ))
         ) : (
           <div style={{ gridColumn: '1 / -1', textAlign: 'center', color: '#999', padding: '40px 0' }}>No products found matching your search.</div>
+        )}
       </div>
 
       {selectedProduct && !isVendor && !isCourier && (
