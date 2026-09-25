@@ -1,7 +1,12 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const root = resolve(import.meta.dirname, '..');
+// FIXED: Evaluated the root path directory using stable fileURLToPath parameters for maximum runtime safety
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const root = resolve(__dirname, '..');
+
 const requiredFiles = [
   'render.yaml',
   'vite.config.js',
@@ -24,12 +29,23 @@ const requiredFiles = [
   'src/components/OrderChatComponent.jsx'
 ];
 
+// Verify the presence of every mission-critical module cleanly
 for (const file of requiredFiles) {
-  if (!existsSync(resolve(root, file))) throw new Error(`Missing required file: ${file}`);
+  const absolutePath = resolve(root, file);
+  if (!existsSync(absolutePath)) {
+    throw new Error(`🔴 Structural Validation Failure: Missing required file path context: ${file}`);
+  }
 }
 
-const html = readFileSync(resolve(root, 'index.html'), 'utf8');
-if (!html.includes('id="root"')) throw new Error('index.html must contain a root div for React');
-if (!html.includes('/src/main.jsx')) throw new Error('index.html must reference /src/main.jsx');
+// Inspect structural entry hooks inside index.html
+const htmlPath = resolve(root, 'index.html');
+const html = readFileSync(htmlPath, 'utf8');
 
-console.log('Render deployment check passed');
+if (!html.includes('id="root"')) {
+  throw new Error('🔴 Structural Validation Failure: index.html is missing a target id="root" div element for React hydration.');
+}
+if (!html.includes('/src/main.jsx')) {
+  throw new Error('🔴 Structural Validation Failure: index.html does not point to the main React compilation entry script (/src/main.jsx).');
+}
+
+console.log('✅ Structure Verification Passed: All 16 core panels and target configuration files are fully resolved.');
