@@ -265,6 +265,7 @@ export default function ProductCatalog({
             </div>
           </div>
         </div>
+      )}
 
       <footer style={{ marginTop: '48px', paddingTop: '16px', borderTop: '1px solid #EAE0D5', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span>Connected: <strong>{user?.email || 'Guest'}</strong> ({role || 'User'})</span>
