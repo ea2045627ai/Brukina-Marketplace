@@ -11,51 +11,96 @@ export default function RiderWithdrawalPanel() {
   const [processing, setProcessing] = useState(false);
   const [uiError, setUiError] = useState('');
 
-  useEffect(() => {
-    async function loadRiderFinancialData() {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) { setSyncing(false); return; }
-        const { data: wallet } = await supabase.from('rider_logistics_wallets').select('total_earned_ghs').eq('rider_id', user.id).maybeSingle();
-        if (wallet) setAvailableBalance(parseFloat(wallet.total_earned_ghs) || 0);
-        setMomoNumber(user.phone || '0244123456');
-        setPayoutsHistory([
-          { id: 'WTH-8831', date: 'Sep 01, 2026', provider: 'MTN MoMo', amount: '120.00', status: 'Cleared' },
-          { id: 'WTH-7402', date: 'Aug 24, 2026', provider: 'Telecel Cash', amount: '85.50', status: 'Cleared' }
-        ]);
-      } catch (err) {
-        console.error('Financial retrieval error:', err.message);
-      } finally {
-        setSyncing(false);
+  // Reusable method to query live data directly from the schema ledger
+  async function loadRiderFinancialData() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // 1. Fetch live logistics balance
+      const { data: wallet } = await supabase
+        .from('rider_logistics_wallets')
+        .select('total_earned_ghs')
+        .eq('rider_id', user.id)
+        .maybeSingle();
+
+      if (wallet) setAvailableBalance(parseFloat(wallet.total_earned_ghs) || 0);
+      
+      // Auto-fallback default number safely
+      setMomoNumber(user.phone || '');
+
+      // 2. Fetch real historic transactions instead of hardcoded data
+      const { data: logs, error: logsError } = await supabase
+        .from('rider_payout_logs')
+        .select('id, created_at, provider, amount, status')
+        .eq('rider_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (!logsError && logs) {
+        setPayoutsHistory(logs);
       }
+    } catch (err) {
+      console.error('Financial retrieval error:', err.message);
+    } finally {
+      setSyncing(false);
     }
+  }
+
+  useEffect(() => {
     loadRiderFinancialData();
   }, []);
 
   const handleRequestPayout = async (e) => {
     e.preventDefault();
     setUiError('');
+    
     const parsedAmount = parseFloat(withdrawalAmount);
-    if (isNaN(parsedAmount) || parsedAmount <= 0) { setUiError('Enter a valid positive amount.'); return; }
-    if (parsedAmount > availableBalance) { setUiError(`Insufficient funds. Max: GH₵ ${availableBalance.toFixed(2)}`); return; }
-    if (momoNumber.trim().length < 10) { setUiError('Enter a valid 10-digit mobile money number.'); return; }
+    if (isNaN(parsedAmount) || parsedAmount <= 0) { 
+      setUiError('Enter a valid positive amount.'); 
+      return; 
+    }
+    if (parsedAmount > availableBalance) { 
+      setUiError(`Insufficient funds. Max: GH₵ ${availableBalance.toFixed(2)}`); 
+      return; 
+    }
+    if (momoNumber.trim().length < 10) { 
+      setUiError('Enter a valid 10-digit mobile money number.'); 
+      return; 
+    }
+
     setProcessing(true);
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Session expired. Please sign in.');
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      const updated = availableBalance - parsedAmount;
-      const { error: updateError } = await supabase.from('rider_logistics_wallets').update({ total_earned_ghs: updated }).eq('rider_id', user.id);
+
+      const updatedBalance = availableBalance - parsedAmount;
+      const networkLabel = momoProvider === 'mtn' ? 'MTN MoMo' : momoProvider === 'telecel' ? 'Telecel Cash' : 'AT Money';
+
+      // 1. Atomically deduct the balance from the database wallet
+      const { error: updateError } = await supabase
+        .from('rider_logistics_wallets')
+        .update({ total_earned_ghs: updatedBalance })
+        .eq('rider_id', user.id);
+
       if (updateError) throw updateError;
-      const newPayout = {
-        id: `WTH-${Math.floor(1000 + Math.random() * 9000)}`,
-        date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-        provider: momoProvider === 'mtn' ? 'MTN MoMo' : momoProvider === 'telecel' ? 'Telecel Cash' : 'AT Money',
-        amount: parsedAmount.toFixed(2),
-        status: 'Cleared'
-      };
-      setAvailableBalance(updated);
-      setPayoutsHistory([newPayout, ...payoutsHistory]);
+
+      // 2. Insert audit trail record directly into the payout log table
+      const { error: logInsertError } = await supabase
+        .from('rider_payout_logs')
+        .insert([{
+          rider_id: user.id,
+          provider: networkLabel,
+          amount: parsedAmount,
+          phone_number: momoNumber.trim(),
+          status: 'Cleared' // In production, switch to 'Pending' if processing asynchronous hooks via Arkesel/Arkesel SMS tools
+        }]);
+
+      if (logInsertError) throw logInsertError;
+
+      // 3. Re-sync state with database values to prevent UI mismatch
+      await loadRiderFinancialData();
+      
       setWithdrawalAmount('');
       alert(`GH₵ ${parsedAmount.toFixed(2)} transferred to your mobile money wallet!`);
     } catch (err) {
@@ -93,7 +138,7 @@ export default function RiderWithdrawalPanel() {
               </select>
             </label>
             <label>MoMo Phone Number
-              <input type="tel" value={momoNumber} onChange={e => setMomoNumber(e.target.value)} required />
+              <input type="tel" value={momoNumber} onChange={e => setMomoNumber(e.target.value)} placeholder="e.g. 0244123456" required />
             </label>
             <button type="submit" disabled={processing || availableBalance <= 0 || !withdrawalAmount} className="btn-primary">
               {processing ? 'Authorizing...' : 'Initiate Instant Cashout'}
@@ -110,10 +155,10 @@ export default function RiderWithdrawalPanel() {
                 <div key={txn.id} className="log-row">
                   <div>
                     <strong>Mobile Money Withdrawal</strong>
-                    <small>{txn.date} · {txn.provider} · #{txn.id}</small>
+                    <small>{new Date(txn.created_at || txn.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} · {txn.provider} · #{txn.id.slice(0, 8)}</small>
                   </div>
                   <div className="log-amount">
-                    <strong>- GH₵ {txn.amount}</strong>
+                    <strong>- GH₵ {parseFloat(txn.amount).toFixed(2)}</strong>
                     <span className="status-badge success">{txn.status}</span>
                   </div>
                 </div>
