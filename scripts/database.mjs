@@ -27,20 +27,33 @@ const REQUIRED_TABLES = [
 
 async function checkDatabase() {
   const missing = [];
+  
+  // FIXED: Checked table presence using a head row length count to prevent custom column name exceptions
   for (const table of REQUIRED_TABLES) {
-    const { error } = await supabase.from(table).select('id').limit(1);
-    if (error && error.code === '42P01') {
-      missing.push(table);
+    const { error } = await supabase
+      .from(table)
+      .select('*', { count: 'exact', head: true }); // Performs an optimized head metadata lookup (0 data egress cost)
+
+    if (error) {
+      // 42P01 means table completely does not exist in public schema catalog
+      if (error.code === '42P01') {
+        missing.push(table);
+      } else {
+        console.warn(`[SCHEMA WARNING] Table "${table}" exists but threw code ${error.code}: ${error.message}`);
+      }
     }
   }
+
   if (missing.length > 0) {
-    console.log(`Missing tables: ${missing.join(', ')}`);
+    console.error(`🔴 Schema Verification Failure: Missing tables: ${missing.join(', ')}`);
+    process.exit(1); // Exit with code 1 during build phase to block broken deployments
   } else {
-    console.log('Database check passed: all required tables exist');
+    console.log('✅ Database check passed: All required tables verified in public schema.');
+    process.exit(0);
   }
 }
 
 checkDatabase().catch(err => {
-  console.error('Database check failed:', err.message);
-  process.exit(0);
+  console.error('Critical verification script error:', err.message);
+  process.exit(1);
 });
