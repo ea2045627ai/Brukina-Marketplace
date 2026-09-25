@@ -23,7 +23,8 @@ app.use(express.json({
 }));
 
 app.use(express.text({ limit: '100kb', type: ['text/*', 'application/*+json'] }));
-app.use(express.static('.'));
+app.use(express.static('dist'));
+app.get('*', (req, res) => res.sendFile(process.cwd() + '/dist/index.html'));
 
 // Helper function to capture and record telemetry logs into external_api_logs securely
 async function recordTelemetryLog(path, source, summary, httpStatus, startTime) {
