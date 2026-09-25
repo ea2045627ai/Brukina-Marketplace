@@ -4,10 +4,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
     "prebuild": "npm run security-audit && npm run access-audit",
-    "build": "vite build",
-    "preview": "vite preview",
     "check": "npm run security-audit && npm run access-audit && node scripts/check-build.mjs && npm run check:netlify && npm run check:render",
     "check:netlify": "node scripts/check-netlify.mjs",
     "check:render": "node scripts/check-render.mjs",
@@ -20,13 +17,8 @@
     "@supabase/supabase-js": "^2.49.1",
     "cors": "^2.8.5",
     "express": "^5.1.0",
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1",
-    "react-router-dom": "^7.18.3"
+    "react": "^19.1.1"
   },
   "devDependencies": {
-    "@vitejs/plugin-react": "^5.0.4",
-    "netlify-cli": "^5.3.1",
-    "vite": "^7.1.4"
   }
 }
