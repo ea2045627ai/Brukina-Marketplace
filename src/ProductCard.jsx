@@ -217,6 +217,7 @@ export default function ProductCatalog({
                   <button onClick={() => { setSelectedProduct(item); setQuantity(1); }} style={{ width: '100%', padding: '10px', background: '#231F20', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>
                     Buy Now
                   </button>
+                )}
               </div>
             </div>
           ))
