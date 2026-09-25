@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './lib/supabaseClient.js';
-import AccessibilityErrorBoundary from './AccessibilityErrorBoundary.jsx';
+import AccessibilityErrorBoundary from './components/AccessibilityErrorBoundary.jsx';
 
 // FIXED: Wrapped in curly braces to match the explicit named export inside the updated engine file
 import { DynamicMarketplaceEngine } from './components/DynamicMarketplaceEngine.jsx';
