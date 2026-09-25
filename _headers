@@ -1,7 +1,24 @@
+# ==========================================================================
+# BRUKINA ACCESS MARKETPLACE - PRODUCTION SECURITY ROUTING MATRICES
+# Path: _headers
+# Configures immutable global caching thresholds and strict secure edge header guidelines.
+# ==========================================================================
+
 /*
   X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  X-XSS-Protection: 1; mode=block
   Referrer-Policy: strict-origin-when-cross-origin
+  Content-Security-Policy: default-src 'self' https: 'unsafe-inline' 'unsafe-eval'; img-src 'self' data: https://pexels.com https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://paystack.co https://arkesel.com;
   Permissions-Policy: camera=(), microphone=(), geolocation=(self)
 
+# Enforce progressive fresh check thresholds specifically on background service workers
 /sw.js
-  Cache-Control: no-cache
+  Cache-Control: no-cache, no-store, must-revalidate
+  Expires: 0
+
+# Enforce progressive fresh check thresholds specifically on structural webapp descriptors
+/manifest.webmanifest
+  Cache-Control: no-cache, no-store, must-revalidate
+  Expires: 0
+  Content-Type: application/manifest+json; charset=utf-8
