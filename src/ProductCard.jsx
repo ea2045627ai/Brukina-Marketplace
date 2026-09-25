@@ -185,6 +185,7 @@ export default function ProductCatalog({
             ))}
           </div>
         </div>
+      )}
 
       {/* Main Grid Header Title */}
       <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
