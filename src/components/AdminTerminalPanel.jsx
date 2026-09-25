@@ -8,32 +8,55 @@ export default function AdminTerminalPanel() {
   const [syncing, setSyncing] = useState(true);
   const [executingSweep, setExecutingSweep] = useState(false);
 
-  useEffect(() => {
-    async function loadMetrics() {
-      try {
-        const { data: migData } = await supabase.from('applied_migrations').select('*').order('applied_at', { ascending: false }).limit(20);
-        const { data: backupData } = await supabase.from('platform_backups_log').select('*').order('created_at', { ascending: false }).limit(20);
-        if (migData) setMigrations(migData);
-        if (backupData) setBackupsLog(backupData);
-        const hasFailures = backupData?.some(b => b.status !== 'Success');
-        if (hasFailures) setSystemHealth('Review Required');
-      } catch (err) {
-        console.error('Terminal connection failed:', err.message);
-        setSystemHealth('Degraded');
-      } finally {
-        setSyncing(false);
+  // Unified orchestration hook to load and evaluate system-wide health parameters
+  async function loadMetrics() {
+    try {
+      const { data: migData, error: migError } = await supabase
+        .from('applied_migrations')
+        .select('*')
+        .order('applied_at', { ascending: false })
+        .limit(20);
+        
+      const { data: backupData, error: backupError } = await supabase
+        .from('platform_backups_log')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (migError) throw migError;
+      if (backupError) throw backupError;
+
+      if (migData) setMigrations(migData);
+      if (backupData) {
+        setBackupsLog(backupData);
+        
+        // Dynamically compute system integrity across active log metrics
+        const hasFailures = backupData.some(b => b.status?.toLowerCase() !== 'success');
+        setSystemHealth(hasFailures ? 'Review Required' : 'Optimal');
       }
+    } catch (err) {
+      console.error('Terminal connection failed:', err.message);
+      setSystemHealth('Degraded');
+    } finally {
+      setSyncing(false);
     }
+  }
+
+  useEffect(() => {
     loadMetrics();
   }, []);
 
   const triggerSweep = async () => {
     setExecutingSweep(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1200));
-      const { data: backupData } = await supabase.from('platform_backups_log').select('*').order('created_at', { ascending: false }).limit(20);
-      if (backupData) setBackupsLog(backupData);
-      alert('Infrastructure sweep complete. All systems report normal parameters.');
+      // FIXED: Replaced fake client setTimeout with an atomic system diagnostic trigger
+      const { data, error } = await supabase.rpc('execute_system_diagnostic_sweep');
+      
+      if (error) throw error;
+
+      // Re-query the system matrix immediately to update logs and status health boxes
+      await loadMetrics();
+      alert(data?.message || 'Infrastructure sweep complete. All systems report normal parameters.');
     } catch (err) {
       alert(`Sweep failure: ${err.message}`);
     } finally {
@@ -52,14 +75,16 @@ export default function AdminTerminalPanel() {
           <p className="panel-subtitle">Review self-healing table registries and backup logs.</p>
         </div>
         <button disabled={executingSweep} onClick={triggerSweep} className="btn-dark">
-          {executingSweep ? 'Analyzing...' : 'Trigger Diagnostic Sweep'}
+          {executingSweep ? 'Analyzing Logs...' : 'Trigger Diagnostic Sweep'}
         </button>
       </div>
 
       <section className="stats-grid">
         <div className="stat-card">
           <div className="stat-label">Ecosystem Status</div>
-          <div className={`stat-value ${systemHealth === 'Optimal' ? 'success' : 'warning'}`}>● {systemHealth}</div>
+          <div className={`stat-value ${systemHealth === 'Optimal' ? 'success' : systemHealth === 'Review Required' ? 'warning' : 'danger'}`}>
+            ● {systemHealth}
+          </div>
         </div>
         <div className="stat-card">
           <div className="stat-label">Applied Migrations</div>
@@ -100,9 +125,13 @@ export default function AdminTerminalPanel() {
                 <div key={log.id} className="log-row">
                   <div>
                     <div className="log-name">{log.backup_file_name}</div>
-                    <small>{new Date(log.created_at).toLocaleDateString()} · {log.total_tables_archived} tables</small>
+                    <small>
+                      {new Date(log.created_at).toLocaleDateString()} · {log.total_tables_archived} tables
+                    </small>
                   </div>
-                  <span className={`status-badge ${log.status === 'Success' ? 'success' : 'error'}`}>{log.status}</span>
+                  <span className={`status-badge ${log.status?.toLowerCase() === 'success' ? 'success' : 'error'}`}>
+                    {log.status}
+                  </span>
                 </div>
               ))
             )}
