@@ -180,6 +180,7 @@ export default function ProductCatalog({
                     >
                       Accept Route
                     </button>
+                  </div>
                 </div>
               </div>
             ))}
