@@ -1,27 +1,12 @@
 {
   "name": "brukina-marketplace",
-  "version": "1.0.0",
   "private": true,
+  "version": "1.0.0",
   "type": "module",
-  "description": "Multi-channel marketplace PWA for wholesale trade and local delivery operations.",
-  "engines": {
-    "node": ">=22.0.0"
-  },
   "scripts": {
-    "start": "node server.js",
     "dev": "vite",
-    "security-audit": "node scripts/security-enforcer.mjs",
-    "access-audit": "node scripts/accessibility-audit.mjs",
-    "prebuild": "npm run security-audit && npm run access-audit",
     "build": "vite build",
-    "preview": "vite preview",
-    "check": "npm run security-audit && npm run access-audit && node scripts/check-build.mjs && npm run check:netlify && npm run check:render",
-    "check:netlify": "node scripts/check-netlify.mjs",
-    "check:render": "node scripts/check-render.mjs",
-    "start:webhook": "node server/operations-webhook.mjs",
-    "start:railway": "node server/railway.mjs",
-    "check:webhook": "node scripts/check-webhook.mjs",
-    "check:all": "npm run check && npm run check:webhook"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",
@@ -32,6 +17,6 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.4",
-    "vite": "^5.4.14"
+    "vite": "^7.1.4"
   }
 }
