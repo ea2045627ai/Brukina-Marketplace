@@ -580,7 +580,7 @@ values
   ('USB-C fast charge kit', 'Northstar Accessories', 'Accessories & body products', 185, 'GH₵ 185.00', 'BULK DEAL', 'https://images.pexels.com/photos/3921707/pexels-photo-3921707.jpeg?auto=compress&cs=tinysrgb&h=650&w=940', 'american_brand', 'USA', 1000, 1, true),
   ('Unisex workwear overshirt', 'Common Thread Co.', 'Clothing', 290, 'GH₵ 290.00', 'NEW ARRIVAL', 'https://images.pexels.com/photos/4483944/pexels-photo-4483944.jpeg?auto=compress&cs=tinysrgb&h=650&w=940', 'sourcing_network', 'Ghana', 300, 1, true),
   ('Stainless kitchen tap', 'Homeform Trade', 'Home & living', 610, 'GH₵ 610.00', 'CONTAINER RATE', 'https://images.pexels.com/photos/37771020/pexels-photo-37771020.jpeg?auto=compress&cs=tinysrgb&h=650&w=940', 'made_in_china', 'China', 400, 1, true)
-on conflict (id) do nothing;
+on conflict (product_name) do nothing;
 -- BRUKINA ACCRA HUB - FOUNDATIONAL SCHEMA MIGRATION SCRIPT
 -- Path: supabase/schema.sql
 -- Run this core file first to initialize structural tables and RLS boundaries error-free.
