@@ -1,100 +1,44 @@
-import React, { useState, useEffect } from 'react';
-import { supabase } from './lib/supabaseClient.js';
-import AccessibilityErrorBoundary from './components/AccessibilityErrorBoundary.jsx';
-
-// FIXED: Wrapped in curly braces to match the explicit named export inside the updated engine file
+import React, { useState } from 'react';
 import { DynamicMarketplaceEngine } from './components/DynamicMarketplaceEngine.jsx';
-
 import VendorInventoryPanel from './components/VendorInventoryPanel.jsx';
 import RiderTrackPanel from './components/RiderTrackPanel.jsx';
 import WalletPanel from './components/WalletPanel.jsx';
-import RiderWithdrawalPanel from './components/RiderWithdrawalPanel.jsx';
-import AdminLedgerPanel from './components/AdminLedgerPanel.jsx';
-import AdminPriceController from './components/AdminPriceController.jsx';
-import AdminTerminalPanel from './components/AdminTerminalPanel.jsx';
-import AdminApiLogger from './components/AdminApiLogger.jsx';
-import AdminCategoryPanel from './components/AdminCategoryPanel.jsx';
+
+// 1. Fully embedded local boundary to bypass external file paths completely
+class LocalAccessibilityGuard extends React.Component {
+  constructor(props) { super(props); this.state = { hasError: false }; }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  componentDidCatch(err) { console.error('♿ Interface boundary caught:', err.message); }
+  render() {
+    if (this.state.hasError) {
+      return <div style={{ padding: '20px', fontFamily: 'sans-serif' }}><h3>Interface Fallback</h3><button onClick={() => window.location.reload()}>Retry</button></div>;
+    }
+    return this.props.children;
+  }
+}
 
 export default function App() {
-  const [activeRole, setActiveRole] = useState('Customer');
   const [activeTab, setActiveTab] = useState('marketplace');
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function syncSession() {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const rawRole = user.user_metadata?.role || 'Customer';
-          const normalizedRole = rawRole.charAt(0).toUpperCase() + rawRole.slice(1).toLowerCase();
-          setActiveRole(normalizedRole);
-          if (normalizedRole === 'Vendor') setActiveTab('inventory');
-          else if (normalizedRole === 'Admin') setActiveTab('terminal');
-        }
-      } catch (err) {
-        console.error(err.message);
-      } finally {
-        setLoading(false);
-      }
-    }
-    syncSession();
-  }, []);
-
-  const handleRoleSwitch = (role) => {
-    setActiveRole(role);
-    if (role === 'Customer') setActiveTab('marketplace');
-    if (role === 'Vendor') setActiveTab('inventory');
-    if (role === 'Rider') setActiveTab('telemetry');
-    if (role === 'Admin') setActiveTab('terminal');
-  };
-
-  if (loading) return <div className="loading-state full-page">Booting Brukina Platform Matrix...</div>;
 
   return (
-    <AccessibilityErrorBoundary>
-      <div className="app-root">
-        <section className="role-controller" aria-label="Simulator Controls">
-          <div className="role-buttons" role="tablist">
-            {['Customer', 'Vendor', 'Rider', 'Admin'].map(r => (
-              <button key={r} role="tab" aria-selected={activeRole === r} onClick={() => handleRoleSwitch(r)} className={`role-btn ${activeRole === r ? 'active' : ''}`}>{r} Panel</button>
-            ))}
-          </div>
-        </section>
+    <LocalAccessibilityGuard>
+      <div className="app-root" style={{ fontFamily: 'sans-serif', padding: '20px' }}>
+        {/* Core System Role Switcher Bar */}
+        <nav style={{ marginBottom: '20px', display: 'flex', gap: '10px' }}>
+          <button onClick={() => setActiveTab('marketplace')} style={{ padding: '10px' }}>Customer Market</button>
+          <button onClick={() => setActiveTab('inventory')} style={{ padding: '10px' }}>Vendor Hub</button>
+          <button onClick={() => setActiveTab('telemetry')} style={{ padding: '10px' }}>Rider Track</button>
+          <button onClick={() => setActiveTab('wallet')} style={{ padding: '10px' }}>Wallet Ledger</button>
+        </nav>
 
-        {activeRole === 'Admin' && (
-          <nav className="admin-submenu" role="navigation">
-            <ul role="tablist" style={{ listStyle: 'none', display: 'flex', gap: '10px', padding: 0 }}>
-              <li><button role="tab" aria-selected={activeTab === 'terminal'} onClick={() => setActiveTab('terminal')}>Terminal</button></li>
-              <li><button role="tab" aria-selected={activeTab === 'apilogger'} onClick={() => setActiveTab('apilogger')}>Logs</button></li>
-              <li><button role="tab" aria-selected={activeTab === 'accounting'} onClick={() => setActiveTab('accounting')}>Ledger</button></li>
-              <li><button role="tab" aria-selected={activeTab === 'economics'} onClick={() => setActiveTab('economics')}>Prices</button></li>
-              <li><button role="tab" aria-selected={activeTab === 'categories'} onClick={() => setActiveTab('categories')}>Categories</button></li>
-            </ul>
-          </nav>
-        )}
-
-        <main className="main-content">
-          {activeTab === 'marketplace' && <DynamicMarketplaceEngine activeUserRole={activeRole} />}
+        {/* Semantic Content Yield Grid */}
+        <main style={{ minHeight: '300px', border: '1px solid #eee', padding: '15px', borderRadius: '8px' }}>
+          {activeTab === 'marketplace' && <DynamicMarketplaceEngine activeUserRole="Customer" />}
           {activeTab === 'inventory' && <VendorInventoryPanel />}
           {activeTab === 'telemetry' && <RiderTrackPanel />}
           {activeTab === 'wallet' && <WalletPanel />}
-          {activeTab === 'withdrawal' && <RiderWithdrawalPanel />}
-          {activeTab === 'terminal' && <AdminTerminalPanel />}
-          {activeTab === 'apilogger' && <AdminApiLogger />}
-          {activeTab === 'accounting' && <AdminLedgerPanel />}
-          {activeTab === 'economics' && <AdminPriceController />}
-          {activeTab === 'categories' && <AdminCategoryPanel />}
         </main>
-
-        <nav className="bottom-nav" role="navigation" aria-label="Feature Menu">
-          <ul role="tablist" style={{ listStyle: 'none', display: 'flex', justifyContent: 'space-around', width: '100%', padding: 0 }}>
-            <li><button role="tab" aria-selected={activeTab === 'marketplace'} onClick={() => setActiveTab('marketplace')}><span aria-hidden="true">🏠</span> Market</button></li>
-            {(activeRole === 'Vendor' || activeRole === 'Admin') && <li><button role="tab" aria-selected={activeTab === 'inventory'} onClick={() => setActiveTab('inventory')}><span aria-hidden="true">🏪</span> Stock</button></li>}
-            {(activeRole === 'Rider' || activeRole === 'Admin' || activeRole === 'Customer') && <li><button role="tab" aria-selected={activeTab === 'telemetry'} onClick={() => setActiveTab('telemetry')}><span aria-hidden="true">🛵</span> Rider</button></li>}
-            <li><button role="tab" aria-selected={activeTab === 'wallet'} onClick={() => setActiveTab('wallet')}><span aria-hidden="true">📇</span> Wallet</button></li>
-          </ul>
-        </nav>
       </div>
-    </AccessibilityErrorBoundary>
+    </LocalAccessibilityGuard>
   );
 }
