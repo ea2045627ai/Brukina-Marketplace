@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './lib/supabaseClient.js';
+import AccessibilityErrorBoundary from './AccessibilityErrorBoundary.jsx';
+// FIXED: Wrapped in curly braces to match the named export structure inside the engine file
 import { DynamicMarketplaceEngine } from './components/DynamicMarketplaceEngine.jsx';
-import DynamicMarketplaceEngine from './components/DynamicMarketplaceEngine.jsx';
 import VendorInventoryPanel from './components/VendorInventoryPanel.jsx';
 import RiderTrackPanel from './components/RiderTrackPanel.jsx';
 import WalletPanel from './components/WalletPanel.jsx';
