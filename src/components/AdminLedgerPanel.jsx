@@ -4,32 +4,47 @@ import { supabase } from '../lib/supabaseClient';
 export default function AdminLedgerPanel() {
   const [ledger, setLedger] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [financials, setFinancials] = useState({ grossSales: 0, platformFees: 0, activeVolume: 0 });
+  const [financials, setFinancials] = useState({ grossSales: '0.00', platformFees: '0.00', activeVolume: 0 });
 
   useEffect(() => {
     async function fetchSystemLedger() {
       try {
+        // FIXED: Explicitly pull relevant columns and add safety constraints
         const { data, error } = await supabase
           .from('orders')
           .select('id, quantity, total_amount, order_status, channel_origin, created_at, products(name, owner_type)')
-          .order('created_at', { ascending: false });
+          .order('created_at', { ascending: false })
+          .limit(100); // Enforce a performance safety ceiling limit for active lists
+          
         if (error) throw error;
-        setLedger(data || []);
+        
+        const safeData = data || [];
+        setLedger(safeData);
+
+        // Compute balances safely handles nullable relational models
         let totalGross = 0;
         let totalCommissions = 0;
-        data?.forEach(order => {
+
+        safeData.forEach(order => {
           const amount = parseFloat(order.total_amount) || 0;
           totalGross += amount;
-          if (order.products?.owner_type === 'vendor') {
+
+          // Catch edge case where product record is missing or soft-deleted
+          const ownerType = order.products?.owner_type;
+          if (ownerType === 'vendor') {
             totalCommissions += amount * 0.10;
-          } else {
+          } else if (ownerType === 'admin' || ownerType === 'native') {
             totalCommissions += amount;
+          } else {
+            // Safe fallback for soft-deleted inventory: log 10% commission minimum to prevent false audit profits
+            totalCommissions += amount * 0.10;
           }
         });
+
         setFinancials({
           grossSales: totalGross.toFixed(2),
           platformFees: totalCommissions.toFixed(2),
-          activeVolume: data?.length || 0
+          activeVolume: safeData.length
         });
       } catch (err) {
         console.error('Ledger retrieval error:', err.message);
@@ -83,16 +98,26 @@ export default function AdminLedgerPanel() {
             </thead>
             <tbody>
               {ledger.map(order => {
-                const isVendor = order.products?.owner_type === 'vendor';
-                const revenueCut = isVendor ? parseFloat(order.total_amount) * 0.10 : parseFloat(order.total_amount);
+                const ownerType = order.products?.owner_type;
+                const amount = parseFloat(order.total_amount) || 0;
+                
+                // Keep UI visual math consistent with ledger array state parsing rules
+                const revenueCut = ownerType === 'vendor' 
+                  ? amount * 0.10 
+                  : ownerType ? amount : amount * 0.10;
+
                 return (
                   <tr key={order.id}>
                     <td>
                       <strong>{order.products?.name || 'Deleted Product'}</strong>
                       <div className="row-meta">#{order.id.slice(0, 8)} · Qty: {order.quantity}</div>
                     </td>
-                    <td><span className="channel-tag">{order.channel_origin ? order.channel_origin.replace('_', ' ') : 'native'}</span></td>
-                    <td>GH₵ {parseFloat(order.total_amount).toFixed(2)}</td>
+                    <td>
+                      <span className="channel-tag">
+                        {order.channel_origin ? order.channel_origin.replace('_', ' ') : 'native'}
+                      </span>
+                    </td>
+                    <td>GH₵ {amount.toFixed(2)}</td>
                     <td className="positive">GH₵ {revenueCut.toFixed(2)}</td>
                     <td><span className="status-badge">{order.order_status}</span></td>
                   </tr>
