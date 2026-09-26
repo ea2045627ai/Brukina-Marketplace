@@ -53,20 +53,71 @@ export default function ProductCatalog({
 
   const handleCheckout = async (e) => {
     e.preventDefault();
-    if (!selectedProduct) return;
-    
+    if (!selectedProduct || !user?.id) return;
+
+    const parsedQuantity = parseInt(quantity, 10);
+    const unitPrice = Number(selectedProduct.price);
+    const total = unitPrice * parsedQuantity;
+
+    if (!Number.isInteger(parsedQuantity) || parsedQuantity < 1) {
+      setNotice('Please enter a valid quantity.');
+      return;
+    }
+
+    if (!selectedProduct.id || String(selectedProduct.id).startsWith('mock-')) {
+      setNotice('This product is a local demo item and cannot be ordered. Please choose a live marketplace item.');
+      return;
+    }
+
+    if (!Number.isFinite(unitPrice) || unitPrice < 0) {
+      setNotice('This product has an invalid price.');
+      return;
+    }
+
     setIsSubmitting(true);
-    setNotice('Processing order locally...');
-    
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setNotice(`🎉 Order successful! Purchased ${quantity}x ${selectedProduct.product_name}.`);
+    setNotice('Creating your order...');
+
+    try {
+      const orderNumber = `BRK-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .insert([{
+          order_number: orderNumber,
+          customer_id: user.id,
+          total,
+          status: 'pending'
+        }])
+        .select('id, order_number, status, total, created_at')
+        .single();
+
+      if (orderError) throw orderError;
+
+      const { error: itemError } = await supabase
+        .from('order_items')
+        .insert([{
+          order_id: order.id,
+          inventory_id: selectedProduct.id,
+          quantity: parsedQuantity,
+          unit_price: unitPrice
+        }]);
+
+      if (itemError) throw itemError;
+
+      setNotice(`Order ${order.order_number} created successfully.`);
+
       setTimeout(() => {
         setNotice('');
         setSelectedProduct(null);
         setQuantity(1);
-      }, 3000);
-    }, 1500);
+      }, 2500);
+
+    } catch (error) {
+      console.error('Order creation error:', error);
+      setNotice(`Order failed: ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleAddProduct = (e) => {
