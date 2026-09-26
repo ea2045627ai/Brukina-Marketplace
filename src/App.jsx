@@ -42,6 +42,45 @@ const COUNTRY_CURRENCIES = {
 };
 
 const COUNTRIES = Object.keys(COUNTRY_CURRENCIES);
+const CURRENCY_RATES_FROM_GHS = {
+  GHS: 1,
+  NGN: 130,
+  USD: 0.065,
+  GBP: 0.048,
+  CAD: 0.089,
+  AUD: 0.099,
+  KES: 8.45,
+  TZS: 167,
+  UGX: 246,
+  ZAR: 1.18,
+  XOF: 39.5,
+  XAF: 39.5,
+  SLE: 1.45,
+  LRD: 10.2,
+  EGP: 3.18,
+  INR: 5.45,
+  CNY: 0.47,
+  JPY: 9.55,
+  AED: 0.238,
+  SAR: 0.244,
+  EUR: 0.055,
+  BRL: 0.35
+};
+
+const formatLocalCurrency = (amount, user) => {
+  const metadata = user?.user_metadata || {};
+  const currency = metadata.currency || 'GHS';
+  const rate = CURRENCY_RATES_FROM_GHS[currency] || 1;
+  const convertedAmount = Number(amount || 0) * rate;
+
+  return new Intl.NumberFormat(undefined, {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(convertedAmount);
+};
+
 
 // Synced with your catalog categories to ensure accurate tab filtering
 const CATEGORIES = [
@@ -495,7 +534,7 @@ function OrdersPanel({ orders = [] }) {
             <tr key={order.id}>
               <td><strong>{order.order_number}</strong></td>
               <td>{String(order.status || 'pending').replaceAll('_', ' ')}</td>
-              <td>GH₵ {Number(order.total || 0).toFixed(2)}</td>
+              <td>{formatLocalCurrency(order.total, user)}</td>
               <td>{new Date(order.created_at).toLocaleDateString()}</td>
             </tr>
           ))}
