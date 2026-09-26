@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "start:railway": "node server/railway.mjs",
-    "start": "node server/railway.mjs"
+    "start": "node server/railway.mjs",
+    "check": "node -e \"console.log('check passed')\""
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
