@@ -1,7 +1,6 @@
 # BRUKINA ACCESS MARKETPLACE - RAILWAY CONFIG
 
 [build]
-  builder = "NIXPACKS"
   buildCommand = "npm ci && npm run check && npm run build"
 
 [deploy]
