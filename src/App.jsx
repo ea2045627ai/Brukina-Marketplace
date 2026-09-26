@@ -373,7 +373,7 @@ function Workspace({ page, role, user, onNavigate, onLogout }) {
       try {
         const [catalogResult, orderResult, walletResult, deliveryResult] = await Promise.all([
           supabase.from('marketplace_inventory').select('*').eq('active', true).order('created_at', { ascending: false }),
-          supabase.from('orders').select('id, order_number, status, total, created_at').eq('customer_id', user.id).order('created_at', { ascending: false }).limit(20),
+          supabase.from('orders').select('*').eq('customer_id', user.id).order('created_at', { ascending: false }).limit(20),
           supabase.from('wallets').select('balance, escrow_balance').eq('user_id', user.id).maybeSingle(),
           supabase.from('deliveries').select('id, order_id, status, eta_minutes, updated_at').order('updated_at', { ascending: false }).limit(20)
         ]);
@@ -512,6 +512,8 @@ function PageShell({ title, children, onNavigate, onLogout }) {
 }
 
 function OrdersPanel({ orders = [], user, error = '' }) {
+  const [selectedOrder, setSelectedOrder] = useState(null);
+
   if (error) {
     return <div className="empty-state-box">Could not load your orders: {error}</div>;
   }
@@ -524,29 +526,174 @@ function OrdersPanel({ orders = [], user, error = '' }) {
     );
   }
 
+  const statusLabel = (status) =>
+    String(status || 'pending').replaceAll('_', ' ');
+
+  const displayField = (label, value) => {
+    if (value === null || value === undefined || value === '') return null;
+    if (label === 'customer_id') return null;
+    if (label === 'id') return null;
+
+    let displayValue = value;
+
+    if (label === 'created_at' || label === 'updated_at') {
+      const date = new Date(value);
+      if (!Number.isNaN(date.getTime())) {
+        displayValue = date.toLocaleString();
+      }
+    }
+
+    if (label === 'total' || label === 'amount') {
+      displayValue = formatLocalCurrency(value, user);
+    }
+
+    return (
+      <div
+        key={label}
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          gap: '20px',
+          padding: '12px 0',
+          borderBottom: '1px solid #eee'
+        }}
+      >
+        <strong style={{ textTransform: 'capitalize' }}>
+          {label.replaceAll('_', ' ')}
+        </strong>
+        <span style={{ textAlign: 'right', wordBreak: 'break-word' }}>
+          {String(displayValue)}
+        </span>
+      </div>
+    );
+  };
+
   return (
-    <div className="data-table-wrapper">
-      <table className="data-table">
-        <thead>
-          <tr>
-            <th>Order</th>
-            <th>Status</th>
-            <th>Total</th>
-            <th>Date</th>
-          </tr>
-        </thead>
-        <tbody>
-          {orders.map(order => (
-            <tr key={order.id}>
-              <td><strong>{order.order_number}</strong></td>
-              <td>{String(order.status || 'pending').replaceAll('_', ' ')}</td>
-              <td>{formatLocalCurrency(order.total, user)}</td>
-              <td>{new Date(order.created_at).toLocaleDateString()}</td>
+    <>
+      <div className="data-table-wrapper">
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>Order</th>
+              <th>Status</th>
+              <th>Total</th>
+              <th>Date</th>
+              <th>Details</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {orders.map(order => (
+              <tr
+                key={order.id}
+                onClick={() => setSelectedOrder(order)}
+                style={{ cursor: 'pointer' }}
+                title="Open order details"
+              >
+                <td><strong>{order.order_number}</strong></td>
+                <td>{statusLabel(order.status)}</td>
+                <td>{formatLocalCurrency(order.total, user)}</td>
+                <td>{new Date(order.created_at).toLocaleDateString()}</td>
+                <td>
+                  <button
+                    type="button"
+                    className="btn-outline"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setSelectedOrder(order);
+                    }}
+                  >
+                    View
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {selectedOrder && (
+        <div
+          className="modal-overlay"
+          onClick={() => setSelectedOrder(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.55)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            zIndex: 1000
+          }}
+        >
+          <div
+            className="modal-content"
+            onClick={(event) => event.stopPropagation()}
+            style={{
+              background: '#fff',
+              width: '100%',
+              maxWidth: '650px',
+              maxHeight: '85vh',
+              overflowY: 'auto',
+              borderRadius: '14px',
+              padding: '24px',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.25)'
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-start',
+                gap: '16px',
+                marginBottom: '20px'
+              }}
+            >
+              <div>
+                <p style={{ margin: 0, color: '#999', fontSize: '13px' }}>
+                  ORDER DETAILS
+                </p>
+                <h2 style={{ margin: '6px 0' }}>
+                  {selectedOrder.order_number || 'Order'}
+                </h2>
+                <strong style={{ textTransform: 'capitalize' }}>
+                  {statusLabel(selectedOrder.status)}
+                </strong>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setSelectedOrder(null)}
+                aria-label="Close order details"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '28px',
+                  cursor: 'pointer',
+                  color: '#777'
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div>
+              {Object.entries(selectedOrder)
+                .map(([label, value]) => displayField(label, value))}
+            </div>
+
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => setSelectedOrder(null)}
+              style={{ marginTop: '20px', width: '100%' }}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
