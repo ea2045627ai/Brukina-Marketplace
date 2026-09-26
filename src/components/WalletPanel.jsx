@@ -101,7 +101,7 @@ export default function WalletPanel() {
         <strong>GH₵ {balance.toFixed(2)}</strong>
         <div className="wallet-card-bottom">
           <span>Live account balance</span>
-          <span>Paystack managed</span>
+          <span>Database wallet</span>
         </div>
       </div>
 
