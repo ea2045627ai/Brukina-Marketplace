@@ -70,7 +70,7 @@ export default function WalletPanel() {
         .insert([{
           wallet_id: walletId,
           amount: parsedAmount,
-          transaction_type: 'credit',
+          transaction_type: 'deposit',
           description: 'Wallet Deposit Confirmed'
         }]);
 
@@ -115,7 +115,7 @@ export default function WalletPanel() {
           <div className="empty-state-box">No transactions yet.</div>
         ) : (
           transactions.map((txn) => {
-            const isCredit = txn.transaction_type?.toLowerCase() === 'credit';
+            const isCredit = ['credit', 'deposit'].includes(txn.transaction_type?.toLowerCase());
             return (
               <div key={txn.id} className="txn-row">
                 <div>

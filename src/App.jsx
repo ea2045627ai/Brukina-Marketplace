@@ -4,7 +4,11 @@ import { supabase, supabaseConfigMissing } from './lib/supabaseClient';
 import { useCourierLocation } from './lib/useCourierLocation';
 
 // Direct path to your component file sitting right next to App.jsx in src/
-import ProductCatalog from './ProductCard'; 
+import ProductCatalog from './ProductCard';
+import VendorInventoryPanel from './components/VendorInventoryPanel';
+import WalletPanel from './components/WalletPanel';
+import RiderTrackPanel from './components/RiderTrackPanel';
+import RiderWithdrawalPanel from './components/RiderWithdrawalPanel'; 
 
 const roles = ['customer', 'vendor', 'driver', 'rider'];
 
@@ -19,11 +23,12 @@ const CATEGORIES = [
 const pageForPath = (path) => {
   if (path === '/login') return 'login';
   if (path === '/signup') return 'signup';
-  if (path.includes('vendor')) return 'inventory';
-  if (path.includes('rider') || path.includes('driver')) return 'dispatch';
-  if (path.includes('wallet')) return 'wallet';
-  if (path.includes('orders')) return 'orders';
-  if (path.includes('profile')) return 'profile';
+  if (path === '/vendor' || path.includes('/vendor/')) return 'vendor';
+  if (path === '/rider' || path.includes('/rider/')) return 'rider';
+  if (path === '/driver' || path.includes('/driver/')) return 'driver';
+  if (path === '/wallet' || path.includes('/wallet/')) return 'wallet';
+  if (path === '/orders' || path.includes('/orders/')) return 'orders';
+  if (path === '/profile' || path.includes('/profile/')) return 'profile';
   
   const segment = path.split('/').pop();
   if (CATEGORIES.some(cat => cat.id === segment)) {
@@ -38,7 +43,22 @@ export default function App() {
   const [role, setRole] = useState('customer');
   
   const navigate = (next) => {
-    const path = ['login', 'signup'].includes(next) ? `/${next}` : `/dashboard/${next}`;
+    const routes = {
+      dashboard: '/dashboard',
+      grain: '/grain',
+      vegetable: '/vegetable',
+      fruit: '/fruit',
+      orders: '/orders',
+      wallet: '/wallet',
+      profile: '/profile',
+      vendor: '/vendor',
+      rider: '/rider',
+      driver: '/driver',
+      login: '/login',
+      signup: '/signup'
+    };
+
+    const path = routes[next] || '/dashboard';
     history.pushState({}, '', path);
     setPage(next);
   };
@@ -239,6 +259,71 @@ function Workspace({ page, role, user, onNavigate, onLogout }) {
     return <div style={{ padding: '40px', textAlign: 'center', color: '#999' }}>Loading marketplace modules...</div>;
   }
 
+  if (page === 'vendor') {
+    if (role !== 'vendor' && role !== 'admin') {
+      return (
+        <PageShell title="Vendor Access">
+          <p>Your account is not registered as a vendor.</p>
+          <button className="btn-primary" onClick={() => onNavigate('dashboard')}>
+            Back to Marketplace
+          </button>
+        </PageShell>
+      );
+    }
+
+    return (
+      <PageShell title="Vendor Console" onNavigate={onNavigate} onLogout={onLogout}>
+        <VendorInventoryPanel />
+      </PageShell>
+    );
+  }
+
+  if (page === 'wallet') {
+    return (
+      <PageShell title="My Wallet" onNavigate={onNavigate} onLogout={onLogout}>
+        <WalletPanel />
+      </PageShell>
+    );
+  }
+
+  if (page === 'rider' || page === 'driver') {
+    if (role !== 'rider' && role !== 'driver' && role !== 'admin') {
+      return (
+        <PageShell title="Courier Access" onNavigate={onNavigate} onLogout={onLogout}>
+          <p>Your account is not registered as a rider or driver.</p>
+          <button className="btn-primary" onClick={() => onNavigate('dashboard')}>
+            Back to Marketplace
+          </button>
+        </PageShell>
+      );
+    }
+
+    return (
+      <PageShell title="Logistics Center" onNavigate={onNavigate} onLogout={onLogout}>
+        <RiderTrackPanel />
+        <div style={{ marginTop: '24px' }}>
+          <RiderWithdrawalPanel />
+        </div>
+      </PageShell>
+    );
+  }
+
+  if (page === 'orders') {
+    return (
+      <PageShell title="My Orders" onNavigate={onNavigate} onLogout={onLogout}>
+        <OrdersPanel orders={orders} />
+      </PageShell>
+    );
+  }
+
+  if (page === 'profile') {
+    return (
+      <PageShell title="My Profile" onNavigate={onNavigate} onLogout={onLogout}>
+        <ProfilePanel user={user} role={role} />
+      </PageShell>
+    );
+  }
+
   return (
     <ProductCatalog 
       catalog={catalog}
@@ -249,5 +334,111 @@ function Workspace({ page, role, user, onNavigate, onLogout }) {
       role={role}
       onLogout={onLogout}
     />
+  );
+}
+
+function PageShell({ title, children, onNavigate, onLogout }) {
+  return (
+    <div className="container" style={{ maxWidth: '1200px', margin: '0 auto', padding: '16px' }}>
+      <header style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '12px',
+        marginBottom: '24px',
+        flexWrap: 'wrap'
+      }}>
+        <div>
+          <button
+            className="btn-text"
+            onClick={() => onNavigate?.('dashboard')}
+            style={{ marginBottom: '8px' }}
+          >
+            ← Marketplace
+          </button>
+          <h1 style={{ margin: 0 }}>{title}</h1>
+        </div>
+
+        {onLogout && (
+          <button className="btn-outline" onClick={onLogout}>
+            Logout
+          </button>
+        )}
+      </header>
+
+      {children}
+    </div>
+  );
+}
+
+function OrdersPanel({ orders = [] }) {
+  if (!orders.length) {
+    return (
+      <div className="empty-state-box">
+        You have no orders yet. Return to the marketplace to place your first order.
+      </div>
+    );
+  }
+
+  return (
+    <div className="data-table-wrapper">
+      <table className="data-table">
+        <thead>
+          <tr>
+            <th>Order</th>
+            <th>Status</th>
+            <th>Total</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          {orders.map(order => (
+            <tr key={order.id}>
+              <td><strong>{order.order_number}</strong></td>
+              <td>{String(order.status || 'pending').replaceAll('_', ' ')}</td>
+              <td>GH₵ {Number(order.total || 0).toFixed(2)}</td>
+              <td>{new Date(order.created_at).toLocaleDateString()}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function ProfilePanel({ user, role }) {
+  return (
+    <div className="wallet-panel">
+      <div className="wallet-card">
+        <div className="wallet-card-top">
+          <span className="wallet-chip">◎</span>
+          <span className="wallet-label">ACCOUNT</span>
+        </div>
+        <p>Email</p>
+        <strong style={{ wordBreak: 'break-word' }}>
+          {user?.email || 'Unknown'}
+        </strong>
+        <div className="wallet-card-bottom">
+          <span>Role</span>
+          <span>{role || 'customer'}</span>
+        </div>
+      </div>
+
+      <div className="transactions-box" style={{ marginTop: '20px' }}>
+        <h3>Account Information</h3>
+        <div className="txn-row">
+          <div>
+            <strong>User ID</strong>
+            <small>{user?.id || 'Unavailable'}</small>
+          </div>
+        </div>
+        <div className="txn-row">
+          <div>
+            <strong>Account status</strong>
+            <small>Email authentication active</small>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
