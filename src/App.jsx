@@ -12,6 +12,37 @@ import RiderWithdrawalPanel from './components/RiderWithdrawalPanel';
 
 const roles = ['customer', 'vendor', 'driver', 'rider'];
 
+const COUNTRY_CURRENCIES = {
+  Ghana: { code: 'GHS', symbol: 'GH₵' },
+  Nigeria: { code: 'NGN', symbol: '₦' },
+  'United States': { code: 'USD', symbol: '$' },
+  'United Kingdom': { code: 'GBP', symbol: '£' },
+  Canada: { code: 'CAD', symbol: 'C$' },
+  Australia: { code: 'AUD', symbol: 'A$' },
+  Kenya: { code: 'KES', symbol: 'KSh' },
+  Tanzania: { code: 'TZS', symbol: 'TSh' },
+  Uganda: { code: 'UGX', symbol: 'USh' },
+  'South Africa': { code: 'ZAR', symbol: 'R' },
+  'Côte d’Ivoire': { code: 'XOF', symbol: 'CFA' },
+  Senegal: { code: 'XOF', symbol: 'CFA' },
+  Cameroon: { code: 'XAF', symbol: 'FCFA' },
+  'Sierra Leone': { code: 'SLE', symbol: 'Le' },
+  Liberia: { code: 'LRD', symbol: '$' },
+  Egypt: { code: 'EGP', symbol: 'E£' },
+  India: { code: 'INR', symbol: '₹' },
+  China: { code: 'CNY', symbol: '¥' },
+  Japan: { code: 'JPY', symbol: '¥' },
+  'United Arab Emirates': { code: 'AED', symbol: 'د.إ' },
+  'Saudi Arabia': { code: 'SAR', symbol: '﷼' },
+  Germany: { code: 'EUR', symbol: '€' },
+  France: { code: 'EUR', symbol: '€' },
+  Italy: { code: 'EUR', symbol: '€' },
+  Spain: { code: 'EUR', symbol: '€' },
+  Brazil: { code: 'BRL', symbol: 'R$' }
+};
+
+const COUNTRIES = Object.keys(COUNTRY_CURRENCIES);
+
 // Synced with your catalog categories to ensure accurate tab filtering
 const CATEGORIES = [
   { id: 'dashboard', label: 'All products', path: '/' },
@@ -205,6 +236,7 @@ function Auth({ mode, onNavigate, onSuccess }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [selectedRole, setSelectedRole] = useState('customer');
+  const [country, setCountry] = useState('Ghana');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -224,7 +256,15 @@ function Auth({ mode, onNavigate, onSuccess }) {
         const { data, error: authError } = await supabase.auth.signUp({ 
           email: email.trim(), 
           password, 
-          options: { data: { full_name: name.trim(), role: selectedRole } } 
+          options: {
+            data: {
+              full_name: name.trim(),
+              role: selectedRole,
+              country,
+              currency: COUNTRY_CURRENCIES[country].code,
+              currency_symbol: COUNTRY_CURRENCIES[country].symbol
+            }
+          } 
         });
         if (authError) throw authError;
         if (!data.session) return setError('Check your email to confirm your account before signing in.');
@@ -255,6 +295,18 @@ function Auth({ mode, onNavigate, onSuccess }) {
         )}
         <form onSubmit={submit}>
           {isSignup && <label>Full name<input value={name} onChange={event => setName(event.target.value)} required /></label>}
+          {isSignup && (
+            <label>
+              Country
+              <select value={country} onChange={event => setCountry(event.target.value)} required>
+                {COUNTRIES.map(item => (
+                  <option key={item} value={item}>
+                    {item} — {COUNTRY_CURRENCIES[item].code}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <label>Email address<input type="email" value={email} onChange={event => setEmail(event.target.value)} required /></label>
           <label>Password<input type="password" value={password} onChange={event => setPassword(event.target.value)} required /></label>
           <button className="primary" disabled={busy}>{busy ? 'Connecting...' : isSignup ? 'Create account' : 'Sign in to workspace'} <span>→</span></button>
