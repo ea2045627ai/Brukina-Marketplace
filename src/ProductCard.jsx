@@ -11,6 +11,7 @@ export default function ProductCatalog({
   onLogout 
 }) {
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [viewProduct, setViewProduct] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [notice, setNotice] = useState('');
