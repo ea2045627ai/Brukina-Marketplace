@@ -104,13 +104,17 @@ export default function ProductCatalog({
 
       if (itemError) throw itemError;
 
-      setNotice(`Order ${order.order_number} created successfully.`);
+      setNotice(`Order ${order.order_number} created successfully. Opening your orders...`);
 
       setTimeout(() => {
         setNotice('');
         setSelectedProduct(null);
         setQuantity(1);
-      }, 2500);
+
+        if (onNavigate) {
+          onNavigate('orders');
+        }
+      }, 1200);
 
     } catch (error) {
       console.error('Order creation error:', error);
