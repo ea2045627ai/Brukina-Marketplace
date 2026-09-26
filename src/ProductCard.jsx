@@ -1,6 +1,45 @@
 import React, { useState } from 'react';
 import { supabase } from './lib/supabaseClient';
 
+const CURRENCY_RATES_FROM_GHS = {
+  GHS: 1,
+  NGN: 130,
+  USD: 0.065,
+  GBP: 0.048,
+  CAD: 0.089,
+  AUD: 0.099,
+  KES: 8.45,
+  TZS: 167,
+  UGX: 246,
+  ZAR: 1.18,
+  XOF: 39.5,
+  XAF: 39.5,
+  SLE: 1.45,
+  LRD: 10.2,
+  EGP: 3.18,
+  INR: 5.45,
+  CNY: 0.47,
+  JPY: 9.55,
+  AED: 0.238,
+  SAR: 0.244,
+  EUR: 0.055,
+  BRL: 0.35
+};
+
+const formatLocalCurrency = (amount, user) => {
+  const metadata = user?.user_metadata || {};
+  const currency = metadata.currency || 'GHS';
+  const rate = CURRENCY_RATES_FROM_GHS[currency] || 1;
+  const convertedAmount = Number(amount || 0) * rate;
+
+  return new Intl.NumberFormat(undefined, {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(convertedAmount);
+};
+
 export default function ProductCatalog({ 
   catalog = [], 
   query = '', 
@@ -560,7 +599,7 @@ export default function ProductCatalog({
                           Starting price
                         </div>
                         <strong style={{ fontSize: '23px', color: '#C85A32' }}>
-                          ${Number(item.price || 0).toFixed(2)}
+                          {formatLocalCurrency(item.price, user)}
                         </strong>
                       </div>
 
@@ -713,7 +752,7 @@ export default function ProductCatalog({
 
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '20px', marginBottom: '22px' }}>
                 <strong style={{ fontSize: '28px', color: '#C85A32' }}>
-                  ${Number(viewProduct.price || 0).toFixed(2)}
+                  {formatLocalCurrency(viewProduct.price, user)}
                 </strong>
                 <span style={{ color: '#666', fontSize: '13px' }}>
                   Sold by <strong>{viewProduct.vendor_name || 'Marketplace Seller'}</strong>
@@ -796,11 +835,11 @@ export default function ProductCatalog({
               <div style={{ borderTop: '1px solid #EAE0D5', paddingTop: '16px', marginBottom: '24px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', color: '#666' }}>
                   <span>Item price:</span>
-                  <span>${selectedProduct.price}</span>
+                  <span>{formatLocalCurrency(selectedProduct.price, user)}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '18px', color: '#231F20' }}>
                   <span>Total cost:</span>
-                  <span style={{ color: '#C85A32' }}>${(selectedProduct.price * quantity).toFixed(2)}</span>
+                  <span style={{ color: '#C85A32' }}>{formatLocalCurrency(selectedProduct.price * quantity, user)}</span>
                 </div>
               </div>
               <button onClick={handleCheckout} disabled={isSubmitting} style={{ width: '100%', padding: '14px', background: '#C85A32', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '16px' }}>
