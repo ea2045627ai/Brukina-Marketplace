@@ -489,13 +489,20 @@ function PageShell({ title, children, onNavigate, onLogout }) {
         flexWrap: 'wrap'
       }}>
         <div>
-          <button
-            className="btn-text"
-            onClick={() => onNavigate?.('dashboard')}
-            style={{ marginBottom: '8px' }}
-          >
-            ← Marketplace
-          </button>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '8px' }}>
+            <button
+              className="btn-text"
+              onClick={() => onNavigate?.('dashboard')}
+            >
+              ← Marketplace
+            </button>
+            <button
+              className="btn-outline"
+              onClick={() => onNavigate?.('orders')}
+            >
+              Items Ordered
+            </button>
+          </div>
           <h1 style={{ margin: 0 }}>{title}</h1>
         </div>
 
