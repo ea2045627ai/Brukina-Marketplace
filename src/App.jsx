@@ -393,7 +393,7 @@ function Workspace({ page, role, user, onNavigate, onLogout }) {
     }
     loadWorkspace();
     return () => { active = false; };
-  }, [user.id]);
+  }, [user.id, page]);
 
   if (loading) {
     return <div style={{ padding: '40px', textAlign: 'center', color: '#999' }}>Loading marketplace modules...</div>;
