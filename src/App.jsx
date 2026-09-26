@@ -360,6 +360,7 @@ function Workspace({ page, role, user, onNavigate, onLogout }) {
   useCourierLocation(role);
   const [catalog, setCatalog] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [ordersError, setOrdersError] = useState('');
   const [wallet, setWallet] = useState(null);
   const [deliveries, setDeliveries] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -372,7 +373,7 @@ function Workspace({ page, role, user, onNavigate, onLogout }) {
       try {
         const [catalogResult, orderResult, walletResult, deliveryResult] = await Promise.all([
           supabase.from('marketplace_inventory').select('*').eq('active', true).order('created_at', { ascending: false }),
-          supabase.from('orders').select('id, order_number, status, total, created_at').order('created_at', { ascending: false }).limit(20),
+          supabase.from('orders').select('id, order_number, status, total, created_at').eq('customer_id', user.id).order('created_at', { ascending: false }).limit(20),
           supabase.from('wallets').select('balance, escrow_balance').eq('user_id', user.id).maybeSingle(),
           supabase.from('deliveries').select('id, order_id, status, eta_minutes, updated_at').order('updated_at', { ascending: false }).limit(20)
         ]);
@@ -380,6 +381,7 @@ function Workspace({ page, role, user, onNavigate, onLogout }) {
         if (active) {
           setCatalog(catalogResult.data || []);
           setOrders(orderResult.data || []);
+          setOrdersError(orderResult.error?.message || '');
           setWallet(walletResult.data || null);
           setDeliveries(deliveryResult.data || []);
         }
@@ -449,7 +451,7 @@ function Workspace({ page, role, user, onNavigate, onLogout }) {
   if (page === 'orders') {
     return (
       <PageShell title="My Orders" onNavigate={onNavigate} onLogout={onLogout}>
-        <OrdersPanel orders={orders} />
+        <OrdersPanel orders={orders} user={user} error={ordersError} />
       </PageShell>
     );
   }
@@ -509,7 +511,11 @@ function PageShell({ title, children, onNavigate, onLogout }) {
   );
 }
 
-function OrdersPanel({ orders = [] }) {
+function OrdersPanel({ orders = [], user, error = '' }) {
+  if (error) {
+    return <div className="empty-state-box">Could not load your orders: {error}</div>;
+  }
+
   if (!orders.length) {
     return (
       <div className="empty-state-box">
