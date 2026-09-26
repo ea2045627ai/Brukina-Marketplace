@@ -318,11 +318,50 @@ export default function ProductCatalog({
         <span style={{ color: '#C85A32', cursor: 'pointer', fontSize: '14px' }} onClick={() => onNavigate('dashboard')}>View all &rarr;</span>
       </div>
 
-      <div className="tab-container" style={{ display: 'flex', gap: '10px', marginBottom: '24px', overflowX: 'auto', paddingBottom: '8px' }}>
-        <button className={`tab-btn ${page === 'dashboard' ? 'active' : ''}`} onClick={() => onNavigate('dashboard')}>All products</button>
-        <button className={`tab-btn ${page === 'grain' ? 'active' : ''}`} onClick={() => onNavigate('grain')}>Grains & Cereals</button>
-        <button className={`tab-btn ${page === 'vegetable' ? 'active' : ''}`} onClick={() => onNavigate('vegetable')}>Vegetables</button>
-        <button className={`tab-btn ${page === 'fruit' ? 'active' : ''}`} onClick={() => onNavigate('fruit')}>Fruits</button>
+      <div className="tab-container" style={{ display: 'flex', gap: '10px', marginBottom: '24px', overflowX: 'auto', paddingBottom: '10px', flexWrap: 'wrap' }}>
+        {[
+          ['dashboard', '🛍️ All Products'],
+          ['grain', '🌾 Grains'],
+          ['vegetable', '🥬 Vegetables'],
+          ['fruit', '🍍 Fruits'],
+          ['food', '🍲 Food & Groceries'],
+          ['building', '🏗️ Building Materials'],
+          ['plumbing', '🚿 Plumbing'],
+          ['electrical', '⚡ Electrical'],
+          ['appliance', '🏠 Appliances'],
+          ['phones', '📱 Phones'],
+          ['computers', '💻 Computers'],
+          ['devices', '📲 Devices'],
+          ['electronics', '🎧 Electronics'],
+          ['accessories', '🔌 Accessories'],
+          ['tools', '🔧 Tools'],
+          ['equipment', '🛠️ Equipment'],
+          ['solar', '☀️ Solar'],
+          ['power', '🔋 Power'],
+          ['furniture', '🪑 Furniture'],
+          ['home', '🏡 Home'],
+          ['auto', '🚗 Auto'],
+          ['fashion', '👕 Fashion'],
+          ['beauty', '✨ Beauty']
+        ].map(([value, label]) => (
+          <button
+            key={value}
+            className={`tab-btn ${page === value ? 'active' : ''}`}
+            onClick={() => onNavigate(value)}
+            style={{
+              whiteSpace: 'nowrap',
+              padding: '10px 14px',
+              borderRadius: '999px',
+              border: page === value ? '1px solid #C85A32' : '1px solid #EAE0D5',
+              background: page === value ? '#C85A32' : '#fff',
+              color: page === value ? '#fff' : '#333',
+              cursor: 'pointer',
+              fontWeight: page === value ? '700' : '500'
+            }}
+          >
+            {label}
+          </button>
+        ))}
       </div>
       <div
         className="deals-grid"
