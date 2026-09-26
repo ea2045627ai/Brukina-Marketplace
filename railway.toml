@@ -1,12 +1,7 @@
-# ==========================================================================
-# BRUKINA ACCESS MARKETPLACE - RAILWAY CONTAINER ENGINE BLUEPRINT
-# Path: railway.toml
-# Governs Nixpacks compilation pipelines, operational health check assertions, and lifecycle policy flags.
-# ==========================================================================
+# BRUKINA ACCESS MARKETPLACE - RAILWAY CONFIG
 
 [build]
   builder = "NIXPACKS"
-  # FIXED: Replaced loose installs with npm ci, and chained the mandatory static assets compilation step
   buildCommand = "npm ci && npm run check && npm run build"
 
 [deploy]
@@ -14,3 +9,6 @@
   healthcheckPath = "/health"
   healthcheckTimeout = 30
   restartPolicyType = "ON_FAILURE"
+
+[build.nixpacks]
+  aptPkgs = []
