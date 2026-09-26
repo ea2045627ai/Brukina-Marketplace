@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start:railway": "node server/railway.mjs",
+    "start": "node server/railway.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
