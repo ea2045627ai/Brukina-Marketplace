@@ -256,31 +256,333 @@ export default function ProductCatalog({
         <button className={`tab-btn ${page === 'vegetable' ? 'active' : ''}`} onClick={() => onNavigate('vegetable')}>Vegetables</button>
         <button className={`tab-btn ${page === 'fruit' ? 'active' : ''}`} onClick={() => onNavigate('fruit')}>Fruits</button>
       </div>
-      <div className="deals-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '16px', marginBottom: '48px', color: '#333' }}>
+      <div
+        className="deals-grid"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+          gap: '22px',
+          marginBottom: '48px',
+          color: '#333'
+        }}
+      >
         {filteredCatalog && filteredCatalog.length > 0 ? (
-          filteredCatalog.map(item => (
-            <div key={item.id || item.product_name} className="product-card" style={{ border: '1px solid #EAE0D5', borderRadius: '12px', padding: '16px', background: '#fff', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-              <div>
-                <h4 style={{ margin: '0 0 8px 0' }}>{item.product_name}</h4>
-                <p style={{ fontSize: '14px', color: '#666', margin: '0 0 12px 0' }}>{item.description}</p>
-              </div>
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                  <span style={{ fontWeight: 'bold', color: '#C85A32', fontSize: '18px' }}>${item.price}</span>
-                  <span style={{ fontSize: '12px', color: '#999' }}>{item.vendor_name || 'My Store'}</span>
+          filteredCatalog.map((item, index) => {
+            const category = (item.category || 'product').toLowerCase();
+            const visualThemes = {
+              grain: { icon: '🌾', label: 'Grains & Cereals' },
+              vegetable: { icon: '🥬', label: 'Vegetables' },
+              fruit: { icon: '🍍', label: 'Fresh Fruits' },
+              'food & beverage': { icon: '🥗', label: 'Food & Beverage' },
+              kitchenware: { icon: '🍳', label: 'Kitchenware' },
+              cosmetics: { icon: '✨', label: 'Cosmetics' }
+            };
+
+            const theme = visualThemes[category] || { icon: '🛍️', label: item.category || 'Marketplace' };
+
+            return (
+              <article
+                key={item.id || item.product_name}
+                className="product-card"
+                style={{
+                  overflow: 'hidden',
+                  border: '1px solid #eee5dc',
+                  borderRadius: '20px',
+                  background: '#fff',
+                  boxShadow: '0 8px 28px rgba(35,31,32,0.07)',
+                  transition: 'transform .2s ease, box-shadow .2s ease',
+                  display: 'flex',
+                  flexDirection: 'column'
+                }}
+              >
+                <div
+                  style={{
+                    minHeight: '170px',
+                    padding: '24px',
+                    background: 'linear-gradient(135deg, #f8efe7 0%, #fff8f2 55%, #f2eee9 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    position: 'relative'
+                  }}
+                >
+                  <div
+                    style={{
+                      width: '112px',
+                      height: '112px',
+                      borderRadius: '50%',
+                      background: '#fff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '58px',
+                      boxShadow: '0 10px 28px rgba(35,31,32,0.10)'
+                    }}
+                  >
+                    {theme.icon}
+                  </div>
+
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: '14px',
+                      left: '14px',
+                      padding: '7px 11px',
+                      borderRadius: '999px',
+                      background: '#231F20',
+                      color: '#fff',
+                      fontSize: '11px',
+                      fontWeight: '800',
+                      letterSpacing: '.3px'
+                    }}
+                  >
+                    {theme.label}
+                  </span>
                 </div>
-                {!isVendor && !isCourier && (
-                  <button onClick={() => { setSelectedProduct(item); setQuantity(1); }} style={{ width: '100%', padding: '10px', background: '#231F20', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>
-                    Buy Now
-                  </button>
-                )}
-              </div>
-            </div>
-          ))
+
+                <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', flex: 1 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'flex-start' }}>
+                    <h3 style={{ margin: 0, fontSize: '18px', lineHeight: 1.25, color: '#231F20' }}>
+                      {item.product_name}
+                    </h3>
+                  </div>
+
+                  <p
+                    style={{
+                      margin: '10px 0 16px',
+                      color: '#6d6865',
+                      fontSize: '13px',
+                      lineHeight: 1.55,
+                      minHeight: '42px'
+                    }}
+                  >
+                    {item.description || 'Quality marketplace product available from a verified supplier.'}
+                  </p>
+
+                  <div style={{ marginTop: 'auto' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'flex-end',
+                        gap: '12px',
+                        marginBottom: '16px'
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontSize: '11px', color: '#999', marginBottom: '3px' }}>
+                          Starting price
+                        </div>
+                        <strong style={{ fontSize: '23px', color: '#C85A32' }}>
+                          ${Number(item.price || 0).toFixed(2)}
+                        </strong>
+                      </div>
+
+                      <div style={{ textAlign: 'right', maxWidth: '120px' }}>
+                        <div style={{ fontSize: '11px', color: '#999', marginBottom: '3px' }}>
+                          Supplier
+                        </div>
+                        <span style={{ fontSize: '12px', fontWeight: '700', color: '#403b39' }}>
+                          {item.vendor_name || 'Marketplace Seller'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '9px' }}>
+                      <button
+                        onClick={() => setViewProduct(item)}
+                        style={{
+                          padding: '11px 10px',
+                          border: '1px solid #ded5cd',
+                          background: '#fff',
+                          color: '#231F20',
+                          borderRadius: '11px',
+                          cursor: 'pointer',
+                          fontWeight: '800',
+                          fontSize: '12px'
+                        }}
+                      >
+                        View product
+                      </button>
+
+                      {!isVendor && !isCourier && (
+                        <button
+                          onClick={() => {
+                            setSelectedProduct(item);
+                            setQuantity(1);
+                          }}
+                          style={{
+                            padding: '11px 10px',
+                            background: '#231F20',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: '11px',
+                            cursor: 'pointer',
+                            fontWeight: '800',
+                            fontSize: '12px'
+                          }}
+                        >
+                          Buy now
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </article>
+            );
+          })
         ) : (
-          <div style={{ gridColumn: '1 / -1', textAlign: 'center', color: '#999', padding: '40px 0' }}>No products found matching your search.</div>
+          <div
+            style={{
+              gridColumn: '1 / -1',
+              textAlign: 'center',
+              color: '#999',
+              padding: '60px 0'
+            }}
+          >
+            No products found matching your search.
+          </div>
         )}
       </div>
+
+      {viewProduct && (
+        <div
+          onClick={() => setViewProduct(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(20,16,14,.58)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            zIndex: 1100
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100%',
+              maxWidth: '720px',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              background: '#fff',
+              borderRadius: '24px',
+              boxShadow: '0 24px 80px rgba(0,0,0,.25)',
+              overflow: 'hidden'
+            }}
+          >
+            <div
+              style={{
+                minHeight: '220px',
+                background: 'linear-gradient(135deg, #f8efe7, #fff8f2)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                position: 'relative'
+              }}
+            >
+              <div style={{ fontSize: '100px' }}>
+                {(
+                  {
+                    grain: '🌾',
+                    vegetable: '🥬',
+                    fruit: '🍍',
+                    'food & beverage': '🥗',
+                    kitchenware: '🍳',
+                    cosmetics: '✨'
+                  }[(viewProduct.category || '').toLowerCase()] || '🛍️'
+                )}
+              </div>
+
+              <button
+                onClick={() => setViewProduct(null)}
+                style={{
+                  position: 'absolute',
+                  top: '16px',
+                  right: '16px',
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  border: 'none',
+                  background: 'rgba(35,31,32,.9)',
+                  color: '#fff',
+                  fontSize: '22px',
+                  cursor: 'pointer'
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{ padding: '28px' }}>
+              <div style={{ fontSize: '12px', color: '#C85A32', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '.8px' }}>
+                {viewProduct.category || 'Marketplace Product'}
+              </div>
+
+              <h2 style={{ margin: '8px 0 10px', color: '#231F20', fontSize: '30px' }}>
+                {viewProduct.product_name}
+              </h2>
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '20px', marginBottom: '22px' }}>
+                <strong style={{ fontSize: '28px', color: '#C85A32' }}>
+                  ${Number(viewProduct.price || 0).toFixed(2)}
+                </strong>
+                <span style={{ color: '#666', fontSize: '13px' }}>
+                  Sold by <strong>{viewProduct.vendor_name || 'Marketplace Seller'}</strong>
+                </span>
+              </div>
+
+              <div
+                style={{
+                  padding: '18px',
+                  borderRadius: '16px',
+                  background: '#faf7f3',
+                  marginBottom: '24px'
+                }}
+              >
+                <h4 style={{ margin: '0 0 8px', color: '#231F20' }}>Product overview</h4>
+                <p style={{ margin: 0, color: '#625d59', lineHeight: 1.7, fontSize: '14px' }}>
+                  {viewProduct.description || 'This marketplace product is supplied through Brukina Marketplace. Product availability, pricing and supplier information are shown from the current marketplace listing.'}
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '24px' }}>
+                <span style={{ padding: '8px 12px', borderRadius: '999px', background: '#f1ebe5', color: '#514b47', fontSize: '12px', fontWeight: '700' }}>
+                  Verified marketplace listing
+                </span>
+                <span style={{ padding: '8px 12px', borderRadius: '999px', background: '#f1ebe5', color: '#514b47', fontSize: '12px', fontWeight: '700' }}>
+                  Supplier: {viewProduct.vendor_name || 'Marketplace Seller'}
+                </span>
+              </div>
+
+              {!isVendor && !isCourier && (
+                <button
+                  onClick={() => {
+                    setSelectedProduct(viewProduct);
+                    setQuantity(1);
+                    setViewProduct(null);
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '15px',
+                    background: '#C85A32',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '13px',
+                    cursor: 'pointer',
+                    fontWeight: '800',
+                    fontSize: '15px'
+                  }}
+                >
+                  Buy this product →
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {selectedProduct && !isVendor && !isCourier && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.4)', display: 'flex', justifyContent: 'flex-end', zIndex: 1000 }}>
