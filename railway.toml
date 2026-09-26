@@ -1,7 +1,5 @@
 # BRUKINA ACCESS MARKETPLACE - RAILWAY CONFIG
 
-[build]
-  buildCommand = "npm ci && npm run check && npm run build"
 
 [deploy]
   startCommand = "npm run start:railway"
@@ -9,5 +7,3 @@
   healthcheckTimeout = 30
   restartPolicyType = "ON_FAILURE"
 
-[build.nixpacks]
-  aptPkgs = []
