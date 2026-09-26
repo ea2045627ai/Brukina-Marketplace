@@ -231,69 +231,61 @@ export default function ProductCatalog({
 
   const handleCheckout = async (e) => {
     e.preventDefault();
-    if (!selectedProduct || !user?.id) return;
 
-    const parsedQuantity = parseInt(quantity, 10);
-    const unitPrice = Number(selectedProduct.price);
-    const total = unitPrice * parsedQuantity;
-
-    if (!Number.isInteger(parsedQuantity) || parsedQuantity < 1) {
-      setNotice('Please enter a valid quantity.');
+    if (!selectedProduct) {
+      setNotice('Please select a product.');
       return;
     }
 
-    if (!selectedProduct.id || String(selectedProduct.id).startsWith('mock-')) {
-      setNotice('This product is a local demo item and cannot be ordered. Please choose a live marketplace item.');
+    const parsedQuantity = Number(quantity);
+
+    if (!Number.isInteger(parsedQuantity) || parsedQuantity < 1 || parsedQuantity > 1000) {
+      setNotice('Enter a quantity between 1 and 1000.');
       return;
     }
 
-    if (!Number.isFinite(unitPrice) || unitPrice < 0) {
-      setNotice('This product has an invalid price.');
+    if (!selectedProduct.id || String(selectedProduct.id).startsWith('mock-') ||
+        String(selectedProduct.id).startsWith('tech-')) {
+      setNotice('This is a demo product and cannot be ordered. Choose a live marketplace item.');
       return;
     }
 
     setIsSubmitting(true);
-    setNotice('Creating your order...');
+    setNotice('Verifying your account and creating your order...');
 
     try {
-      const orderNumber = `BRK-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-      const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .insert([{
-          order_number: orderNumber,
-          customer_id: user.id,
-          total,
-          status: 'pending'
-        }])
-        .select('id, order_number, status, total, created_at')
-        .single();
+      if (sessionError) throw sessionError;
+      if (!session?.access_token) {
+        throw new Error('Please sign in again before placing an order.');
+      }
 
-      if (orderError) throw orderError;
-
-      const { error: itemError } = await supabase
-        .from('order_items')
-        .insert([{
-          order_id: order.id,
+      const response = await fetch('/.netlify/functions/create-order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
           inventory_id: selectedProduct.id,
-          quantity: parsedQuantity,
-          unit_price: unitPrice
-        }]);
+          quantity: parsedQuantity
+        })
+      });
 
-      if (itemError) throw itemError;
+      const result = await response.json();
 
-      setNotice(`Order ${order.order_number} created successfully. Opening your orders...`);
+      if (!response.ok || !result.accepted) {
+        throw new Error(result.error || 'The order could not be created.');
+      }
 
+      setNotice(`Order ${result.order_number} created successfully. Opening your orders...`);
       setTimeout(() => {
         setNotice('');
         setSelectedProduct(null);
         setQuantity(1);
-
-        if (onNavigate) {
-          onNavigate('orders');
-        }
+        if (onNavigate) onNavigate('orders');
       }, 1200);
-
     } catch (error) {
       console.error('Order creation error:', error);
       setNotice(`Order failed: ${error.message}`);
