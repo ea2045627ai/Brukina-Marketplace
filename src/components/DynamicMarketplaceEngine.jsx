@@ -13,10 +13,10 @@ export default function DynamicMarketplaceEngine({ activeUserRole }) {
       const { data, error } = await supabase
         .from('marketplace_inventory')
         .select(
-          'id, name, price, stock_quantity, minimum_order_quantity, category'
+          'id, name:product_name, price, stock_quantity, minimum_order_quantity, category'
         )
         .eq('active', true)
-        .order('name', { ascending: true });
+        .order('product_name', { ascending: true });
 
       if (error) throw error;
 
@@ -105,23 +105,34 @@ export default function DynamicMarketplaceEngine({ activeUserRole }) {
         );
       }
 
-      // Call the atomic marketplace order procedure
-      const { error } = await supabase.rpc(
-        'place_marketplace_order_transaction',
-        {
-          p_order_number: `BK-${Date.now()
-            .toString(36)
-            .toUpperCase()}`,
-          p_customer_id: user.id,
-          p_inventory_id: itemId,
-          p_quantity: qty,
-        }
-      );
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-      if (error) throw error;
+      if (sessionError) throw sessionError;
+
+      if (!session?.access_token) {
+        throw new Error("Authentication session expired. Please sign in again.");
+      }
+
+      const response = await fetch("/.netlify/functions/create-order", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          inventory_id: itemId,
+          quantity: qty,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.accepted) {
+        throw new Error(result.error || "The order could not be created.");
+      }
 
       alert(
-        'Order successfully generated and routed to the Operations Desk!'
+        `Order ${result.order_number} successfully generated and routed to the Operations Desk!`
       );
 
       setCart((prev) => {
