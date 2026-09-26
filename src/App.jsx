@@ -46,6 +46,8 @@ export default function App() {
   useEffect(() => {
     const onPopState = () => setPage(pageForPath(location.pathname));
     window.addEventListener('popstate', onPopState);
+    let authSubscription;
+
     if (supabase) {
       supabase.auth.getSession().then(({ data }) => {
         if (data.session) {
@@ -53,8 +55,24 @@ export default function App() {
           setRole(data.session.user.user_metadata?.role || 'customer');
         }
       });
+
+      const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+        if (session) {
+          setUser(session.user);
+          setRole(session.user.user_metadata?.role || 'customer');
+        } else {
+          setUser(null);
+          setRole('customer');
+        }
+      });
+
+      authSubscription = data.subscription;
     }
-    return () => window.removeEventListener('popstate', onPopState);
+
+    return () => {
+      window.removeEventListener('popstate', onPopState);
+      authSubscription?.unsubscribe();
+    };
   }, []);
 
   if (supabaseConfigMissing) return <ConfigurationNotice />;
