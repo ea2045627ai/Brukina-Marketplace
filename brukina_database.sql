@@ -746,3 +746,4 @@ DROP POLICY IF EXISTS "allow_all_migrations" ON public.applied_migrations;
 CREATE POLICY "allow_all_migrations" ON public.applied_migrations FOR ALL TO authenticated USING (true);
 DROP POLICY IF EXISTS "allow_all_backups" ON public.platform_backups_log;
 CREATE POLICY "allow_all_backups" ON public.platform_backups_log FOR ALL TO authenticated USING (true);
+npx supabase login
