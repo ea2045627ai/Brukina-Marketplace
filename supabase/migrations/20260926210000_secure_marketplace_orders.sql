@@ -1,75 +1,90 @@
--- Secure MarketHub order access and seller fulfillment.
+-- Secure marketplace order access and seller fulfillment.
 
--- Remove the overly broad policies from the legacy marketplace migration.
+-- Remove broad legacy order policies.
 DROP POLICY IF EXISTS "auth_read_orders" ON public.orders;
 DROP POLICY IF EXISTS "anon_read_orders" ON public.orders;
 DROP POLICY IF EXISTS "auth_insert_orders" ON public.orders;
 DROP POLICY IF EXISTS "auth_update_orders" ON public.orders;
-
--- Replace broad order update policies from the original schema.
 DROP POLICY IF EXISTS "order operators update" ON public.orders;
 
--- Customers, sellers of ordered inventory, and admins can read relevant orders.
+-- Replace order read access.
 DROP POLICY IF EXISTS "orders participants read" ON public.orders;
+
 CREATE POLICY "orders participants read"
-ON public.orders FOR SELECT TO authenticated
+ON public.orders
+FOR SELECT
+TO authenticated
 USING (
   customer_id = auth.uid()
   OR public.is_admin()
   OR EXISTS (
     SELECT 1
-    FROM public.order_items oi
-    JOIN public.marketplace_inventory mi ON mi.id = oi.inventory_id
-    JOIN public.global_vendors gv ON gv.id = mi.vendor_id
-    WHERE oi.order_id = orders.id
+    FROM public.global_vendors gv
+    WHERE gv.id = orders.vendor_id
       AND gv.owner_id = auth.uid()
   )
 );
 
--- Customers may create orders only for themselves.
+-- Customers can create orders only for themselves.
 DROP POLICY IF EXISTS "customers create orders" ON public.orders;
-CREATE POLICY "customers create orders"
-ON public.orders FOR INSERT TO authenticated
-WITH CHECK (customer_id = auth.uid());
 
--- Sellers can update only orders containing their inventory.
--- Customers may update their own order row; admins may update any.
-CREATE POLICY "orders controlled update"
-ON public.orders FOR UPDATE TO authenticated
-USING (
+CREATE POLICY "customers create orders"
+ON public.orders
+FOR INSERT
+TO authenticated
+WITH CHECK (
   customer_id = auth.uid()
-  OR public.is_admin()
+);
+
+-- Only the seller assigned to the order or an admin can update it.
+DROP POLICY IF EXISTS "orders controlled update" ON public.orders;
+
+CREATE POLICY "orders controlled update"
+ON public.orders
+FOR UPDATE
+TO authenticated
+USING (
+  public.is_admin()
   OR EXISTS (
     SELECT 1
-    FROM public.order_items oi
-    JOIN public.marketplace_inventory mi ON mi.id = oi.inventory_id
-    JOIN public.global_vendors gv ON gv.id = mi.vendor_id
-    WHERE oi.order_id = orders.id
+    FROM public.global_vendors gv
+    WHERE gv.id = orders.vendor_id
       AND gv.owner_id = auth.uid()
   )
 )
 WITH CHECK (
-  customer_id = auth.uid()
-  OR public.is_admin()
+  public.is_admin()
   OR EXISTS (
     SELECT 1
-    FROM public.order_items oi
-    JOIN public.marketplace_inventory mi ON mi.id = oi.inventory_id
-    JOIN public.global_vendors gv ON gv.id = mi.vendor_id
-    WHERE oi.order_id = orders.id
+    FROM public.global_vendors gv
+    WHERE gv.id = orders.vendor_id
       AND gv.owner_id = auth.uid()
   )
 );
 
--- Sellers can read order items belonging to their inventory.
+-- Remove broad direct UPDATE privileges.
+REVOKE UPDATE ON public.orders FROM anon, authenticated;
+
+-- Authenticated sellers/admins can directly update status only,
+-- subject to the row-level policy above.
+GRANT UPDATE (status) ON public.orders TO authenticated;
+
+-- Customers, admins, and sellers can read relevant order items.
 DROP POLICY IF EXISTS "order items participants read" ON public.order_items;
+
 CREATE POLICY "order items participants read"
-ON public.order_items FOR SELECT TO authenticated
+ON public.order_items
+FOR SELECT
+TO authenticated
 USING (
   EXISTS (
-    SELECT 1 FROM public.orders o
+    SELECT 1
+    FROM public.orders o
     WHERE o.id = order_items.order_id
-      AND (o.customer_id = auth.uid() OR public.is_admin())
+      AND (
+        o.customer_id = auth.uid()
+        OR public.is_admin()
+      )
   )
   OR EXISTS (
     SELECT 1
