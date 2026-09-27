@@ -3,8 +3,6 @@ import { executeDatabaseLogin, validateSignupForm } from './lib/validation.mjs';
 import { supabase, supabaseConfigMissing } from './lib/supabaseClient';
 import { useCourierLocation } from './lib/useCourierLocation';
 
-import DeveloperControlCenter from './components/developer/DeveloperControlCenter.jsx';
-import './components/developer/developer-control-center.css';
 // Direct path to your component file sitting right next to App.jsx in src/
 import ProductCatalog from './ProductCard';
 import VendorInventoryPanel from './components/VendorInventoryPanel';
@@ -240,8 +238,7 @@ export default function App() {
       authSubscription = data.subscription;
     }
 
-    return (
-      <DeveloperControlCenter />) => {
+    return () => {
       window.removeEventListener('hashchange', onRouteChange);
       window.removeEventListener('popstate', onRouteChange);
       authSubscription?.unsubscribe();
