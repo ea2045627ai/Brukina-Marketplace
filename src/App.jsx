@@ -240,8 +240,7 @@ export default function App() {
       authSubscription = data.subscription;
     }
 
-    return (
-      <DeveloperControlCenter />) => {
+    return () => {
       window.removeEventListener('hashchange', onRouteChange);
       window.removeEventListener('popstate', onRouteChange);
       authSubscription?.unsubscribe();
@@ -803,6 +802,8 @@ function OrdersPanel({ orders = [], user, error = '' }) {
 
 function ProfilePanel({ user, role }) {
   return (
+      <DeveloperControlCenter />
+
     <div className="wallet-panel">
       <div className="wallet-card">
         <div className="wallet-card-top">
