@@ -1,0 +1,198 @@
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { chromium } from 'playwright';
+
+const exec = promisify(execFile);
+
+const PORT = Number(process.env.DEVELOPER_APP_PORT || 5175);
+const BASE_URL = process.env.DEVELOPER_APP_URL || `http://127.0.0.1:${PORT}`;
+
+function result(type, message, data = {}) {
+  return {
+    type,
+    message,
+    data,
+    created_at: new Date().toISOString()
+  };
+}
+
+async function runBuild() {
+  try {
+    const { stdout, stderr } = await exec('npm', ['run', 'build'], {
+      cwd: process.cwd(),
+      timeout: 120000,
+      maxBuffer: 5 * 1024 * 1024
+    });
+
+    return {
+      ok: true,
+      output: `${stdout}\n${stderr}`.slice(-12000)
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      output: `${error.stdout || ''}\n${error.stderr || ''}\n${error.message}`.slice(-12000)
+    };
+  }
+}
+
+async function inspectBrowser() {
+  const browser = await chromium.launch({ headless: true });
+  const page = await browser.newPage();
+
+  const consoleErrors = [];
+  const failedRequests = [];
+
+  page.on('console', (message) => {
+    if (message.type() === 'error') {
+      consoleErrors.push(message.text());
+    }
+  });
+
+  page.on('requestfailed', (request) => {
+    failedRequests.push({
+      url: request.url(),
+      failure: request.failure()?.errorText || 'Unknown request failure'
+    });
+  });
+
+  const pages = [
+    '/',
+    '/#/developer',
+    '/#/login',
+    '/#/signup',
+    '/#/dashboard',
+    '/#/orders',
+    '/#/wallet',
+    '/#/profile',
+    '/#/admin',
+    '/#/vendor',
+    '/#/rider',
+    '/#/driver'
+  ];
+
+  const reports = [];
+
+  for (const path of pages) {
+    const url = `${BASE_URL}${path}`;
+
+    try {
+      await page.goto(url, {
+        waitUntil: 'domcontentloaded',
+        timeout: 15000
+      });
+
+      await page.waitForTimeout(500);
+
+      const report = await page.evaluate(() => ({
+        title: document.title,
+        url: location.href,
+        buttons: [...document.querySelectorAll('button')].map((button) => ({
+          text: (button.innerText || button.getAttribute('aria-label') || '').trim(),
+          disabled: button.disabled
+        })),
+        links: [...document.querySelectorAll('a')].map((link) => ({
+          text: (link.innerText || '').trim(),
+          href: link.href
+        })),
+        inputs: [...document.querySelectorAll('input, textarea, select')].map((element) => ({
+          tag: element.tagName,
+          type: element.type || '',
+          name: element.name || '',
+          placeholder: element.placeholder || ''
+        })),
+        headings: [...document.querySelectorAll('h1,h2,h3')].map((element) =>
+          (element.innerText || '').trim()
+        ).filter(Boolean)
+      }));
+
+      reports.push({
+        path,
+        ok: true,
+        ...report
+      });
+    } catch (error) {
+      reports.push({
+        path,
+        ok: false,
+        error: error.message
+      });
+    }
+  }
+
+  await browser.close();
+
+  return {
+    pages: reports,
+    consoleErrors,
+    failedRequests
+  };
+}
+
+async function inspectProject() {
+  console.log(result('started', 'Master Developer inspection started.'));
+
+  const browser = await inspectBrowser();
+
+  console.log(
+    result(
+      'browser',
+      `Browser inspection completed: ${browser.pages.length} routes checked.`,
+      browser
+    )
+  );
+
+  const build = await runBuild();
+
+  console.log(
+    result(
+      'build',
+      build.ok ? 'Production build passed.' : 'Production build failed.',
+      build
+    )
+  );
+
+  const failedPages = browser.pages.filter((page) => !page.ok);
+
+  console.log(
+    result(
+      'completed',
+      failedPages.length === 0 && build.ok
+        ? 'Inspection completed successfully.'
+        : 'Inspection completed with issues requiring attention.',
+      {
+        pages_checked: browser.pages.length,
+        failed_pages: failedPages.length,
+        console_errors: browser.consoleErrors.length,
+        failed_requests: browser.failedRequests.length,
+        build_passed: build.ok
+      }
+    )
+  );
+
+  return {
+    browser,
+    build,
+    summary: {
+      pages_checked: browser.pages.length,
+      failed_pages: failedPages.length,
+      console_errors: browser.consoleErrors.length,
+      failed_requests: browser.failedRequests.length,
+      build_passed: build.ok
+    }
+  };
+}
+
+if (process.argv.includes('--check')) {
+  try {
+    await inspectProject();
+    process.exit(0);
+  } catch (error) {
+    console.error(result('error', error.message));
+    process.exit(1);
+  }
+}
+
+console.log('[MASTER DEVELOPER WORKER] Ready.');
+console.log(`[MASTER DEVELOPER WORKER] Target: ${BASE_URL}`);
+console.log('[MASTER DEVELOPER WORKER] Use --check to run a full inspection.');
