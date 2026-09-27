@@ -199,6 +199,7 @@ function VendorUploadModal({ isOpen, onClose, onUploadSuccess }) {
         price: parseFloat(price),
         stock_quantity: parseInt(stockQuantity, 10),
         minimum_order_quantity: parseInt(minOrderQty, 10),
+        image_url: imageUrl,
         active: true
       }]);
       
