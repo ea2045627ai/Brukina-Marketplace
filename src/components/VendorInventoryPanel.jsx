@@ -15,10 +15,22 @@ export default function VendorInventoryPanel() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setLoading(false); return; }
       
+      const { data: vendor, error: vendorError } = await supabase
+        .from('global_vendors')
+        .select('id')
+        .eq('owner_id', user.id)
+        .maybeSingle();
+
+      if (vendorError) throw vendorError;
+      if (!vendor) {
+        setInventory([]);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('marketplace_inventory')
         .select('id, product_name, price, stock_quantity, minimum_order_quantity, active, category, vendor_name')
-        .eq('vendor_id', user.id)
+        .eq('vendor_id', vendor.id)
         .order('created_at', { ascending: false });
         
       if (error) throw error;
