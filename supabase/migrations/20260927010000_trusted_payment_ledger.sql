@@ -67,6 +67,17 @@ create table if not exists public.rider_payout_logs (
   updated_at timestamptz not null default now()
 );
 
+alter table public.rider_payout_logs
+  add column if not exists provider text,
+  add column if not exists amount numeric(12,2),
+  add column if not exists phone_number text,
+  add column if not exists status text default 'pending',
+  add column if not exists provider_reference text,
+  add column if not exists provider_recipient_code text,
+  add column if not exists failure_reason text,
+  add column if not exists created_at timestamptz default now(),
+  add column if not exists updated_at timestamptz default now();
+
 create index if not exists rider_payout_logs_rider_idx
   on public.rider_payout_logs(rider_id, created_at desc);
 
