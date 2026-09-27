@@ -156,6 +156,7 @@ function VendorUploadModal({ isOpen, onClose, onUploadSuccess }) {
   const [price, setPrice] = useState('');
   const [stockQuantity, setStockQuantity] = useState('');
   const [minOrderQty, setMinOrderQty] = useState('1');
+  const [imageFile, setImageFile] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -208,6 +209,9 @@ function VendorUploadModal({ isOpen, onClose, onUploadSuccess }) {
         <form onSubmit={handleSubmit} className="form-stack">
           <label>Product Asset Title
             <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Premium Millet Bags (Wholesale)" required />
+          </label>
+          <label>Product Image
+            <input type="file" accept="image/*" onChange={e => setImageFile(e.target.files?.[0] || null)} required />
           </label>
           <label>Category Group
             <select value={category} onChange={e => setCategory(e.target.value)}>
