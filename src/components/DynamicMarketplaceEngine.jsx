@@ -113,25 +113,30 @@ export default function DynamicMarketplaceEngine({ activeUserRole }) {
         throw new Error("Authentication session expired. Please sign in again.");
       }
 
-      const response = await fetch("/.netlify/functions/create-order", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          inventory_id: itemId,
-          quantity: qty,
-        }),
-      });
+      const orderNumber = `BRK-${Date.now()}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
 
-      const result = await response.json();
-
-      if (!response.ok || !result.accepted) {
-        throw new Error(result.error || "The order could not be created.");
+    const { data: result, error: orderError } = await supabase.rpc(
+      "place_marketplace_order_transaction",
+      {
+        p_order_number: orderNumber,
+        p_customer_id: user.id,
+        p_inventory_id: itemId,
+        p_quantity: qty,
       }
+    );
 
-      alert(
+    if (orderError) {
+      throw orderError;
+    }
+
+    if (!result?.success) {
+      throw new Error("The order could not be created.");
+    }
+
+    result.accepted = true;
+    result.order_number = result.order_number || orderNumber;
+
+    alert(
         `Order ${result.order_number} successfully generated and routed to the Operations Desk!`
       );
 

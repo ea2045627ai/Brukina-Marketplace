@@ -261,25 +261,30 @@ export default function ProductCatalog({
         throw new Error('Please sign in again before placing an order.');
       }
 
-      const response = await fetch('/.netlify/functions/create-order', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({
-          inventory_id: selectedProduct.id,
-          quantity: parsedQuantity
-        })
-      });
+      const orderNumber = `BRK-${Date.now()}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
 
-      const result = await response.json();
-
-      if (!response.ok || !result.accepted) {
-        throw new Error(result.error || 'The order could not be created.');
+    const { data: result, error: orderError } = await supabase.rpc(
+      'place_marketplace_order_transaction',
+      {
+        p_order_number: orderNumber,
+        p_customer_id: session.user.id,
+        p_inventory_id: selectedProduct.id,
+        p_quantity: parsedQuantity
       }
+    );
 
-      setNotice(`Order ${result.order_number} created successfully. Opening your orders...`);
+    if (orderError) {
+      throw orderError;
+    }
+
+    if (!result?.success) {
+      throw new Error('The order could not be created.');
+    }
+
+    result.accepted = true;
+    result.order_number = result.order_number || orderNumber;
+
+    setNotice(`Order ${result.order_number} created successfully. Opening your orders...`);
       setTimeout(() => {
         setNotice('');
         setSelectedProduct(null);
