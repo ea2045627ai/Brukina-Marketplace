@@ -17,7 +17,7 @@ export default defineConfig({
   // Custom domain:
   // https://yourdomain.com/
   base: process.env.NODE_ENV === 'production'
-    ? (process.env.GITHUB_ACTIONS ? '/brukina-marketplace/' : '/')
+    ? (process.env.GITHUB_ACTIONS ? '/Brukina-Marketplace/' : '/')
     : '/',
 
   server: {
