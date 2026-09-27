@@ -15,6 +15,8 @@ import AdminCategoryPanel from './components/AdminCategoryPanel';
 import AdminLedgerPanel from './components/AdminLedgerPanel';
 import AdminPriceController from './components/AdminPriceController';
 import AdminTerminalPanel from './components/AdminTerminalPanel';
+import DeveloperControlCenter from './components/developer/DeveloperControlCenter.jsx';
+import './components/developer/developer-control-center.css';
 
 const roles = ['customer', 'vendor', 'driver', 'rider'];
 
@@ -276,17 +278,20 @@ export default function App() {
   }
   
   return (
-    <Workspace 
-      page={page} 
-      role={role} 
-      user={user} 
-      onNavigate={navigate} 
-      onLogout={async () => { 
-        await supabase.auth.signOut(); 
-        setUser(null); 
-        navigate('login'); 
-      }} 
-    />
+    <>
+      <DeveloperControlCenter />
+      <Workspace 
+        page={page} 
+        role={role} 
+        user={user} 
+        onNavigate={navigate} 
+        onLogout={async () => { 
+          await supabase.auth.signOut(); 
+          setUser(null); 
+          navigate('login'); 
+        }} 
+      />
+    </>
   );
 }
 
