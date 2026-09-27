@@ -17,7 +17,7 @@ export default function VendorInventoryPanel() {
       
       const { data, error } = await supabase
         .from('marketplace_inventory')
-        .select('id, name, price, stock_quantity, minimum_order_quantity, active, category')
+        .select('id, product_name, price, stock_quantity, minimum_order_quantity, active, category, vendor_name')
         .eq('vendor_id', user.id)
         .order('created_at', { ascending: false });
         
@@ -86,7 +86,7 @@ export default function VendorInventoryPanel() {
               inventory.map(p => (
                 <tr key={p.id}>
                   <td>
-                    <strong>{p.name}</strong>
+                    <strong>{p.product_name}</strong>
                     <div className="row-meta">{p.category || 'Native'} · {p.stock_quantity} units available (MOQ: {p.minimum_order_quantity || 1})</div>
                   </td>
                   <td>
@@ -98,7 +98,7 @@ export default function VendorInventoryPanel() {
                         onChange={(e) => setNewBasePrice(e.target.value)}
                         placeholder={parseFloat(p.price).toFixed(2)}
                         className="inline-input"
-                        aria-label={`Edit price for ${p.name}`}
+                        aria-label={`Edit price for ${p.product_name}`}
                       />
                     ) : (
                       `GH₵ ${parseFloat(p.price).toFixed(2)}`
@@ -160,7 +160,8 @@ function VendorUploadModal({ isOpen, onClose, onUploadSuccess }) {
       // Structural insert matching the marketplace_inventory constraints
       const { error: insertError } = await supabase.from('marketplace_inventory').insert([{
         vendor_id: user.id,
-        name: name.trim(),
+        product_name: name.trim(),
+        vendor_name: user.email || 'Marketplace Vendor',
         category,
         price: parseFloat(price),
         stock_quantity: parseInt(stockQuantity, 10),
