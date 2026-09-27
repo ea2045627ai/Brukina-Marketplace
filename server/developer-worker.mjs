@@ -246,6 +246,42 @@ async function inspectBrowser() {
             result: 'Start QA button not found'
           });
         }
+
+        const markFixedButton = page.getByRole('button', {
+          name: 'Mark Fixed',
+          exact: true
+        }).first();
+
+        if (await markFixedButton.count()) {
+          await markFixedButton.click({ timeout: 3000 });
+          await page.waitForTimeout(200);
+
+          const fixedMessage = page.getByText(
+            'Developer marked the current task fixed. Run the QA checks before treating it as verified.',
+            { exact: true }
+          ).first();
+
+          const fixedMessageVisible = await fixedMessage.count() > 0;
+          const fixedStatusVisible = await page.getByText('FIXED', {
+            exact: true
+          }).count() > 0;
+
+          interactions.push({
+            button: 'Mark Fixed',
+            tested: true,
+            clicked: true,
+            state_changed: fixedMessageVisible || fixedStatusVisible,
+            result: fixedMessageVisible || fixedStatusVisible
+              ? 'Mark Fixed completed and fixed state was verified'
+              : 'Mark Fixed clicked but fixed state could not be verified'
+          });
+        } else {
+          interactions.push({
+            button: 'Mark Fixed',
+            tested: false,
+            result: 'Mark Fixed button not found'
+          });
+        }
       }
       reports.push({
         path,
