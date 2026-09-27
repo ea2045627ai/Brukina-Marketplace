@@ -365,7 +365,7 @@ function Auth({ mode, onNavigate, onSuccess }) {
 }
 
 function Workspace({ page, role, user, onNavigate, onLogout }) {
-  useCourierLocation(role);
+  useCourierLocation((role === 'rider' || role === 'driver') ? user?.id : null);
   const [catalog, setCatalog] = useState([]);
   const [orders, setOrders] = useState([]);
   const [ordersError, setOrdersError] = useState('');
