@@ -26,11 +26,11 @@ export default function AdminLedgerPanel() {
         let totalCommissions = 0;
 
         safeData.forEach(order => {
-          const amount = parseFloat(order.total_amount) || 0;
+          const amount = parseFloat(order.total) || 0;
           totalGross += amount;
 
           // Catch edge case where product record is missing or soft-deleted
-          const ownerType = order.products?.owner_type;
+          const ownerType = order.order_items?.[0]?.marketplace_inventory?.vendor_name || 'Vendor';
           if (ownerType === 'vendor') {
             totalCommissions += amount * 0.10;
           } else if (ownerType === 'admin' || ownerType === 'native') {
@@ -98,8 +98,8 @@ export default function AdminLedgerPanel() {
             </thead>
             <tbody>
               {ledger.map(order => {
-                const ownerType = order.products?.owner_type;
-                const amount = parseFloat(order.total_amount) || 0;
+                const ownerType = order.order_items?.[0]?.marketplace_inventory?.vendor_name || 'Vendor';
+                const amount = parseFloat(order.total) || 0;
                 
                 // Keep UI visual math consistent with ledger array state parsing rules
                 const revenueCut = ownerType === 'vendor' 
@@ -109,17 +109,17 @@ export default function AdminLedgerPanel() {
                 return (
                   <tr key={order.id}>
                     <td>
-                      <strong>{order.products?.name || 'Deleted Product'}</strong>
-                      <div className="row-meta">#{order.id.slice(0, 8)} · Qty: {order.quantity}</div>
+                      <strong>{order.order_items?.[0]?.marketplace_inventory?.product_name || 'Marketplace item' || 'Deleted Product'}</strong>
+                      <div className="row-meta">#{order.id.slice(0, 8)} · Qty: {order.order_items?.reduce((sum, item) => sum + Number(item.quantity || 0), 0)}</div>
                     </td>
                     <td>
                       <span className="channel-tag">
-                        {order.channel_origin ? order.channel_origin.replace('_', ' ') : 'native'}
+                        {order.order_number ? order.order_number.replace('_', ' ') : 'native'}
                       </span>
                     </td>
                     <td>GH₵ {amount.toFixed(2)}</td>
                     <td className="positive">GH₵ {revenueCut.toFixed(2)}</td>
-                    <td><span className="status-badge">{order.order_status}</span></td>
+                    <td><span className="status-badge">{order.status}</span></td>
                   </tr>
                 );
               })}
