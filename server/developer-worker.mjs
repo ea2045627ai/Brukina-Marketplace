@@ -1,6 +1,7 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { chromium } from 'playwright';
+import { createServer } from 'node:http';
 
 const exec = promisify(execFile);
 
@@ -193,6 +194,48 @@ if (process.argv.includes('--check')) {
   }
 }
 
-console.log('[MASTER DEVELOPER WORKER] Ready.');
-console.log(`[MASTER DEVELOPER WORKER] Target: ${BASE_URL}`);
-console.log('[MASTER DEVELOPER WORKER] Use --check to run a full inspection.');
+if (process.argv.includes('--serve')) {
+  const server = createServer(async (request, response) => {
+    response.setHeader('Content-Type', 'application/json; charset=utf-8');
+
+    if (request.method === 'GET' && request.url === '/health') {
+      response.writeHead(200);
+      return response.end(JSON.stringify({ ok: true, service: 'developer-worker' }));
+    }
+
+    if (request.method !== 'POST' || request.url !== '/inspect') {
+      response.writeHead(404);
+      return response.end(JSON.stringify({ error: 'Not found' }));
+    }
+
+    try {
+      let raw = '';
+      for await (const chunk of request) {
+        raw += chunk;
+        if (raw.length > 4000) throw new Error('Request too large');
+      }
+
+      const payload = JSON.parse(raw || '{}');
+      if (payload.action !== 'inspect') {
+        response.writeHead(400);
+        return response.end(JSON.stringify({ error: 'Unsupported action' }));
+      }
+
+      const report = await inspectProject();
+      response.writeHead(200);
+      return response.end(JSON.stringify({ ok: true, report }));
+    } catch (error) {
+      response.writeHead(500);
+      return response.end(JSON.stringify({ ok: false, error: error.message }));
+    }
+  });
+
+  server.listen(4179, '127.0.0.1', () => {
+    console.log('[MASTER DEVELOPER WORKER] Local inspection API on 127.0.0.1:4179');
+    console.log(`[MASTER DEVELOPER WORKER] Target: ${BASE_URL}`);
+  });
+} else {
+  console.log('[MASTER DEVELOPER WORKER] Ready.');
+  console.log(`[MASTER DEVELOPER WORKER] Target: ${BASE_URL}`);
+  console.log('[MASTER DEVELOPER WORKER] Use --check to run a full inspection.');
+}

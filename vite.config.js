@@ -22,7 +22,14 @@ export default defineConfig({
 
   server: {
     port: 5173,
-    host: '0.0.0.0'
+    host: '0.0.0.0',
+    proxy: {
+      '/developer-api': {
+        target: 'http://127.0.0.1:4179',
+        changeOrigin: false,
+        rewrite: (path) => path.replace(/^\\/developer-api/, '')
+      }
+    }
   },
   
   build: {
