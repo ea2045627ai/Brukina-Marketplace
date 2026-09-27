@@ -171,7 +171,7 @@ function VendorUploadModal({ isOpen, onClose, onUploadSuccess }) {
       
       // Structural insert matching the marketplace_inventory constraints
       const { error: insertError } = await supabase.from('marketplace_inventory').insert([{
-        vendor_id: user.id,
+        vendor_id: vendor.id,
         product_name: name.trim(),
         vendor_name: user.email || 'Marketplace Vendor',
         category,
