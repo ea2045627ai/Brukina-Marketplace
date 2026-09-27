@@ -169,11 +169,15 @@ function VendorUploadModal({ isOpen, onClose, onUploadSuccess }) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Authentication session missing. Please sign in again.');
       
+      const { data: vendor, error: vendorError } = await supabase.from("global_vendors").select("id, business_name").eq("owner_id", user.id).maybeSingle();
+      if (vendorError) throw vendorError;
+      if (!vendor) throw new Error("Create your vendor profile before listing products.");
+
       // Structural insert matching the marketplace_inventory constraints
       const { error: insertError } = await supabase.from('marketplace_inventory').insert([{
         vendor_id: vendor.id,
         product_name: name.trim(),
-        vendor_name: user.email || 'Marketplace Vendor',
+        vendor_name: vendor.business_name,
         category,
         price: parseFloat(price),
         stock_quantity: parseInt(stockQuantity, 10),
