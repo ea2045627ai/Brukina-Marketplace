@@ -3,8 +3,6 @@ import { executeDatabaseLogin, validateSignupForm } from './lib/validation.mjs';
 import { supabase, supabaseConfigMissing } from './lib/supabaseClient';
 import { useCourierLocation } from './lib/useCourierLocation';
 
-import DeveloperControlCenter from './components/developer/DeveloperControlCenter.jsx';
-import './components/developer/developer-control-center.css';
 // Direct path to your component file sitting right next to App.jsx in src/
 import ProductCatalog from './ProductCard';
 import VendorInventoryPanel from './components/VendorInventoryPanel';
@@ -802,8 +800,6 @@ function OrdersPanel({ orders = [], user, error = '' }) {
 
 function ProfilePanel({ user, role }) {
   return (
-      <DeveloperControlCenter />
-
     <div className="wallet-panel">
       <div className="wallet-card">
         <div className="wallet-card-top">
