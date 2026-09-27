@@ -210,6 +210,42 @@ async function inspectBrowser() {
             result: 'Checklist checkbox not found after opening panel'
           });
         }
+
+        const startQaButton = page.getByRole('button', {
+          name: 'Start QA',
+          exact: true
+        }).first();
+
+        if (await startQaButton.count()) {
+          await startQaButton.click({ timeout: 3000 });
+          await page.waitForTimeout(200);
+
+          const qaMessage = page.getByText(
+            'QA testing started. Pages, controls, images, forms, routes and console errors must be checked.',
+            { exact: true }
+          ).first();
+
+          const qaMessageVisible = await qaMessage.count() > 0;
+          const qaStatusVisible = await page.getByText('TESTING', {
+            exact: true
+          }).count() > 0;
+
+          interactions.push({
+            button: 'Start QA',
+            tested: true,
+            clicked: true,
+            state_changed: qaMessageVisible || qaStatusVisible,
+            result: qaMessageVisible || qaStatusVisible
+              ? 'Start QA completed and testing state was verified'
+              : 'Start QA clicked but testing state could not be verified'
+          });
+        } else {
+          interactions.push({
+            button: 'Start QA',
+            tested: false,
+            result: 'Start QA button not found'
+          });
+        }
       }
       reports.push({
         path,
