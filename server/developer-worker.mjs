@@ -107,10 +107,63 @@ async function inspectBrowser() {
         ).filter(Boolean)
       }));
 
+      const interactions = [];
+
+      if (path === '/#/developer') {
+        const safeButtons = [
+          'Developer',
+          'QA Tester',
+          'Manager',
+          'Accountant',
+          'Assistant',
+          'Deployment Team',
+          'Hide'
+        ];
+
+        for (const label of safeButtons) {
+          await page.goto(url, {
+            waitUntil: 'domcontentloaded',
+            timeout: 15000
+          });
+          await page.waitForTimeout(250);
+
+          const button = page.getByRole('button', {
+            name: label,
+            exact: true
+          }).first();
+
+          if (await button.count()) {
+            try {
+              await button.click({ timeout: 3000 });
+              await page.waitForTimeout(200);
+              interactions.push({
+                button: label,
+                tested: true,
+                result: 'Clicked without a browser error'
+              });
+            } catch (error) {
+              interactions.push({
+                button: label,
+                tested: true,
+                result: 'Click failed',
+                error: error.message
+              });
+            }
+          } else {
+            interactions.push({
+              button: label,
+              tested: false,
+              result: 'Button not found'
+            });
+          }
+        }
+      }
+
       reports.push({
         path,
         ok: true,
-        ...report
+        ...report,
+        interactions
       });
     } catch (error) {
       reports.push({
