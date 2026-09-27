@@ -15,8 +15,6 @@ import AdminCategoryPanel from './components/AdminCategoryPanel';
 import AdminLedgerPanel from './components/AdminLedgerPanel';
 import AdminPriceController from './components/AdminPriceController';
 import AdminTerminalPanel from './components/AdminTerminalPanel';
-import DeveloperControlCenter from './components/developer/DeveloperControlCenter.jsx';
-import './components/developer/developer-control-center.css';
 
 const roles = ['customer', 'vendor', 'driver', 'rider'];
 
@@ -264,8 +262,6 @@ export default function App() {
   }
   
   if (!user) {
-      <>
-      <DeveloperControlCenter />
     return (
       <Auth 
         mode="login" 
@@ -291,7 +287,6 @@ export default function App() {
         navigate('login'); 
       }} 
     />
-      </>
   );
 }
 
