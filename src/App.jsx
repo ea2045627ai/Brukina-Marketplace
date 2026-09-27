@@ -129,6 +129,7 @@ const CATEGORIES = [
 const pageForPath = (path) => {
   if (path === '/login') return 'login';
   if (path === '/signup') return 'signup';
+  if (path === '/developer' || path.includes('/developer/')) return 'developer';
   if (path === '/admin' || path.includes('/admin/')) return 'admin';
   if (path === '/vendor' || path.includes('/vendor/')) return 'vendor';
   if (path === '/rider' || path.includes('/rider/')) return 'rider';
@@ -193,7 +194,8 @@ export default function App() {
       rider: '/rider',
       driver: '/driver',
       login: '/login',
-      signup: '/signup'
+      signup: '/signup',
+      developer: '/developer'
     };
 
     const safePage = Object.prototype.hasOwnProperty.call(routes, next)
