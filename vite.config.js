@@ -27,7 +27,7 @@ export default defineConfig({
       '/developer-api': {
         target: 'http://127.0.0.1:4179',
         changeOrigin: false,
-        rewrite: (path) => path.replace(/^\\/developer-api/, '')
+        rewrite: (path) => path.slice('/developer-api'.length)
       }
     }
   },
