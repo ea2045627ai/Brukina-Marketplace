@@ -162,9 +162,18 @@ export default function App() {
       appliance: '/appliance',
       phones: '/phones',
       computers: '/computers',
+      screens: '/screens',
+      'screen-accessories': '/screen-accessories',
       devices: '/devices',
       electronics: '/electronics',
       accessories: '/accessories',
+      components: '/components',
+      storage: '/storage',
+      'laptop-parts': '/laptop-parts',
+      chargers: '/chargers',
+      networking: '/networking',
+      audio: '/audio',
+      'office-devices': '/office-devices',
       tools: '/tools',
       equipment: '/equipment',
       solar: '/solar',
@@ -185,9 +194,16 @@ export default function App() {
       signup: '/signup'
     };
 
-    const path = routes[next] || '/dashboard';
-    location.hash = path;
-    setPage(next);
+    const safePage = Object.prototype.hasOwnProperty.call(routes, next)
+      ? next
+      : 'dashboard';
+    const path = routes[safePage];
+
+    if (location.hash !== `#${path}`) {
+      location.hash = path;
+    }
+
+    setPage(safePage);
   };
 
   useEffect(() => {
