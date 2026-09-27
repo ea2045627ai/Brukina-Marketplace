@@ -168,6 +168,40 @@ async function inspectBrowser() {
         }
       }
 
+      if (path === '/#/developer') {
+        await page.goto(url, {
+          waitUntil: 'domcontentloaded',
+          timeout: 15000
+        });
+        await page.waitForTimeout(250);
+
+        const checkbox = page.locator('.developer-checklist input[type="checkbox"]').first();
+
+        if (await checkbox.count()) {
+          const before = await checkbox.isChecked();
+          await checkbox.setChecked(!before);
+          const toggled = await checkbox.isChecked();
+          await checkbox.setChecked(before);
+          const restored = (await checkbox.isChecked()) === before;
+
+          interactions.push({
+            button: 'First checklist checkbox',
+            tested: true,
+            clicked: true,
+            state_changed: toggled === !before && restored,
+            result: toggled === !before && restored
+              ? 'Checkbox toggled and original state was restored'
+              : 'Checkbox state verification failed'
+          });
+        } else {
+          interactions.push({
+            button: 'First checklist checkbox',
+            tested: false,
+            result: 'Checklist checkbox not found'
+          });
+        }
+      }
+
       reports.push({
         path,
         ok: true,
