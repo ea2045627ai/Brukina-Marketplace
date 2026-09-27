@@ -8,7 +8,13 @@ import ProductCatalog from './ProductCard';
 import VendorInventoryPanel from './components/VendorInventoryPanel';
 import WalletPanel from './components/WalletPanel';
 import RiderTrackPanel from './components/RiderTrackPanel';
-import RiderWithdrawalPanel from './components/RiderWithdrawalPanel'; 
+import RiderWithdrawalPanel from './components/RiderWithdrawalPanel';
+import OrderChatComponent from './components/OrderChatComponent';
+import AdminApiLogger from './components/AdminApiLogger';
+import AdminCategoryPanel from './components/AdminCategoryPanel';
+import AdminLedgerPanel from './components/AdminLedgerPanel';
+import AdminPriceController from './components/AdminPriceController';
+import AdminTerminalPanel from './components/AdminTerminalPanel';
 
 const roles = ['customer', 'vendor', 'driver', 'rider'];
 
@@ -121,6 +127,7 @@ const CATEGORIES = [
 const pageForPath = (path) => {
   if (path === '/login') return 'login';
   if (path === '/signup') return 'signup';
+  if (path === '/admin' || path.includes('/admin/')) return 'admin';
   if (path === '/vendor' || path.includes('/vendor/')) return 'vendor';
   if (path === '/rider' || path.includes('/rider/')) return 'rider';
   if (path === '/driver' || path.includes('/driver/')) return 'driver';
@@ -168,6 +175,7 @@ export default function App() {
       orders: '/orders',
       wallet: '/wallet',
       profile: '/profile',
+      admin: '/admin',
       vendor: '/vendor',
       rider: '/rider',
       driver: '/driver',
@@ -399,6 +407,42 @@ function Workspace({ page, role, user, onNavigate, onLogout }) {
     return <div style={{ padding: '40px', textAlign: 'center', color: '#999' }}>Loading marketplace modules...</div>;
   }
 
+  if (page === 'admin') {
+    if (role !== 'admin') {
+      return (
+        <PageShell title="Admin Access" role={role} onNavigate={onNavigate} onLogout={onLogout}>
+          <div className="empty-state-box">
+            <h2>Admin access required</h2>
+            <p>This workspace is restricted to administrator accounts.</p>
+            <button className="btn-primary" onClick={() => onNavigate('dashboard')}>
+              Back to Marketplace
+            </button>
+          </div>
+        </PageShell>
+      );
+    }
+
+    return (
+      <PageShell title="Admin Control Center" role={role} onNavigate={onNavigate} onLogout={onLogout}>
+        <div className="admin-panel" style={{ marginBottom: '20px' }}>
+          <div className="panel-header">
+            <span className="admin-tag">BRUKINA ADMIN</span>
+            <h2 className="panel-title">Marketplace Control Center</h2>
+            <p className="panel-subtitle">
+              Manage marketplace categories, pricing, financial activity, integrations and system health.
+            </p>
+          </div>
+        </div>
+
+        <AdminCategoryPanel />
+        <div style={{ marginTop: '24px' }}><AdminPriceController /></div>
+        <div style={{ marginTop: '24px' }}><AdminLedgerPanel /></div>
+        <div style={{ marginTop: '24px' }}><AdminApiLogger /></div>
+        <div style={{ marginTop: '24px' }}><AdminTerminalPanel /></div>
+      </PageShell>
+    );
+  }
+
   if (page === 'vendor') {
     if (role !== 'vendor' && role !== 'admin') {
       return (
@@ -477,7 +521,17 @@ function Workspace({ page, role, user, onNavigate, onLogout }) {
   );
 }
 
-function PageShell({ title, children, onNavigate, onLogout }) {
+function PageShell({ title, children, role, onNavigate, onLogout }) {
+  const navItems = [
+    ['dashboard', 'Marketplace'],
+    ['orders', 'Items Ordered'],
+    ['profile', 'Profile'],
+    ['wallet', 'Wallet'],
+    ...(role === 'vendor' || role === 'admin' ? [['vendor', 'Vendor']] : []),
+    ...(role === 'rider' || role === 'driver' || role === 'admin' ? [['rider', 'Rider / Driver']] : []),
+    ...(role === 'admin' ? [['admin', 'Admin Control']] : [])
+  ];
+
   return (
     <div className="container" style={{ maxWidth: '1200px', margin: '0 auto', padding: '16px' }}>
       <header style={{
@@ -488,21 +542,24 @@ function PageShell({ title, children, onNavigate, onLogout }) {
         marginBottom: '24px',
         flexWrap: 'wrap'
       }}>
-        <div>
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '8px' }}>
-            <button
-              className="btn-text"
-              onClick={() => onNavigate?.('dashboard')}
-            >
-              ← Marketplace
-            </button>
-            <button
-              className="btn-outline"
-              onClick={() => onNavigate?.('orders')}
-            >
-              Items Ordered
-            </button>
+        <div style={{ flex: '1 1 auto', minWidth: '280px' }}>
+          <div style={{
+            display: 'flex',
+            gap: '8px',
+            flexWrap: 'wrap',
+            marginBottom: '14px'
+          }}>
+            {navItems.map(([target, label]) => (
+              <button
+                key={target}
+                className={target === 'dashboard' ? 'btn-primary' : 'btn-outline'}
+                onClick={() => onNavigate?.(target)}
+              >
+                {label}
+              </button>
+            ))}
           </div>
+
           <h1 style={{ margin: 0 }}>{title}</h1>
         </div>
 
@@ -687,6 +744,18 @@ function OrdersPanel({ orders = [], user, error = '' }) {
             <div>
               {Object.entries(selectedOrder)
                 .map(([label, value]) => displayField(label, value))}
+            </div>
+
+            <div style={{ marginTop: '24px' }}>
+              <OrderChatComponent
+                orderId={selectedOrder.id}
+                currentUserName={
+                  user?.user_metadata?.full_name ||
+                  user?.email ||
+                  'Customer'
+                }
+                currentUserRole={user?.user_metadata?.role || 'customer'}
+              />
             </div>
 
             <button
