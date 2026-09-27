@@ -580,10 +580,24 @@ export default function ProductCatalog({
                       animationDelay: `${visualIndex * 120}ms`
                     }}
                   >
+                    {item.image_url ? (
+                      <img
+                        src={item.image_url}
+                        alt={item.product_name || 'Marketplace product'}
+                        className="product-visual-image"
+                        loading="lazy"
+                        onError={(event) => {
+                          event.currentTarget.style.display = 'none';
+                          const fallback = event.currentTarget.nextElementSibling;
+                          if (fallback) fallback.style.display = 'inline-flex';
+                        }}
+                      />
+                    ) : null}
+
                     <span
                       className="product-visual-main"
                       style={{
-                        display: 'inline-flex',
+                        display: item.image_url ? 'none' : 'inline-flex',
                         alignItems: 'center',
                         justifyContent: 'center'
                       }}
