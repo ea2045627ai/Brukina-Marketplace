@@ -136,10 +136,20 @@ async function inspectBrowser() {
             try {
               await button.click({ timeout: 3000 });
               await page.waitForTimeout(200);
+
+              const visibleText = await page.locator('body').innerText();
+              const stateChanged = label === 'Hide'
+                ? !visibleText.includes('Developer / Team Feedback')
+                : visibleText.toLowerCase().includes(label.toLowerCase());
+
               interactions.push({
                 button: label,
                 tested: true,
-                result: 'Clicked without a browser error'
+                clicked: true,
+                state_changed: stateChanged,
+                result: stateChanged
+                  ? 'Click completed and expected text was detected'
+                  : 'Click completed, but expected interface change was not verified'
               });
             } catch (error) {
               interactions.push({
