@@ -16,7 +16,7 @@ export function useRealtimeCatalog() {
     async function fetchInitialCatalog() {
       try {
         const { data, error } = await supabase
-          .from('products')
+          .from('marketplace_inventory')
           .select('*')
           .order('created_at', { ascending: false });
         
@@ -36,7 +36,7 @@ export function useRealtimeCatalog() {
       .channel('schema-db-changes')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'products' },
+        { event: '*', schema: 'public', table: 'marketplace_inventory' },
         (payload) => {
           console.log(`⚡ Real-time catalog mutation detected: ${payload.eventType}`);
           
