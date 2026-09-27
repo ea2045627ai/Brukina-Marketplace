@@ -385,6 +385,25 @@ if (process.argv.includes('--serve')) {
       return response.end(JSON.stringify({ ok: true, service: 'developer-worker' }));
     }
 
+    if (request.method === 'GET' && request.url === '/autonomous/status') {
+      response.writeHead(200);
+      return response.end(JSON.stringify(getAutonomousStatus()));
+    }
+
+    if (request.method === 'POST' && request.url === '/autonomous/run') {
+      try {
+        const report = await runAutonomousCycle(inspectProject);
+        response.writeHead(200);
+        return response.end(JSON.stringify(report));
+      } catch (error) {
+        response.writeHead(500);
+        return response.end(JSON.stringify({
+          ok: false,
+          error: error.message
+        }));
+      }
+    }
+
     if (request.method !== 'POST' || request.url !== '/inspect') {
       response.writeHead(404);
       return response.end(JSON.stringify({ error: 'Not found' }));
@@ -415,6 +434,8 @@ if (process.argv.includes('--serve')) {
   server.listen(4179, '127.0.0.1', () => {
     console.log('[MASTER DEVELOPER WORKER] Local inspection API on 127.0.0.1:4179');
     console.log(`[MASTER DEVELOPER WORKER] Target: ${BASE_URL}`);
+
+    startAutonomousOperations(inspectProject);
   });
 } else {
   console.log('[MASTER DEVELOPER WORKER] Ready.');
