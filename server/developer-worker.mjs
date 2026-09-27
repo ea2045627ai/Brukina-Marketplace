@@ -176,7 +176,7 @@ async function inspectBrowser() {
         await page.waitForTimeout(300);
 
         const showButton = page.getByRole('button', {
-          name: 'Show',
+          name: 'Open',
           exact: true
         }).first();
 
