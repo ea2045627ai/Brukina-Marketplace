@@ -173,9 +173,19 @@ async function inspectBrowser() {
           waitUntil: 'domcontentloaded',
           timeout: 15000
         });
-        await page.waitForTimeout(250);
+        await page.waitForTimeout(300);
 
-        const checkbox = page.locator('.developer-checklist input[type="checkbox"]').first();
+        const showButton = page.getByRole('button', {
+          name: 'Show',
+          exact: true
+        }).first();
+
+        if (await showButton.count()) {
+          await showButton.click({ timeout: 3000 });
+          await page.waitForTimeout(200);
+        }
+
+        const checkbox = page.locator('input[type="checkbox"]').first();
 
         if (await checkbox.count()) {
           const before = await checkbox.isChecked();
@@ -197,11 +207,10 @@ async function inspectBrowser() {
           interactions.push({
             button: 'First checklist checkbox',
             tested: false,
-            result: 'Checklist checkbox not found'
+            result: 'Checklist checkbox not found after opening panel'
           });
         }
       }
-
       reports.push({
         path,
         ok: true,
