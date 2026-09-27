@@ -174,6 +174,22 @@ function VendorUploadModal({ isOpen, onClose, onUploadSuccess }) {
       if (vendorError) throw vendorError;
       if (!vendor) throw new Error("Create your vendor profile before listing products.");
 
+      if (!imageFile) throw new Error("Please select a product image.");
+      if (!imageFile.type.startsWith("image/")) throw new Error("Please select a valid image file.");
+      if (imageFile.size > 5 * 1024 * 1024) throw new Error("Image must be 5MB or smaller.");
+
+      const fileExt = imageFile.name.split(".").pop().toLowerCase();
+      const filePath = `${user.id}/${crypto.randomUUID()}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage
+        .from("product-images")
+        .upload(filePath, imageFile, { contentType: imageFile.type, upsert: false });
+      if (uploadError) throw uploadError;
+
+      const { data: publicImage } = supabase.storage
+        .from("product-images")
+        .getPublicUrl(filePath);
+      const imageUrl = publicImage.publicUrl;
+
       // Structural insert matching the marketplace_inventory constraints
       const { error: insertError } = await supabase.from('marketplace_inventory').insert([{
         vendor_id: vendor.id,
