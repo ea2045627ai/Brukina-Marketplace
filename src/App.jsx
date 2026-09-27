@@ -247,6 +247,10 @@ export default function App() {
     };
   }, []);
 
+  if (page === 'developer') {
+    return <DeveloperControlCenter />;
+  }
+
   if (supabaseConfigMissing) return <ConfigurationNotice />;
   
   if (page === 'login' || page === 'signup') {
