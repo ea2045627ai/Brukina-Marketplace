@@ -2,6 +2,11 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { chromium } from 'playwright';
 import { createServer } from 'node:http';
+import {
+  startAutonomousOperations,
+  getAutonomousStatus,
+  runAutonomousCycle
+} from './autonomous-operations.mjs';
 
 const exec = promisify(execFile);
 
