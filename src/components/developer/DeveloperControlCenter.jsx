@@ -58,18 +58,20 @@ export default function DeveloperControlCenter() {
     );
   }, [messages, status, activeTeam, checks, open]);
 
-  function sendInstruction(event) {
+  async function sendInstruction(event) {
     event.preventDefault();
 
     const text = instruction.trim();
     if (!text) return;
 
     const now = new Date().toISOString();
+    const taskId = crypto.randomUUID();
+    const teamName = TEAM.find(([id]) => id === activeTeam)?.[1] || 'Developer';
 
     setMessages((current) => [
       ...current,
       {
-        id: crypto.randomUUID(),
+        id: taskId,
         sender: 'You',
         team: activeTeam,
         text,
@@ -78,9 +80,9 @@ export default function DeveloperControlCenter() {
       },
       {
         id: crypto.randomUUID(),
-        sender: TEAM.find(([id]) => id === activeTeam)?.[1] || 'Developer',
+        sender: 'Master Developer',
         team: activeTeam,
-        text: 'Instruction received. Work is queued for this team. The task must be tested before it is reported as fixed.',
+        text: 'Inspection request sent to the local worker. Waiting for real browser and build results...',
         status: 'working',
         created_at: new Date().toISOString()
       }
@@ -88,6 +90,57 @@ export default function DeveloperControlCenter() {
 
     setStatus('working');
     setInstruction('');
+
+    try {
+      const response = await fetch('/developer-api/inspect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'inspect', instruction: text, team: activeTeam })
+      });
+
+      const result = await response.json();
+      if (!response.ok || !result.ok) {
+        throw new Error(result.error || `Worker returned HTTP ${response.status}`);
+      }
+
+      const summary = result.report?.summary || {};
+      const reportText = [
+        'Real inspection completed.',
+        `Pages checked: ${summary.pages_checked ?? 'unknown'}`,
+        `Failed page loads: ${summary.failed_pages ?? 'unknown'}`,
+        `Console errors: ${summary.console_errors ?? 'unknown'}`,
+        `Failed requests: ${summary.failed_requests ?? 'unknown'}`,
+        `Production build: ${summary.build_passed === true ? 'PASSED' : summary.build_passed === false ? 'FAILED' : 'unknown'}`,
+        '',
+        'Note: this run checks route loading and collects interface elements; it does not click every control or make code changes.'
+      ].join('\n');
+
+      setMessages((current) => [
+        ...current,
+        {
+          id: crypto.randomUUID(),
+          sender: 'Master Developer',
+          team: activeTeam,
+          text: reportText,
+          status: summary.failed_pages === 0 && summary.build_passed ? 'fixed' : 'info',
+          created_at: new Date().toISOString()
+        }
+      ]);
+      setStatus(summary.failed_pages === 0 && summary.build_passed ? 'testing' : 'needs-attention');
+    } catch (error) {
+      setMessages((current) => [
+        ...current,
+        {
+          id: crypto.randomUUID(),
+          sender: 'Master Developer',
+          team: activeTeam,
+          text: `Inspection could not be completed: ${error.message}. Check that the local worker is running and the Vite proxy is active.`,
+          status: 'error',
+          created_at: new Date().toISOString()
+        }
+      ]);
+      setStatus('error');
+    }
   }
 
   function toggleCheck(index) {
