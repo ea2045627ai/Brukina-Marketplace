@@ -143,7 +143,9 @@ const pageForPath = (path) => {
 };
 
 export default function App() {
-  const [page, setPage] = useState(() => pageForPath(location.pathname));
+  const [page, setPage] = useState(() =>
+    pageForPath(location.hash.startsWith('#/') ? location.hash.slice(1) : location.pathname)
+  );
   const [user, setUser] = useState(null);
   const [role, setRole] = useState('customer');
   
@@ -184,13 +186,19 @@ export default function App() {
     };
 
     const path = routes[next] || '/dashboard';
-    history.pushState({}, '', path);
+    location.hash = path;
     setPage(next);
   };
 
   useEffect(() => {
-    const onPopState = () => setPage(pageForPath(location.pathname));
-    window.addEventListener('popstate', onPopState);
+    const onRouteChange = () => {
+      const path = location.hash.startsWith('#/')
+        ? location.hash.slice(1)
+        : location.pathname;
+      setPage(pageForPath(path));
+    };
+    window.addEventListener('hashchange', onRouteChange);
+    window.addEventListener('popstate', onRouteChange);
     let authSubscription;
 
     if (supabase) {
@@ -215,7 +223,8 @@ export default function App() {
     }
 
     return () => {
-      window.removeEventListener('popstate', onPopState);
+      window.removeEventListener('hashchange', onRouteChange);
+      window.removeEventListener('popstate', onRouteChange);
       authSubscription?.unsubscribe();
     };
   }, []);
