@@ -44,6 +44,8 @@ export default function DeveloperControlCenter() {
   const [activeTeam, setActiveTeam] = useState(saved.activeTeam || 'developer');
   const [checks, setChecks] = useState(saved.checks || {});
   const [open, setOpen] = useState(saved.open ?? true);
+  const [autonomous, setAutonomous] = useState(null);
+  const [autonomousLoading, setAutonomousLoading] = useState(false);
 
   useEffect(() => {
     localStorage.setItem(
@@ -57,6 +59,74 @@ export default function DeveloperControlCenter() {
       })
     );
   }, [messages, status, activeTeam, checks, open]);
+
+  async function refreshAutonomousStatus() {
+    try {
+      const response = await fetch('/developer-api/autonomous/status');
+      const result = await response.json();
+
+      if (!response.ok || !result.enabled) {
+        throw new Error(result.error || 'Autonomous operations are unavailable.');
+      }
+
+      setAutonomous(result);
+    } catch (error) {
+      setAutonomous({
+        enabled: false,
+        error: error.message
+      });
+    }
+  }
+
+  async function runAutonomousNow() {
+    setAutonomousLoading(true);
+
+    try {
+      const response = await fetch('/developer-api/autonomous/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.ok) {
+        throw new Error(result.error || `Worker returned HTTP ${response.status}`);
+      }
+
+      setAutonomous((current) => ({
+        ...(current || {}),
+        state: {
+          ...(current?.state || {}),
+          last_cycle: result.cycle,
+          last_cycle_at: result.cycle?.created_at,
+          cycle: result.cycle?.cycle
+        }
+      }));
+
+      await refreshAutonomousStatus();
+    } catch (error) {
+      setMessages((current) => [
+        ...current,
+        {
+          id: crypto.randomUUID(),
+          sender: 'Master Developer',
+          team: 'developer',
+          text: `Autonomous cycle could not be started: ${error.message}`,
+          status: 'error',
+          created_at: new Date().toISOString()
+        }
+      ]);
+    } finally {
+      setAutonomousLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    refreshAutonomousStatus();
+
+    const timer = window.setInterval(refreshAutonomousStatus, 15000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   async function sendInstruction(event) {
     event.preventDefault();
@@ -210,6 +280,51 @@ export default function DeveloperControlCenter() {
             <span data-developer-status={status}>{status.toUpperCase()}</span>
             <span>{passed}/{CHECKS.length} checks</span>
           </div>
+
+          <section className="developer-feedback">
+            <h3>Autonomous Operations</h3>
+
+            {autonomous?.enabled ? (
+              <>
+                <p>
+                  <strong>Automatic monitoring:</strong> ON
+                </p>
+                <p>
+                  Cycle: {autonomous.state?.cycle ?? 0}
+                  {' · '}
+                  Interval: {Math.round((autonomous.interval_ms || 60000) / 1000)}s
+                </p>
+                <p>
+                  Last result:{' '}
+                  {autonomous.state?.last_cycle?.summary?.healthy
+                    ? 'HEALTHY'
+                    : autonomous.state?.last_cycle
+                      ? 'ATTENTION REQUIRED'
+                      : 'Waiting for first cycle'}
+                </p>
+                <p>
+                  Roles: {autonomous.state?.last_cycle?.summary?.roles_run ?? 0}
+                  {' · '}
+                  Attention: {autonomous.state?.last_cycle?.summary?.roles_attention ?? 0}
+                </p>
+
+                <button
+                  type="button"
+                  onClick={runAutonomousNow}
+                  disabled={autonomousLoading || autonomous.state?.running}
+                >
+                  {autonomousLoading || autonomous.state?.running
+                    ? 'Running Autonomous Cycle...'
+                    : 'Run Autonomous Cycle Now'}
+                </button>
+              </>
+            ) : (
+              <p>
+                Autonomous operations unavailable
+                {autonomous?.error ? `: ${autonomous.error}` : '.'}
+              </p>
+            )}
+          </section>
 
           <div className="developer-team">
             {TEAM.map(([id, name]) => (
