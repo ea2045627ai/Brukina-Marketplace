@@ -328,6 +328,40 @@ export default function ProductCatalog({
   const isVendor = role === 'vendor';
   const isCourier = role === 'driver' || role === 'rider';
 
+  const productVisuals = {
+    grain: ['🌾', '🌽', '🌾', '🥣'],
+    vegetable: ['🥬', '🥕', '🍅', '🥦'],
+    fruit: ['🍍', '🍊', '🍌', '🥭'],
+    food: ['🍚', '🫘', '🥫', '🍳'],
+    building: ['🧱', '🏗️', '🪨', '🔨'],
+    plumbing: ['🚿', '🚰', '🔧', '🪠'],
+    electrical: ['⚡', '💡', '🔌', '🔋'],
+    appliance: ['🏠', '🧊', '🌀', '🍳'],
+    phones: ['📱', '📲', '📞', '🔋'],
+    computers: ['💻', '🖥️', '⌨️', '🖱️'],
+    screens: ['🖥️', '📺', '💻', '🖼️'],
+    'screen-accessories': ['🧩', '🔧', '🔌', '🖥️'],
+    devices: ['📱', '⌚', '📲', '🎮'],
+    electronics: ['🎧', '🔊', '📻', '🎛️'],
+    accessories: ['🔌', '🎒', '🖱️', '⌨️'],
+    components: ['⚙️', '🧩', '💾', '🔧'],
+    storage: ['💾', '🗄️', '📦', '🧠'],
+    'laptop-parts': ['🔧', '🧩', '💻', '⚙️'],
+    chargers: ['🔋', '🔌', '⚡', '🔋'],
+    networking: ['🌐', '📡', '🛜', '🔗'],
+    audio: ['🎧', '🎙️', '🔊', '🎤'],
+    'office-devices': ['🖨️', '📠', '📋', '💼'],
+    tools: ['🔧', '🔨', '🪛', '🛠️'],
+    equipment: ['🛠️', '⚙️', '🏗️', '🔩'],
+    solar: ['☀️', '🔆', '🔋', '⚡'],
+    power: ['🔋', '⚡', '🔌', '💡'],
+    furniture: ['🪑', '🛋️', '🛏️', '🗄️'],
+    home: ['🏡', '🚰', '🛋️', '🍽️'],
+    auto: ['🚗', '🔧', '🛞', '🔋'],
+    fashion: ['👕', '👟', '🧥', '🎒'],
+    beauty: ['✨', '🧴', '🧼', '💄']
+  };
+
   return (
     <div className="container" style={{ maxWidth: '1200px', margin: '0 auto', padding: '16px', position: 'relative' }}>
       
@@ -501,6 +535,8 @@ export default function ProductCatalog({
             };
 
             const theme = visualThemes[category] || { icon: '🛍️', label: item.category || 'Marketplace' };
+            const rotatingVisuals = productVisuals[category] || ['🛍️', '📦', '✨', '🛒'];
+            const visualIndex = index % rotatingVisuals.length;
 
             return (
               <article
@@ -529,19 +565,35 @@ export default function ProductCatalog({
                   }}
                 >
                   <div
+                    className="product-visual-orbit"
                     style={{
-                      width: '112px',
-                      height: '112px',
+                      width: '124px',
+                      height: '124px',
                       borderRadius: '50%',
                       background: '#fff',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       fontSize: '58px',
-                      boxShadow: '0 10px 28px rgba(35,31,32,0.10)'
+                      boxShadow: '0 10px 28px rgba(35,31,32,0.10)',
+                      position: 'relative',
+                      animationDelay: `${visualIndex * 120}ms`
                     }}
                   >
-                    {theme.icon}
+                    <span
+                      className="product-visual-main"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      {rotatingVisuals[visualIndex]}
+                    </span>
+
+                    <span className="product-visual-spark spark-one">✦</span>
+                    <span className="product-visual-spark spark-two">·</span>
+                    <span className="product-visual-spark spark-three">✦</span>
                   </div>
 
                   <span
