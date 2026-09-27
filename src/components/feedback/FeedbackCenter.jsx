@@ -28,7 +28,10 @@ export default function FeedbackCenter() {
       created_at: new Date().toISOString()
     };
 
-    const existing = JSON.parse(localStorage.getItem('brukina_feedback') || '[]');
+    const existing = JSON.parse(
+      localStorage.getItem('brukina_feedback') || '[]'
+    );
+
     localStorage.setItem(
       'brukina_feedback',
       JSON.stringify([feedback, ...existing])
@@ -55,7 +58,10 @@ export default function FeedbackCenter() {
 
         <label>
           Rating
-          <select value={rating} onChange={(e) => setRating(Number(e.target.value))}>
+          <select
+            value={rating}
+            onChange={(e) => setRating(Number(e.target.value))}
+          >
             {[5, 4, 3, 2, 1].map((value) => (
               <option key={value} value={value}>
                 {'★'.repeat(value)} ({value}/5)
@@ -77,7 +83,11 @@ export default function FeedbackCenter() {
 
         <button type="submit">Submit Feedback</button>
 
-        {sent && <p role="status">Feedback submitted successfully.</p>}
+        {sent && (
+          <p role="status">
+            Feedback submitted successfully.
+          </p>
+        )}
       </form>
     </section>
   );
