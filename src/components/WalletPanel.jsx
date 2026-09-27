@@ -41,50 +41,44 @@ export default function WalletPanel() {
 
   const handleDeposit = async (e) => {
     e.preventDefault();
-    const parsedAmount = parseFloat(depositAmount);
-    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+    const parsedAmount = Number(depositAmount);
+
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
       alert('Please enter a valid positive amount.');
-      return;
-    }
-    if (!walletId) {
-      alert('Wallet account could not be resolved.');
       return;
     }
 
     setLoading(true);
 
     try {
-      const updatedBalance = balance + parsedAmount;
+      const { data: { session } } = await supabase.auth.getSession();
 
-      // 1. Update the actual database balance
-      const { error: walletError } = await supabase
-        .from('wallets')
-        .update({ balance: updatedBalance })
-        .eq('id', walletId);
+      if (!session?.access_token) {
+        throw new Error('Your session has expired. Please sign in again.');
+      }
 
-      if (walletError) throw walletError;
+      const response = await fetch('/.netlify/functions/initialize-payment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ amount: Number(parsedAmount.toFixed(2)) })
+      });
 
-      // 2. Insert the transaction log into the database
-      const { error: txnError } = await supabase
-        .from('wallet_transactions')
-        .insert([{
-          wallet_id: walletId,
-          amount: parsedAmount,
-          transaction_type: 'deposit',
-          description: 'Wallet Deposit Confirmed'
-        }]);
+      const result = await response.json();
 
-      if (txnError) throw txnError;
-
-      // 3. Refresh state to guarantee total accuracy
-      await loadWallet();
+      if (!response.ok || !result?.authorization_url) {
+        throw new Error(result?.error || 'Unable to initialize payment.');
+      }
 
       setDepositAmount('');
       setIsModalOpen(false);
-      alert(`GH₵ ${parsedAmount.toFixed(2)} added to your wallet!`);
+
+      window.location.assign(result.authorization_url);
     } catch (error) {
-      console.error('Payment Error:', error.message);
-      alert('Transaction failed to sync. Please try again.');
+      console.error('Payment initialization error:', error);
+      alert(error.message || 'Unable to start payment. Please try again.');
     } finally {
       setLoading(false);
     }
