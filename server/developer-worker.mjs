@@ -137,10 +137,9 @@ async function inspectBrowser() {
               await button.click({ timeout: 3000 });
               await page.waitForTimeout(200);
 
-              const visibleText = await page.locator('body').innerText();
               const stateChanged = label === 'Hide'
-                ? !visibleText.includes('Developer / Team Feedback')
-                : visibleText.toLowerCase().includes(label.toLowerCase());
+                ? !(await page.getByText('Developer / Team Feedback', { exact: true }).count())
+                : await button.evaluate((element) => element.classList.contains('active'));
 
               interactions.push({
                 button: label,
@@ -148,8 +147,8 @@ async function inspectBrowser() {
                 clicked: true,
                 state_changed: stateChanged,
                 result: stateChanged
-                  ? 'Click completed and expected text was detected'
-                  : 'Click completed, but expected interface change was not verified'
+                  ? 'Click completed and expected interface state was verified'
+                  : 'Click completed, but expected interface state was not verified'
               });
             } catch (error) {
               interactions.push({
