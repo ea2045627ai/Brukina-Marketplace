@@ -514,3 +514,106 @@ textarea:focus{
     transition:none!important;
   }
 }
+
+/* Brukina Marketplace — product showcase motion */
+.product-card {
+  transform: translateZ(0);
+  transition: transform .28s ease, box-shadow .28s ease, border-color .28s ease;
+}
+
+.product-card:hover {
+  transform: translateY(-7px);
+  box-shadow: 0 18px 44px rgba(35, 31, 32, .14);
+  border-color: rgba(200, 90, 50, .28);
+}
+
+.product-visual-orbit {
+  animation: brukinaProductFloat 4.5s ease-in-out infinite;
+  will-change: transform;
+}
+
+.product-visual-main {
+  animation: brukinaProductSwap 3.6s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.product-visual-image {
+  width: 92px;
+  height: 92px;
+  object-fit: contain;
+  border-radius: 18px;
+  animation: brukinaProductImage 4.5s ease-in-out infinite;
+  will-change: transform;
+}
+
+.product-visual-spark {
+  position: absolute;
+  pointer-events: none;
+  color: #C85A32;
+  font-size: 14px;
+  opacity: .7;
+}
+
+.spark-one {
+  top: 12px;
+  right: 20px;
+  animation: brukinaSparkOne 3.2s ease-in-out infinite;
+}
+
+.spark-two {
+  bottom: 18px;
+  left: 18px;
+  font-size: 20px;
+  animation: brukinaSparkTwo 3.8s ease-in-out infinite;
+}
+
+.spark-three {
+  bottom: 28px;
+  right: 14px;
+  animation: brukinaSparkThree 4.1s ease-in-out infinite;
+}
+
+@keyframes brukinaProductFloat {
+  0%, 100% { transform: translateY(0) rotate(-1deg); }
+  50% { transform: translateY(-8px) rotate(1deg); }
+}
+
+@keyframes brukinaProductSwap {
+  0%, 100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  50% { transform: scale(1.08) rotate(4deg); opacity: .82; }
+}
+
+@keyframes brukinaProductImage {
+  0%, 100% { transform: scale(1) rotate(-2deg); }
+  50% { transform: scale(1.06) rotate(2deg); }
+}
+
+@keyframes brukinaSparkOne {
+  0%, 100% { transform: translate(0, 0) scale(.8); opacity: .35; }
+  50% { transform: translate(5px, -7px) scale(1.15); opacity: 1; }
+}
+
+@keyframes brukinaSparkTwo {
+  0%, 100% { transform: translate(0, 0); opacity: .3; }
+  50% { transform: translate(-5px, 6px); opacity: .9; }
+}
+
+@keyframes brukinaSparkThree {
+  0%, 100% { transform: translate(0, 0) scale(.7); opacity: .25; }
+  50% { transform: translate(6px, -5px) scale(1.2); opacity: .95; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .product-card,
+  .product-visual-orbit,
+  .product-visual-main,
+  .product-visual-image,
+  .product-visual-spark {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .product-card:hover {
+    transform: none;
+  }
+}
