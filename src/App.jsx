@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { executeDatabaseLogin, validateSignupForm } from './lib/validation.mjs';
 import { supabase, supabaseConfigMissing } from './lib/supabaseClient';
 import { useCourierLocation } from './lib/useCourierLocation';
@@ -21,31 +21,31 @@ import './components/developer/developer-control-center.css';
 const roles = ['customer', 'vendor', 'driver', 'rider'];
 
 const COUNTRY_CURRENCIES = {
-  Ghana: { code: 'GHS', symbol: 'GH₵' },
-  Nigeria: { code: 'NGN', symbol: '₦' },
+  Ghana: { code: 'GHS', symbol: 'GHâ‚µ' },
+  Nigeria: { code: 'NGN', symbol: 'â‚¦' },
   'United States': { code: 'USD', symbol: '$' },
-  'United Kingdom': { code: 'GBP', symbol: '£' },
+  'United Kingdom': { code: 'GBP', symbol: 'Â£' },
   Canada: { code: 'CAD', symbol: 'C$' },
   Australia: { code: 'AUD', symbol: 'A$' },
   Kenya: { code: 'KES', symbol: 'KSh' },
   Tanzania: { code: 'TZS', symbol: 'TSh' },
   Uganda: { code: 'UGX', symbol: 'USh' },
   'South Africa': { code: 'ZAR', symbol: 'R' },
-  'Côte d’Ivoire': { code: 'XOF', symbol: 'CFA' },
+  'CÃ´te dâ€™Ivoire': { code: 'XOF', symbol: 'CFA' },
   Senegal: { code: 'XOF', symbol: 'CFA' },
   Cameroon: { code: 'XAF', symbol: 'FCFA' },
   'Sierra Leone': { code: 'SLE', symbol: 'Le' },
   Liberia: { code: 'LRD', symbol: '$' },
-  Egypt: { code: 'EGP', symbol: 'E£' },
-  India: { code: 'INR', symbol: '₹' },
-  China: { code: 'CNY', symbol: '¥' },
-  Japan: { code: 'JPY', symbol: '¥' },
-  'United Arab Emirates': { code: 'AED', symbol: 'د.إ' },
-  'Saudi Arabia': { code: 'SAR', symbol: '﷼' },
-  Germany: { code: 'EUR', symbol: '€' },
-  France: { code: 'EUR', symbol: '€' },
-  Italy: { code: 'EUR', symbol: '€' },
-  Spain: { code: 'EUR', symbol: '€' },
+  Egypt: { code: 'EGP', symbol: 'EÂ£' },
+  India: { code: 'INR', symbol: 'â‚¹' },
+  China: { code: 'CNY', symbol: 'Â¥' },
+  Japan: { code: 'JPY', symbol: 'Â¥' },
+  'United Arab Emirates': { code: 'AED', symbol: 'Ø¯.Ø¥' },
+  'Saudi Arabia': { code: 'SAR', symbol: 'ï·¼' },
+  Germany: { code: 'EUR', symbol: 'â‚¬' },
+  France: { code: 'EUR', symbol: 'â‚¬' },
+  Italy: { code: 'EUR', symbol: 'â‚¬' },
+  Spain: { code: 'EUR', symbol: 'â‚¬' },
   Brazil: { code: 'BRL', symbol: 'R$' }
 };
 
@@ -340,6 +340,7 @@ function Auth({ mode, onNavigate, onSuccess }) {
           email: email.trim(), 
           password, 
           options: {
+            emailRedirectTo: window.location.origin,
             data: {
               full_name: name.trim(),
               role: selectedRole,
@@ -384,7 +385,7 @@ function Auth({ mode, onNavigate, onSuccess }) {
               <select value={country} onChange={event => setCountry(event.target.value)} required>
                 {COUNTRIES.map(item => (
                   <option key={item} value={item}>
-                    {item} — {COUNTRY_CURRENCIES[item].code}
+                    {item} â€” {COUNTRY_CURRENCIES[item].code}
                   </option>
                 ))}
               </select>
@@ -392,9 +393,9 @@ function Auth({ mode, onNavigate, onSuccess }) {
           )}
           <label>Email address<input type="email" value={email} onChange={event => setEmail(event.target.value)} required /></label>
           <label>Password<input type="password" value={password} onChange={event => setPassword(event.target.value)} required /></label>
-          <button className="primary" disabled={busy}>{busy ? 'Connecting...' : isSignup ? 'Create account' : 'Sign in to workspace'} <span>→</span></button>
+          <button className="primary" disabled={busy}>{busy ? 'Connecting...' : isSignup ? 'Create account' : 'Sign in to workspace'} <span>â†’</span></button>
         </form>
-        <button className="link" onClick={() => onNavigate(isSignup ? 'login' : 'signup')}>{isSignup ? 'Already have an account? Sign in' : 'Create account'} ↗</button>
+        <button className="link" onClick={() => onNavigate(isSignup ? 'login' : 'signup')}>{isSignup ? 'Already have an account? Sign in' : 'Create account'} â†—</button>
       </section>
     </main>
   );
@@ -773,7 +774,7 @@ function OrdersPanel({ orders = [], user, error = '' }) {
                   color: '#777'
                 }}
               >
-                ×
+                Ã—
               </button>
             </div>
 
@@ -814,7 +815,7 @@ function ProfilePanel({ user, role }) {
     <div className="wallet-panel">
       <div className="wallet-card">
         <div className="wallet-card-top">
-          <span className="wallet-chip">◎</span>
+          <span className="wallet-chip">â—Ž</span>
           <span className="wallet-label">ACCOUNT</span>
         </div>
         <p>Email</p>
@@ -845,3 +846,4 @@ function ProfilePanel({ user, role }) {
     </div>
   );
 }
+
