@@ -1,4 +1,4 @@
-import { execFile } from 'node:child_process';
+﻿import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { existsSync, readFileSync } from 'node:fs';
 
@@ -99,7 +99,7 @@ function fileSize(relativePath) {
 
 async function runBuildCheck() {
   try {
-    const { stdout, stderr } = await exec('npm', ['run', 'build'], {
+    const { stdout, stderr } = await exec(process.platform === 'win32' ? (process.env.ComSpec || 'cmd.exe') : 'npm', process.platform === 'win32' ? ['/d','/s','/c','npm.cmd run build'] : ['run','build'], {
       cwd: process.cwd(),
       timeout: 120000,
       maxBuffer: 5 * 1024 * 1024
@@ -293,3 +293,4 @@ export function startAutonomousOperations(runInspection) {
   schedule();
   setInterval(schedule, INTERVAL_MS);
 }
+

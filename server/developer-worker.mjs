@@ -1,4 +1,4 @@
-import { execFile } from 'node:child_process';
+﻿import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { chromium } from 'playwright';
 import { createServer } from 'node:http';
@@ -24,7 +24,7 @@ function result(type, message, data = {}) {
 
 async function runBuild() {
   try {
-    const { stdout, stderr } = await exec('npm', ['run', 'build'], {
+    const { stdout, stderr } = await exec(process.platform === 'win32' ? (process.env.ComSpec || 'cmd.exe') : 'npm', process.platform === 'win32' ? ['/d','/s','/c','npm.cmd run build'] : ['run','build'], {
       cwd: process.cwd(),
       timeout: 120000,
       maxBuffer: 5 * 1024 * 1024
@@ -442,3 +442,5 @@ if (process.argv.includes('--serve')) {
   console.log(`[MASTER DEVELOPER WORKER] Target: ${BASE_URL}`);
   console.log('[MASTER DEVELOPER WORKER] Use --check to run a full inspection.');
 }
+
+

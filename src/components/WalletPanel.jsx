@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 
 export default function WalletPanel() {
@@ -6,14 +6,14 @@ export default function WalletPanel() {
   const [balance, setBalance] = useState(0);
   const [transactions, setTransactions] = useState([]);
   const [depositAmount, setDepositAmount] = useState('');
+  const [provider, setProvider] = useState('paystack');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Reusable function to fetch live wallet data from Supabase
   async function loadWallet() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    
+
     const { data: wallet } = await supabase
       .from('wallets')
       .select('id, balance, escrow_balance')
@@ -23,14 +23,14 @@ export default function WalletPanel() {
     if (wallet) {
       setWalletId(wallet.id);
       setBalance(parseFloat(wallet.balance) || 0);
-      
+
       const { data: entries } = await supabase
         .from('wallet_transactions')
         .select('id, amount, transaction_type, description, created_at')
         .eq('wallet_id', wallet.id)
         .order('created_at', { ascending: false })
         .limit(10);
-        
+
       if (entries) setTransactions(entries);
     }
   }
@@ -41,41 +41,53 @@ export default function WalletPanel() {
 
   const handleDeposit = async (e) => {
     e.preventDefault();
-    const parsedAmount = Number(depositAmount);
 
-    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
-      alert('Please enter a valid positive amount.');
-      return;
+    if (provider === 'paystack') {
+      const parsedAmount = Number(depositAmount);
+      if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+        alert('Please enter a valid positive amount.');
+        return;
+      }
     }
 
     setLoading(true);
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
-
       if (!session?.access_token) {
         throw new Error('Your session has expired. Please sign in again.');
       }
 
-      const response = await fetch('/.netlify/functions/initialize-payment', {
+      const isDodo = provider === 'dodo';
+      const endpoint = isDodo
+        ? '/.netlify/functions/initialize-dodo-payment'
+        : '/.netlify/functions/initialize-payment';
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${session.access_token}`
         },
-        body: JSON.stringify({ amount: Number(parsedAmount.toFixed(2)) })
+        body: JSON.stringify(
+          isDodo
+            ? {}
+            : { amount: Number(Number(depositAmount).toFixed(2)) }
+        )
       });
 
       const result = await response.json();
+      const checkoutUrl = isDodo
+        ? result?.checkout_url
+        : result?.authorization_url;
 
-      if (!response.ok || !result?.authorization_url) {
+      if (!response.ok || !checkoutUrl) {
         throw new Error(result?.error || 'Unable to initialize payment.');
       }
 
       setDepositAmount('');
       setIsModalOpen(false);
-
-      window.location.assign(result.authorization_url);
+      window.location.assign(checkoutUrl);
     } catch (error) {
       console.error('Payment initialization error:', error);
       alert(error.message || 'Unable to start payment. Please try again.');
@@ -99,7 +111,10 @@ export default function WalletPanel() {
         </div>
       </div>
 
-      <button onClick={() => setIsModalOpen(true)} className="btn-primary wallet-action-btn">
+      <button
+        onClick={() => setIsModalOpen(true)}
+        className="btn-primary wallet-action-btn"
+      >
         + Load Virtual Funds
       </button>
 
@@ -109,15 +124,20 @@ export default function WalletPanel() {
           <div className="empty-state-box">No transactions yet.</div>
         ) : (
           transactions.map((txn) => {
-            const isCredit = ['credit', 'deposit'].includes(txn.transaction_type?.toLowerCase());
+            const isCredit = ['credit', 'deposit'].includes(
+              txn.transaction_type?.toLowerCase()
+            );
             return (
               <div key={txn.id} className="txn-row">
                 <div>
                   <strong>{txn.description}</strong>
-                  <small>{new Date(txn.created_at).toLocaleDateString()}</small>
+                  <small>
+                    {new Date(txn.created_at).toLocaleDateString()}
+                  </small>
                 </div>
                 <div className={`txn-amount ${isCredit ? 'positive' : 'negative'}`}>
-                  {isCredit ? '+' : '-'} GH₵ {Math.abs(parseFloat(txn.amount)).toFixed(2)}
+                  {isCredit ? '+' : '-'} GH₵{' '}
+                  {Math.abs(parseFloat(txn.amount)).toFixed(2)}
                 </div>
               </div>
             );
@@ -126,22 +146,92 @@ export default function WalletPanel() {
       </div>
 
       {isModalOpen && (
-        <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <button onClick={() => setIsModalOpen(false)} className="modal-close">×</button>
-            <h3>Mobile Money Topup</h3>
-            <p className="modal-subtitle">Deposit credits via payment networks.</p>
+        <div
+          className="modal-overlay"
+          onClick={() => !loading && setIsModalOpen(false)}
+        >
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setIsModalOpen(false)}
+              className="modal-close"
+              disabled={loading}
+            >
+              ×
+            </button>
+
+            <h3>Wallet Top-up</h3>
+            <p className="modal-subtitle">
+              Choose a payment method to fund your wallet.
+            </p>
+
             <form onSubmit={handleDeposit} className="form-stack">
-              <label>Deposit Amount (GHS)
-                <input type="number" step="0.01" placeholder="0.00" value={depositAmount} onChange={e => setDepositAmount(e.target.value)} required />
-              </label>
+              <label>Payment Method</label>
               <div className="quick-amounts">
-                {['50', '100', '200'].map(val => (
-                  <button key={val} type="button" onClick={() => setDepositAmount(val)} className="quick-btn">+ GH₵ {val}</button>
-                ))}
+                <button
+                  type="button"
+                  className={`quick-btn ${provider === 'paystack' ? 'active' : ''}`}
+                  onClick={() => setProvider('paystack')}
+                  disabled={loading}
+                >
+                  Paystack · GHS
+                </button>
+                <button
+                  type="button"
+                  className={`quick-btn ${provider === 'dodo' ? 'active' : ''}`}
+                  onClick={() => setProvider('dodo')}
+                  disabled={loading}
+                >
+                  Dodo · USD
+                </button>
               </div>
-              <button type="submit" disabled={loading} className="btn-primary">
-                {loading ? 'Processing...' : 'Confirm Funding'}
+
+              {provider === 'paystack' ? (
+                <>
+                  <label>
+                    Deposit Amount (GHS)
+                    <input
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={depositAmount}
+                      onChange={(e) => setDepositAmount(e.target.value)}
+                      required
+                      disabled={loading}
+                    />
+                  </label>
+                  <div className="quick-amounts">
+                    {['50', '100', '200'].map((val) => (
+                      <button
+                        key={val}
+                        type="button"
+                        onClick={() => setDepositAmount(val)}
+                        className="quick-btn"
+                        disabled={loading}
+                      >
+                        + GH₵ {val}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="empty-state-box">
+                  Dodo checkout uses the USD amount and exchange rate
+                  configured on the server. The wallet will be credited in GHS
+                  after payment is confirmed.
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="btn-primary"
+              >
+                {loading
+                  ? 'Processing...'
+                  : provider === 'dodo'
+                    ? 'Continue to Dodo Checkout'
+                    : 'Confirm Funding'}
               </button>
             </form>
           </div>
