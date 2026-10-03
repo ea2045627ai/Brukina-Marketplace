@@ -1,238 +1,94 @@
-import cors from 'cors';
 import express from 'express';
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import cors from 'cors';
+import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
-import { triggerArkeselVoiceCall } from '../lib/arkesel.mjs';
 
 const app = express();
-const port = Number(process.env.PORT || 3000);
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const webhookSecret = process.env.WEBHOOK_SECRET || process.env.RAILWAY_WEBHOOK_SECRET;
-
-const supabase = supabaseUrl && supabaseServiceKey ? createClient(supabaseUrl, supabaseServiceKey) : null;
-
 app.use(cors());
 
-// FIXED: Capture the exact raw request buffer for Paystack signature matching
-app.use(express.json({
-  limit: '100kb',
-  verify: (req, res, buf) => {
-    req.rawBody = buf;
-  }
-}));
+// Raw parsing for Paystack hook signatures, JSON parsing for standard APIs
+app.use('/api/webhooks/paystack', express.raw({ type: 'application/json' }));
+app.use(express.json());
 
-app.use(express.text({ limit: '100kb', type: ['text/*', 'application/*+json'] }));
-app.use(express.static('dist'));
-app.get('/health', (request, response) => response.json({ ok: true, service: 'brukina-railway' }));
-app.get('*', (req, res) => res.sendFile(process.cwd() + '/dist/index.html'));
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
-// Helper function to capture and record telemetry logs into external_api_logs securely
-async function recordTelemetryLog(path, source, summary, httpStatus, startTime) {
-  if (!supabase) return;
+// 1. PAYSTACK PAYMENT INITIALIZATION
+app.post('/api/payments/initialize', async (req, res) => {
   try {
-    const lagMs = Date.now() - startTime;
-    await supabase.from('external_api_logs').insert([{
-      endpoint_path: path,
-      channel_source: source,
-      payload_summary: summary.slice(0, 255),
-      sync_lag_ms: lagMs,
-      http_status_code: httpStatus
-    }]);
-  } catch (err) {
-    console.error('[TELEMETRY ERROR LOGGING FAILURE]', err.message);
-  }
-}
-
-// FIXED: Protected JSON parser wrapper against unhandled format exceptions
-function parsePayload(body) {
-  if (!body) return {};
-  if (typeof body === 'string') {
-    try {
-      return JSON.parse(body);
-    } catch {
-      return {};
-    }
-  }
-  return body;
-}
-
-function requireWebhookSecret(request, response) {
-  if (!webhookSecret) return true;
-  if (request.get('x-railway-webhook-secret') === webhookSecret) return true;
-  response.status(401).json({ error: 'Webhook authentication required' });
-  return false;
-}
-
-// FIXED: Rewritten to safely match raw bytes against secret keys securely
-function verifyPaystackSignature(request) {
-  const signature = request.get('x-paystack-signature');
-  if (!signature || !process.env.PAYSTACK_SECRET_KEY || !request.rawBody) return false;
-  
-  const expected = createHmac('sha512', process.env.PAYSTACK_SECRET_KEY)
-    .update(request.rawBody)
-    .digest('hex');
-    
-  const supplied = Buffer.from(signature, 'utf8');
-  const calculated = Buffer.from(expected, 'utf8');
-  
-  if (supplied.length !== calculated.length) return false;
-  return timingSafeEqual(supplied, calculated);
-}
-
-
-app.post('/api/v1/operations-webhook', async (request, response) => {
-  const startTime = Date.now();
-  if (!requireWebhookSecret(request, response)) return;
-  if (!supabase) return response.status(503).json({ error: 'Supabase server configuration is required' });
-  
-  let payload = parsePayload(request.body);
-  const { record, type, table } = payload;
-  
-  try {
-    if (!record || typeof record !== 'object' || !['dispatch_providers', 'telephony_calls'].includes(table) || !['INSERT', 'UPDATE'].includes(type)) {
-      await recordTelemetryLog('/operations-webhook', 'railway_internal', 'Invalid operations payload constraints', 400, startTime);
-      return response.status(400).json({ error: 'Invalid operations event' });
-    }
-    
-    if (table === 'dispatch_providers' && record.is_available === false) {
-      const { error } = await supabase.from('telephony_calls').insert({ 
-        call_status: 'system_alert', 
-        detected_native_language: 'English', 
-        metadata: { event: 'provider_outage', action_taken: 'fallback_to_brukina_backup' } 
-      });
-      if (error) throw error;
-    }
-    
-    if (table === 'telephony_calls' && type === 'INSERT') {
-      console.log(`[TELEPHONY] Call queued in ${record.detected_native_language || 'unknown'} language`);
-      await triggerArkeselVoiceCall(record);
-    }
-    
-    await recordTelemetryLog('/operations-webhook', 'railway_internal', `Processed ${table} mutation`, 202, startTime);
-    return response.status(202).json({ accepted: true, table, type });
+    const { amount, email, userId } = req.body;
+    const amountInSubunits = Math.round(parseFloat(amount) * 100);
+    const paystackResponse = await fetch('https://paystack.co', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email,
+        amount: amountInSubunits,
+        metadata: { custom_fields: [{ display_name: "User ID", variable_name: "user_id", value: userId }] }
+      }),
+    });
+    const data = await paystackResponse.json();
+    if (!data.status) return res.status(400).json({ error: data.message });
+    return res.json({ url: data.data.authorization_url });
   } catch (error) {
-    console.error('[OPERATIONS ERROR]', error.message);
-    await recordTelemetryLog('/operations-webhook', 'railway_internal', `Error: ${error.message}`, 400, startTime);
-    return response.status(400).json({ accepted: false, error: 'Invalid operations event' });
+    return res.status(500).json({ error: 'Internal payment initialization failure' });
   }
 });
 
-app.post('/api/v1/supply-bridge', async (request, response) => {
-  const startTime = Date.now();
-  if (!requireWebhookSecret(request, response)) return;
-  
-  const payload = parsePayload(request.body);
-  if (payload.table !== 'sourcing_requests' || payload.type !== 'INSERT' || !payload.record?.id) {
-    await recordTelemetryLog('/supply-bridge', 'supply_partner', 'Invalid structural sourcing parameters', 400, startTime);
-    return response.status(400).json({ error: 'Invalid sourcing event' });
-  }
-  
+// 2. PAYSTACK SECURE WEBHOOK
+app.post('/api/webhooks/paystack', async (req, res) => {
   try {
-    const partnerUrl = process.env.SUPPLY_PARTNER_WEBHOOK_URL;
-    if (partnerUrl) {
-      const forwarded = await fetch(partnerUrl, { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json', 'X-Brukina-Event': 'sourcing_request.created' }, 
-        body: JSON.stringify(payload) 
-      });
-      if (!forwarded.ok) throw new Error(`Supply partner returned ${forwarded.status}`);
+    const signature = req.headers['x-paystack-signature'];
+    if (!signature) return res.status(401).json({ error: 'Missing signature' });
+    const hash = crypto.createHmac('sha512', process.env.PAYSTACK_SECRET_KEY).update(req.body).digest('hex');
+    if (hash !== signature) return res.status(401).json({ error: 'Invalid signature' });
+    const event = JSON.parse(req.body.toString());
+    if (event.event === 'charge.success') {
+      const trx = event.data;
+      const userId = trx.metadata?.custom_fields?.find(f => f.variable_name === 'user_id')?.value;
+      if (userId) {
+        await supabaseAdmin.from('momo_deposits').insert([{ user_id: userId, amount: trx.amount / 100, reference: trx.reference, status: 'success' }]);
+      }
     }
-    
-    await recordTelemetryLog('/supply-bridge', 'supply_partner', 'Sourcing forward complete', 202, startTime);
-    return response.status(202).json({ accepted: true, forwarded: Boolean(partnerUrl) });
+    return res.status(200).json({ received: true });
   } catch (error) {
-    await recordTelemetryLog('/supply-bridge', 'supply_partner', `Forward error: ${error.message}`, 400, startTime);
-    return response.status(400).json({ accepted: false, error: error.message || 'Invalid sourcing event' });
+    return res.status(500).json({ error: 'Webhook processing failure' });
   }
 });
 
-app.post('/api/v1/paystack-webhook', async (request, response) => {
-  const startTime = Date.now();
-  // FIXED: Evaluates signature correctly using raw buffer arrays now
-  if (!verifyPaystackSignature(request)) {
-    return response.status(401).json({ error: 'Invalid Paystack signature' });
-  }
-  
-  try {
-    const payload = parsePayload(request.body);
-    if (payload.event !== 'charge.success' || !payload.data?.reference) {
-      await recordTelemetryLog('/paystack-webhook', 'paystack', 'Unsupported gateway event type', 400, startTime);
-      return response.status(400).json({ error: 'Unsupported payment event' });
-    }
-    
-    console.log(`[PAYMENT] Verified event received: ${payload.data.reference}`);
-    
-    // Core telemetry insertion maps beautifully onto our operational dashboard rows
-    await recordTelemetryLog('/paystack-webhook', 'paystack', `Payment success ref: ${payload.data.reference}`, 200, startTime);
-    return response.json({ received: true });
-  } catch (error) {
-    await recordTelemetryLog('/paystack-webhook', 'paystack', 'Exception processing payment metadata', 400, startTime);
-    return response.status(400).json({ error: 'Invalid payment event' });
-  }
-});
-
-app.post('/api/v1/generate-invoice', async (request, response) => {
-  const startTime = Date.now();
-  if (!requireWebhookSecret(request, response)) return;
-  
-  try {
-    const payload = parsePayload(request.body);
-    if (payload.table !== 'marketplace_orders' || payload.record?.order_status !== 'paid') {
-      await recordTelemetryLog('/generate-invoice', 'billing_node', 'Order is unpaid or misconfigured', 400, startTime);
-      return response.status(400).json({ error: 'A paid marketplace order is required' });
-    }
-    
-    await recordTelemetryLog('/generate-invoice', 'billing_node', 'Invoice successfully generated', 202, startTime);
-    return response.status(202).json({ accepted: true, invoice_complete: false, message: 'Invoice generation queued for implementation' });
-  } catch (error) {
-    return response.status(400).json({ error: 'Invalid invoice event' });
-  }
-});
-
-app.listen(port, '0.0.0.0', () => console.log(`[RAILWAY SERVER ACTIVE] Port ${port}`));
-
-// =========================================================================
-// AUTOMATED ARKESEL TERMINAL VERIFICATION CONTRACT
-// =========================================================================
-
-// 1. ENDPOINT TO GENERATE AND TRANSMIT THE 6-DIGIT VERIFICATION CODE
+// 3. ARKESEL OTP GENERATE & SEND
 app.post('/api/auth/send-otp', async (req, res) => {
   try {
     const { phoneNumber } = req.body;
     if (!phoneNumber) return res.status(400).json({ error: 'Phone number is required' });
-
     const response = await fetch('https://arkesel.com', {
       method: 'POST',
       headers: {
         'api-key': process.env.ARKESEL_API_KEY,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        expiry: 5,
-        length: 6,
-        medium: 'sms',
-        number: phoneNumber,
-        sender: 'BrukinaHub'
-      })
+      body: JSON.stringify({ expiry: 5, length: 6, medium: 'sms', number: phoneNumber, sender: 'BrukinaHub' })
     });
-
     const data = await response.json();
     if (data.code !== '1000' && data.status !== 'success') {
-      return res.status(400).json({ error: data.message || 'Failed to generate code' });
+      return res.status(400).json({ error: data.message || 'Failed to generate OTP' });
     }
     return res.status(200).json({ success: true });
   } catch (error) {
-    return res.status(500).json({ error: 'Internal gateway connection error' });
+    return res.status(500).json({ error: 'Arkesel connection failure' });
   }
 });
 
-// 2. ENDPOINT TO SECURELY VALIDATE THE CONFIRMATION TOKEN INPUT 
+// 4. ARKESEL OTP VERIFY
 app.post('/api/auth/verify-otp', async (req, res) => {
   try {
     const { phoneNumber, code } = req.body;
-    if (!phoneNumber || !code) return res.status(400).json({ error: 'Payload requires code strings' });
-
+    if (!phoneNumber || !code) return res.status(400).json({ error: 'Phone number and code required' });
     const response = await fetch('https://arkesel.com', {
       method: 'POST',
       headers: {
@@ -241,13 +97,16 @@ app.post('/api/auth/verify-otp', async (req, res) => {
       },
       body: JSON.stringify({ code, number: phoneNumber })
     });
-
     const data = await response.json();
     if (data.code === '1100' || data.message === 'Successful') {
       return res.status(200).json({ authenticated: true });
     }
-    return res.status(400).json({ error: 'Invalid verification token verification failed' });
+    return res.status(400).json({ error: 'Invalid or expired verification code' });
   } catch (error) {
-    return res.status(500).json({ error: 'Verification network pipeline failure' });
+    return res.status(500).json({ error: 'Verification validation failure' });
   }
+});
+
+app.listen(3000, () => {
+  console.log('[RAILWAY SERVER ACTIVE] Port 3000');
 });
