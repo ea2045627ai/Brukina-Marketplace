@@ -6,21 +6,24 @@ import { createClient } from '@supabase/supabase-js';
 const app = express();
 app.use(cors());
 
-// Raw parsing for Paystack hook signatures, JSON parsing for standard APIs
 app.use('/api/webhooks/paystack', express.raw({ type: 'application/json' }));
 app.use(express.json());
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ttwezetyljpvtdlvgyxr.supabase.co';
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseUrl) {
+  console.error('CRITICAL ERROR: supabaseUrl is missing.');
+}
+
+const supabaseAdmin = createClient(supabaseUrl, supabaseKey || 'placeholder_token');
 
 // 1. PAYSTACK PAYMENT INITIALIZATION
 app.post('/api/payments/initialize', async (req, res) => {
   try {
     const { amount, email, userId } = req.body;
     const amountInSubunits = Math.round(parseFloat(amount) * 100);
-    const paystackResponse = await fetch('https://paystack.co', {
+    const response = await fetch('https://paystack.co', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
@@ -32,15 +35,15 @@ app.post('/api/payments/initialize', async (req, res) => {
         metadata: { custom_fields: [{ display_name: "User ID", variable_name: "user_id", value: userId }] }
       }),
     });
-    const data = await paystackResponse.json();
+    const data = await response.json();
     if (!data.status) return res.status(400).json({ error: data.message });
     return res.json({ url: data.data.authorization_url });
   } catch (error) {
-    return res.status(500).json({ error: 'Internal payment initialization failure' });
+    return res.status(500).json({ error: 'Internal initialization failure' });
   }
 });
 
-// 2. PAYSTACK SECURE WEBHOOK
+// 2. PAYSTACK WEBHOOK
 app.post('/api/webhooks/paystack', async (req, res) => {
   try {
     const signature = req.headers['x-paystack-signature'];
@@ -57,7 +60,7 @@ app.post('/api/webhooks/paystack', async (req, res) => {
     }
     return res.status(200).json({ received: true });
   } catch (error) {
-    return res.status(500).json({ error: 'Webhook processing failure' });
+    return res.status(500).json({ error: 'Webhook database update failure' });
   }
 });
 
@@ -80,7 +83,7 @@ app.post('/api/auth/send-otp', async (req, res) => {
     }
     return res.status(200).json({ success: true });
   } catch (error) {
-    return res.status(500).json({ error: 'Arkesel connection failure' });
+    return res.status(500).json({ error: 'Arkesel transmission failure' });
   }
 });
 
