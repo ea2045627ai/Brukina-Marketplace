@@ -191,3 +191,63 @@ app.post('/api/v1/generate-invoice', async (request, response) => {
 });
 
 app.listen(port, '0.0.0.0', () => console.log(`[RAILWAY SERVER ACTIVE] Port ${port}`));
+
+// =========================================================================
+// AUTOMATED ARKESEL TERMINAL VERIFICATION CONTRACT
+// =========================================================================
+
+// 1. ENDPOINT TO GENERATE AND TRANSMIT THE 6-DIGIT VERIFICATION CODE
+app.post('/api/auth/send-otp', async (req, res) => {
+  try {
+    const { phoneNumber } = req.body;
+    if (!phoneNumber) return res.status(400).json({ error: 'Phone number is required' });
+
+    const response = await fetch('https://arkesel.com', {
+      method: 'POST',
+      headers: {
+        'api-key': process.env.ARKESEL_API_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        expiry: 5,
+        length: 6,
+        medium: 'sms',
+        number: phoneNumber,
+        sender: 'BrukinaHub'
+      })
+    });
+
+    const data = await response.json();
+    if (data.code !== '1000' && data.status !== 'success') {
+      return res.status(400).json({ error: data.message || 'Failed to generate code' });
+    }
+    return res.status(200).json({ success: true });
+  } catch (error) {
+    return res.status(500).json({ error: 'Internal gateway connection error' });
+  }
+});
+
+// 2. ENDPOINT TO SECURELY VALIDATE THE CONFIRMATION TOKEN INPUT 
+app.post('/api/auth/verify-otp', async (req, res) => {
+  try {
+    const { phoneNumber, code } = req.body;
+    if (!phoneNumber || !code) return res.status(400).json({ error: 'Payload requires code strings' });
+
+    const response = await fetch('https://arkesel.com', {
+      method: 'POST',
+      headers: {
+        'api-key': process.env.ARKESEL_API_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ code, number: phoneNumber })
+    });
+
+    const data = await response.json();
+    if (data.code === '1100' || data.message === 'Successful') {
+      return res.status(200).json({ authenticated: true });
+    }
+    return res.status(400).json({ error: 'Invalid verification token verification failed' });
+  } catch (error) {
+    return res.status(500).json({ error: 'Verification network pipeline failure' });
+  }
+});
