@@ -24,10 +24,12 @@ export default defineConfig({
     port: 5173,
     host: '0.0.0.0',
     proxy: {
-      '/developer-api': {
-        target: 'http://127.0.0.1:4179',
-        changeOrigin: false,
-        rewrite: (path) => path.slice('/developer-api'.length)
+      // CONNECTS ALL VITE INTERFACE CALLS DIRECTLY TO PORT 3000
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        secure: false,
+        ws: true
       }
     }
   },
