@@ -43,7 +43,7 @@ app.post('/api/auth/send-otp', async (req, res) => {
       message: 'Your Brukina Marketplace verification code is %otp_code%. Valid for 5 minutes.'
     });
 
-    const options = {
+        const options = {
       hostname: '://arkesel.com',
       port: 443,
       path: '/api/v2/otp/generate',
@@ -51,9 +51,11 @@ app.post('/api/auth/send-otp', async (req, res) => {
       headers: {
         'api-key': process.env.ARKESEL_API_KEY || '',
         'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(payload)
+        'Content-Length': Buffer.byteLength(payload),
+        'User-Agent': 'NodeJS/Express-Server'
       }
     };
+
 
     const request = https.request(options, (response) => {
       let body = '';
