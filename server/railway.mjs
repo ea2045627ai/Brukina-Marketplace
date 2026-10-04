@@ -11,21 +11,22 @@ const supabaseUrl = 'https://supabase.co';
 const supabaseKey = 'sb_publishable_rwhXMUxNgN6r01HRLxwsdg_TmIOmy92';
 const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
 
-// 1. FIXED SECURE PAYSTACK TRANSACTION INITIALIZATION
+// 1. PRODUCTION PAYSTACK TRANSACTION INITIALIZATION ROUTE
 app.post('/api/payments/initialize', async (req, res) => {
   try {
     const { amount, email, userId } = req.body;
     
-    // Convert to minor subunits (e.g., GHS 45.00 becomes 4500 pesewas)
+    // Convert to minor currency subunits (e.g., GHS 45.00 becomes 4500 pesewas)
     const subunits = Math.round(parseFloat(amount) * 100);
     console.log('[PAYSTACK ENGINE]: Initializing charge subunit amount:', subunits);
 
-    // CRUCIAL: Pointing directly to the official complete endpoint route
+    // FIXED: Pointing directly to the official complete endpoint API route path with explicit tunnel bypass headers
     const response = await fetch('https://paystack.co', {
       method: 'POST',
       headers: { 
         'Authorization': 'Bearer ' + process.env.PAYSTACK_SECRET_KEY, 
-        'Content-Type': 'application/json' 
+        'Content-Type': 'application/json',
+        'User-Agent': 'BrukinaMarketplace/1.0.0 NodeJS/Server'
       },
       body: JSON.stringify({ 
         email: email || 'customer@brukina-marketplace.com', 
