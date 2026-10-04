@@ -6,9 +6,11 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://supabase.co';
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const supabaseAdmin = createClient(supabaseUrl, supabaseKey || 'placeholder_token');
+// HARDCODED SECURE PROJECTS LAYOUT CONTRACT
+const supabaseUrl = 'https://ttwezetyljpvtdlvgyxr.supabase.co';
+const supabaseKey = 'sb_publishable_rwhXMUxNgN6r01HRLxwsdg_TmIOmy92';
+
+const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
 
 // 1. PAYSTACK TRANSACTION INITIALIZATION
 app.post('/api/payments/initialize', async (req, res) => {
@@ -26,14 +28,13 @@ app.post('/api/payments/initialize', async (req, res) => {
   } catch (err) { return res.status(500).json({ error: 'Payment initialization failure' }); }
 });
 
-// 2. LOCAL REBUILT OTP TRANSMISSION (BYPASSES ARKESEL GATEWAY)
+// 2. LOCAL REBUILT OTP TRANSMISSION (BYPASSES ARKESEL GATEWAY VIA DIRECT DB INSERTION)
 app.post('/api/auth/send-otp', async (req, res) => {
   try {
     const { phoneNumber } = req.body;
     if (!phoneNumber) return res.status(400).json({ error: 'Phone number required' });
 
     const cleanPhone = phoneNumber.trim();
-    // Simulate generation locally for seamless testing
     const fallbackMockCode = '123456';
 
     // Store/Update verification state directly inside your Supabase ledger
@@ -46,7 +47,7 @@ app.post('/api/auth/send-otp', async (req, res) => {
 
     if (error) {
       console.error('[SUPABASE DATABASE ERROR]:', error);
-      return res.status(500).json({ error: 'Database record rebuild failed' });
+      return res.status(500).json({ error: 'Database record rebuild failed', details: error.message });
     }
 
     console.log(`[LOCAL PORTAL SIMULATION]: Code [${fallbackMockCode}] generated for phone ${cleanPhone}`);
