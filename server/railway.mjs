@@ -74,4 +74,4 @@ app.post('/api/auth/send-otp', async (req, res) => {
   } catch (err) { return res.status(500).json({ error: 'Arkesel connection crash' }); }
 });
 
-app.listen(3000, () => { consol.log('[RAILWAY SERVER ACTIVE] Port 3000'); });
+app.listen(3000, () => { console.log('[RAILWAY SERVER ACTIVE] Port 3000'); });
