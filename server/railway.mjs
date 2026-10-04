@@ -27,11 +27,13 @@ app.post('/api/payments/initialize', async (req, res) => {
   } catch (err) { return res.status(500).json({ error: 'Payment initialization failure' }); }
 });
 
-// 2. ARKESEL BULK SMS GATEWAY TRANSMISSION (NATIVE FETCH ROUTE)
+// 2. ARKESEL BULK SMS GATEWAY TRANSMISSION (FULL ERROR LOGGING INTEGRATED)
 app.post('/api/auth/send-otp', async (req, res) => {
   try {
     const { phoneNumber } = req.body;
     if (!phoneNumber) return res.status(400).json({ error: 'Phone number required' });
+
+    console.log('[LOCAL SERVER TARGET]: Preparing to contact Arkesel Gateway for number:', phoneNumber);
 
     const arkeselResponse = await fetch('https://arkesel.com', {
       method: 'POST',
@@ -58,8 +60,11 @@ app.post('/api/auth/send-otp', async (req, res) => {
     return res.status(400).json({ error: data.message || 'Gateway rejection' });
 
   } catch (err) {
-    console.error('[FETCH ERROR CATCH]:', err);
-    return res.status(500).json({ error: 'Arkesel connection framework failure' });
+    console.error('[REAL ARKESEL ERROR NETWORK TRACE]:', err);
+    return res.status(500).json({ 
+      error: 'Arkesel connection framework failure', 
+      details: err.message 
+    });
   }
 });
 
