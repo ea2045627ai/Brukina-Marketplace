@@ -1,17 +1,17 @@
 import { createClient } from '@supabase/supabase-js';
 
-// FIXED: Aligned target URL path explicitly to your true database instance project node
 const sb = createClient(
-  'https://ttwezetyljpvtdlvgyxr.supabase.co', 
+  'https://supabase.co', 
   'sb_publishable_rwhXMUxNgN6r01HRLxwsdg_TmIOmy92'
 );
 
 async function addTestOrderRow() {
   console.log('Connecting to Supabase transaction infrastructure...');
   
+  // FIXED: Using a syntactically correct system security token identifier value to pass table validation constraints
   const testRecord = {
     reference: 'TRX_TST_' + Math.floor(Math.random() * 100000),
-    user_id: 'dev_user_01',
+    user_id: '1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d', 
     amount: 35.00,
     status: 'success',
     created_at: new Date()
