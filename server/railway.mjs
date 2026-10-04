@@ -27,7 +27,7 @@ app.post('/api/payments/initialize', async (req, res) => {
   } catch (err) { return res.status(500).json({ error: 'Payment initialization failure' }); }
 });
 
-// 2. ARKESEL BULK SMS GATEWAY TRANSMISSION (FULL ERROR LOGGING INTEGRATED)
+// 2. ARKESEL BULK SMS GATEWAY TRANSMISSION (FIXED SCHEMA MAPPING)
 app.post('/api/auth/send-otp', async (req, res) => {
   try {
     const { phoneNumber } = req.body;
@@ -44,14 +44,18 @@ app.post('/api/auth/send-otp', async (req, res) => {
       body: JSON.stringify({
         expiry: 5,
         length: 6,
-        medium: 'sms',
+        medium: 'SMS', // Strictly capitalized to satisfy v2 core gateway profiles
         number: phoneNumber.trim(),
         sender: 'Arkesel',
         message: 'Your Brukina Marketplace verification code is %otp_code%. Valid for 5 minutes.'
       })
     });
 
-    const data = await arkeselResponse.json();
+    // Capture response as raw text first to inspect it before parsing
+    const rawBody = await arkeselResponse.text();
+    console.log('[ARKESEL GATEWAY RAW LOG]:', rawBody);
+
+    const data = JSON.parse(rawBody);
     console.log('[ARKESEL RUNTIME RESPONSE]:', data);
 
     if (data.code === 1000 || data.code === '1000' || data.status === 'success') {
