@@ -10,12 +10,6 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   
-  // FIXED: Supports both GitHub project Pages and the future custom domain.
-  // GitHub project URL:
-  // https://USERNAME.github.io/brukina-marketplace/
-  //
-  // Custom domain:
-  // https://yourdomain.com/
   base: process.env.NODE_ENV === 'production'
     ? (process.env.GITHUB_ACTIONS ? '/Brukina-Marketplace/' : '/')
     : '/',
@@ -24,9 +18,9 @@ export default defineConfig({
     port: 5173,
     host: '0.0.0.0',
     proxy: {
-      // CONNECTS ALL VITE INTERFACE CALLS DIRECTLY TO PORT 3000
+      // CONNECTS ALL INTERFACE REQUESTS DIRECTLY TO YOUR RUNNING PORT 3000 BACKEND
       '/api': {
-        target: 'http://localhost:3000',
+        target: 'http://127.0.0.1:3000',
         changeOrigin: true,
         secure: false,
         ws: true
@@ -39,7 +33,6 @@ export default defineConfig({
     minify: 'esbuild',
     rollupOptions: {
       output: {
-        // Optimizes mobile loading latency across Accra networks via strategic chunk splitting
         manualChunks(id) {
           if (id.includes('node_modules')) {
             if (id.includes('@supabase')) return 'vendor-supabase';
@@ -51,7 +44,6 @@ export default defineConfig({
     }
   },
   
-  // FIXED: Restructured compressor configurations to keep error telemetry active while stripping standard tracking logs
   esbuild: {
     pure: ['console.log', 'console.info', 'console.debug'],
     drop: ['debugger']
