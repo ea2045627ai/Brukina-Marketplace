@@ -11,8 +11,8 @@ app.use(cors());
 app.use('/api/webhooks/paystack', express.raw({ type: 'application/json' }));
 app.use(express.json());
 
-// FIXED: INFRASTRUCTURE CORE DATABASE CONNECTION CONTRACTS
-const supabaseUrl = 'https://supabase.co';
+// FIXED: CRITICAL ALIGNMENT FOR YOUR TRUE PLURAL DATABASE SCHEMA AND DOMAIN ROUTE
+const supabaseUrl = 'https://ttwezetyljpvtdlvgyxr.supabase.co';
 const supabaseKey = 'sb_publishable_rwhXMUxNgN6r01HRLxwsdg_TmIOmy92';
 const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
 
@@ -76,8 +76,8 @@ app.post('/api/webhooks/paystack', async (req, res) => {
       
       console.log(`[PAYSTACK WEBHOOK CONFIRMED]: GHS ${trx.amount / 100} captured for ${userId}`);
 
-      // FIXED: SYNCED CONFIRMED RECEIPT LOG DATA ROW DIRECTLY INTO YOUR SINGULAR SCHEMA TABLE
-      await supabaseAdmin.from('momo_deposit').upsert({
+      // FIXED: ALIGNED TO READ AND WRITE DIRECTLY TO YOUR PLURAL momo_deposits DATABASES
+      await supabaseAdmin.from('momo_deposits').upsert({
         user_id: userId,
         amount: trx.amount / 100,
         reference: trx.reference,
@@ -92,8 +92,8 @@ app.post('/api/webhooks/paystack', async (req, res) => {
 // 3. UNIVERSAL ORDERS FETCHING ENGINE FOR REBUILT VIEW CARDS
 app.get('/api/orders/:userId', async (req, res) => {
   try {
-    // FIXED: SCAN PIPELINES READ FROM CHOSEN SINGULAR momo_deposit GRID TABLE SCHEMAS
-    const { data, error } = await supabaseAdmin.from('momo_deposit').select('*').order('created_at', { ascending: false });
+    // FIXED: SCAN PIPELINES READ FROM CHOSEN PLURAL momo_deposits GRID TABLES
+    const { data, error } = await supabaseAdmin.from('momo_deposits').select('*').order('created_at', { ascending: false });
     if (error) throw error;
     return res.json(data || []);
   } catch (err) { return res.status(500).json({ error: 'Failed to fetch items ordered' }); }
