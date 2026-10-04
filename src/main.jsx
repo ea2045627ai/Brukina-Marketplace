@@ -21,10 +21,11 @@ function App() {
   const [isProcessing, setIsProcessing] = useState(false);
 
   // AUTO-FETCH ITEMS ORDERED DATABASE ROWS FROM BACKEND ENGINE ON NAVIGATION
+  // FIXED: Changed route target parameter endpoint parameter to 'all' to load every successful cedi transaction row log
   useEffect(() => {
     async function fetchOrders() {
       try {
-        const response = await fetch('/api/orders/dev_user_01');
+        const response = await fetch('/api/orders/all');
         if (response.ok) {
           const data = await response.json();
           setOrderedItems(data);
@@ -149,22 +150,26 @@ function App() {
         <div style={{ border: '2px solid #231F20', padding: '24px', borderRadius: '12px', background: '#fff' }}>
           <h2>📋 Items Ordered Ledger Matrix (Supabase Synced Rows)</h2>
           {orderedItems.length === 0 ? <p>No confirmed transaction database record rows found inside your deposits table yet.</p> : (
-            <table className="order-table">
+            <table className="order-table" style={{ width: '100%', borderCollapse: 'collapse', marginTop: '15px' }}>
               <thead>
-                <tr>
-                  <th>Order Reference ID Token</th>
-                  <th>Customer Account ID</th>
-                  <th>Settlement Value Gross</th>
-                  <th>Fulfillment Routing Status</th>
+                <tr style={{ background: '#231F20', color: '#fff' }}>
+                  <th style={{ padding: '12px', border: '1px solid #eae0d5' }}>Order Reference ID Token</th>
+                  <th style={{ padding: '12px', border: '1px solid #eae0d5' }}>Customer Account ID</th>
+                  <th style={{ padding: '12px', border: '1px solid #eae0d5' }}>Settlement Value Gross</th>
+                  <th style={{ padding: '12px', border: '1px solid #eae0d5' }}>Fulfillment Status</th>
                 </tr>
               </thead>
               <tbody>
                 {orderedItems.map((order, idx) => (
                   <tr key={idx}>
-                    <td style={{ fontFamily: 'DM Mono, monospace' }}>{order.reference}</td>
-                    <td>{order.user_id}</td>
-                    <td style={{ color: '#27ae60', fontWeight: 'bold' }}>GHS {parseFloat(order.amount).toFixed(2)}</td>
-                    <td><span style={{ background: '#27ae60', color: '#fff', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold' }}>{order.status.toUpperCase()}</span></td>
+                    <td style={{ padding: '12px', border: '1px solid #eae0d5', fontFamily: 'monospace' }}>{order.reference}</td>
+                    <td style={{ padding: '12px', border: '1px solid #eae0d5' }}>{order.user_id}</td>
+                    <td style={{ padding: '12px', border: '1px solid #eae0d5', color: '#27ae60', fontWeight: 'bold' }}>GHS {parseFloat(order.amount).toFixed(2)}</td>
+                    <td style={{ padding: '12px', border: '1px solid #eae0d5' }}>
+                      <span style={{ background: '#27ae60', color: '#fff', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold' }}>
+                        {order.status.toUpperCase()}
+                      </span>
+                    </td>
                   </tr>
                 ))}
               </tbody>
