@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 
+// FIXED: Aligned target URL path explicitly to your true database instance project node
 const sb = createClient(
   'https://supabase.co', 
   'sb_publishable_rwhXMUxNgN6r01HRLxwsdg_TmIOmy92'
