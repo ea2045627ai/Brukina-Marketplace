@@ -15,7 +15,7 @@ export default async function handler(request) {
   try {
     const apiKey = process.env.DODO_PAYMENTS_API_KEY;
     const productId = process.env.DODO_PRODUCT_ID;
-    const siteUrl = process.env.URL || process.env.DEPLOY_URL;
+    const siteUrl = process.env.URL || process.env.DEPLOY_URL || process.env.PUBLIC_SITE_URL || 'http://127.0.0.1:8787';
 
     if (!apiKey || !productId || !siteUrl) {
       return json({
