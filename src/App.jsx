@@ -800,6 +800,9 @@ function Workspace({ page, role, user, onNavigate, onLogout }) {
     );
   }
 
+  const isVendor = role === 'vendor';
+  const isCourier = role === 'rider' || role === 'driver';
+
   if (page === 'profile') {
     return (
       <PageShell title="My Profile" onNavigate={onNavigate} onLogout={onLogout}>
