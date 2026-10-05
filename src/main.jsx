@@ -22,13 +22,14 @@ function App() {
 
   // FETCH ALL DEPOSIT ROWS REGARDLESS OF USER ID FILTER STRINGS
   // FIXED: Targets your true plural momo_deposits table name exactly
-  useEffect(() => {
-    sb.from('momo_deposits')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .then(({ data }) => {
-        if (data) setOrders(data);
-      });
+    useEffect(() => {
+    // Queries your healthy running backend port 3000 mapping layer smoothly
+    fetch('/api/orders/all')
+      .then(res => res.json())
+      .then(data => {
+        if (data && !data.error) setOrders(data);
+      })
+      .catch(err => console.warn('Fetch route offline sync bypass active'));
   }, [tab, cart]);
 
   const pay = async () => {
