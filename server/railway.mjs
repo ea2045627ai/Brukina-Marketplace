@@ -11,8 +11,8 @@ app.use(cors());
 app.use('/api/webhooks/paystack', express.raw({ type: 'application/json' }));
 app.use(express.json());
 
-// FIXED: CRITICAL ALIGNMENT FOR YOUR TRUE PLURAL DATABASE SCHEMA AND DOMAIN ROUTE
-const supabaseUrl = 'https://ttwezetyljpvtdlvgyxr.supabase.co';
+// Infractructure database connection contracts
+const supabaseUrl = 'https://supabase.co';
 const supabaseKey = 'sb_publishable_rwhXMUxNgN6r01HRLxwsdg_TmIOmy92';
 const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
 
@@ -26,7 +26,7 @@ app.post('/api/payments/initialize', async (req, res) => {
     const payload = JSON.stringify({
       email: email || 'customer@brukina-marketplace.com',
       amount: subunits,
-      metadata: { custom_fields: [{ display_name: 'User ID', variable_name: 'user_id', value: userId || 'dev_user_01' }] }
+      metadata: { custom_fields: [{ display_name: 'User ID', variable_name: 'user_id', value: userId || '00000000-0000-0000-0000-000000000000' }] }
     });
 
     const options = {
@@ -72,11 +72,11 @@ app.post('/api/webhooks/paystack', async (req, res) => {
     const event = JSON.parse(req.body.toString());
     if (event.event === 'charge.success') {
       const trx = event.data;
-      const userId = trx.metadata?.custom_fields?.find(f => f.variable_name === 'user_id')?.value || 'dev_user_01';
+      const userId = trx.metadata?.custom_fields?.find(f => f.variable_name === 'user_id')?.value || '00000000-0000-0000-0000-000000000000';
       
-      console.log(`[PAYSTACK WEBHOOK CONFIRMED]: GHS ${trx.amount / 100} captured for ${userId}`);
+      console.log(`[PAYSTACK WEBHOOK CONFIRMED]: GHS ${trx.amount / 100} captured`);
 
-      // FIXED: ALIGNED TO READ AND WRITE DIRECTLY TO YOUR PLURAL momo_deposits DATABASES
+      // FIXED: Writes directly to your true plural momo_deposits table name
       await supabaseAdmin.from('momo_deposits').upsert({
         user_id: userId,
         amount: trx.amount / 100,
@@ -90,9 +90,9 @@ app.post('/api/webhooks/paystack', async (req, res) => {
 });
 
 // 3. UNIVERSAL ORDERS FETCHING ENGINE FOR REBUILT VIEW CARDS
-app.get('/api/orders/:userId', async (req, res) => {
+app.get('/api/orders/all', async (req, res) => {
   try {
-    // FIXED: SCAN PIPELINES READ FROM CHOSEN PLURAL momo_deposits GRID TABLES
+    // FIXED: Reads data parameters directly from your true plural momo_deposits table name
     const { data, error } = await supabaseAdmin.from('momo_deposits').select('*').order('created_at', { ascending: false });
     if (error) throw error;
     return res.json(data || []);
