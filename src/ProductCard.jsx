@@ -244,7 +244,8 @@ export default function ProductCatalog({
         </div>
       )}
 
-      <div style={{ position: 'fixed', top: '20px', right: '20px', background: '#231F20', color: '#fff', padding: '16px 24px', borderRadius: '8px', zIndex: 2000, boxShadow: '0 4px 12px rgba(0,0,0,0.15)', fontWeight: 'bold' }}>
+      {notice && (
+        <div style={{ position: 'fixed', top: '20px', right: '20px', background: '#231F20', color: '#fff', padding: '16px 24px', borderRadius: '8px', zIndex: 2000, boxShadow: '0 4px 12px rgba(0,0,0,0.15)', fontWeight: 'bold' }}>
           {notice}
         </div>
       )}
