@@ -159,6 +159,19 @@ export default function CartPanel({
 
           const result = await response.json().catch(() => ({}));
 
+          if (response.status === 402 || result.payment_required) {
+            throw Object.assign(
+              new Error(
+                result.error ||
+                'Your wallet balance is not enough to pay for this order.'
+              ),
+              {
+                code: 'PAYMENT_REQUIRED',
+                paymentRequired: true
+              }
+            );
+          }
+
           if (!response.ok || !result.accepted) {
             throw new Error(
               result.error ||
@@ -170,12 +183,16 @@ export default function CartPanel({
           successful.push({
             item,
             orderId: result.order_id,
-            orderNumber: result.order_number
+            orderNumber: result.order_number,
+            deliveryId: result.delivery_id,
+            amountPaid: result.amount_paid,
+            remainingWalletBalance: result.remaining_wallet_balance
           });
         } catch (error) {
           failed.push({
             item,
-            error: error.message || 'Order creation failed.'
+            error: error.message || 'Order creation failed.',
+            paymentRequired: Boolean(error?.paymentRequired)
           });
         }
       }
@@ -192,9 +209,15 @@ export default function CartPanel({
       if (successful.length) {
         await onOrdersRefresh?.();
 
+        const paymentRequired = failed.some(item => item.paymentRequired);
+
         if (!failed.length) {
           setMessage(
             `${successful.length} order${successful.length === 1 ? '' : 's'} created successfully.`
+          );
+        } else if (paymentRequired) {
+          setMessage(
+            `${successful.length} order${successful.length === 1 ? '' : 's'} created. Add funds to your wallet for the remaining item${failed.length === 1 ? '' : 's'}.`
           );
         } else {
           setMessage(
@@ -202,7 +225,15 @@ export default function CartPanel({
           );
         }
       } else {
-        setMessage('No orders were created. Please review the errors below.');
+        const paymentRequired = failed.some(item => item.paymentRequired);
+
+        if (paymentRequired) {
+          setMessage(
+            'Your wallet does not have enough funds to place these orders. Add funds to your wallet, then return to the cart.'
+          );
+        } else {
+          setMessage('No orders were created. Please review the errors below.');
+        }
       }
     } catch (error) {
       console.error('[CART] Checkout failed:', error);
@@ -424,9 +455,29 @@ export default function CartPanel({
         >
           <strong>Items needing attention</strong>
 
-          {checkoutResult.failed.map(({ item, error }) => (
+          {checkoutResult.failed.map(({ item, error, paymentRequired }) => (
             <div key={item.id} style={{ marginTop: '8px', fontSize: '13px' }}>
               <strong>{item.product_name}:</strong> {error}
+
+              {paymentRequired && (
+                <button
+                  type="button"
+                  onClick={() => onNavigate?.('wallet')}
+                  style={{
+                    marginLeft: '10px',
+                    marginTop: '6px',
+                    border: 'none',
+                    background: '#231F20',
+                    color: '#fff',
+                    borderRadius: '8px',
+                    padding: '7px 10px',
+                    cursor: 'pointer',
+                    fontWeight: 800
+                  }}
+                >
+                  Open Wallet
+                </button>
+              )}
             </div>
           ))}
         </div>
