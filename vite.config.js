@@ -13,6 +13,11 @@ export default defineConfig({
         secure: false,
         rewrite: (path) => path.replace(/^\/developer-api/, ''),
       },
+      '/.netlify/functions': {
+        target: 'http://127.0.0.1:8787',
+        changeOrigin: true,
+        secure: false,
+      },
       '/api': {
         target: 'http://127.0.0.1:3000',
         changeOrigin: true,
