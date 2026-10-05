@@ -48,18 +48,15 @@ function adaptHandler(handler, { rawBody = false } = {}) {
       let bodyText = '';
 
       if (rawBody) {
-        bodyText = await new Promise((resolve, reject) => {
-          let data = '';
-
-          req.setEncoding('utf8');
-
-          req.on('data', chunk => {
-            data += chunk;
-          });
-
-          req.on('end', () => resolve(data));
-          req.on('error', reject);
-        });
+        if (Buffer.isBuffer(req.body)) {
+          bodyText = req.body;
+        } else if (req.body instanceof Uint8Array) {
+          bodyText = Buffer.from(req.body);
+        } else if (typeof req.body === 'string') {
+          bodyText = Buffer.from(req.body, 'utf8');
+        } else {
+          bodyText = Buffer.from('');
+        }
       }
 
       const protocol =
