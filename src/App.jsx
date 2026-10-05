@@ -1009,100 +1009,302 @@ function OrdersPanel({ orders = [], user, error = '' }) {
   const [selectedOrder, setSelectedOrder] = useState(null);
 
   if (error) {
-    return <div className="empty-state-box">Could not load your orders: {error}</div>;
+    return (
+      <div className="empty-state-box">
+        Could not load your orders: {error}
+      </div>
+    );
   }
 
   if (!orders.length) {
     return (
       <div className="empty-state-box">
-        You have no orders yet. Return to the marketplace to place your first order.
+        <div style={{ fontSize: '42px', marginBottom: '12px' }}>📦</div>
+        <h3 style={{ margin: '0 0 8px' }}>No orders yet</h3>
+        <p style={{ margin: 0 }}>
+          Return to the marketplace to add products to your cart and place an order.
+        </p>
       </div>
     );
   }
 
   const statusLabel = (status) =>
-    String(status || 'pending').replaceAll('_', ' ');
+    String(status || 'pending')
+      .replaceAll('_', ' ')
+      .replace(/\b\w/g, char => char.toUpperCase());
 
-  const displayField = (label, value) => {
-    if (value === null || value === undefined || value === '') return null;
-    if (label === 'customer_id') return null;
-    if (label === 'id') return null;
+  const getItems = (order) =>
+    Array.isArray(order?.order_items) ? order.order_items : [];
 
-    let displayValue = value;
+  const getProduct = (item) => {
+    const product = Array.isArray(item?.marketplace_inventory)
+      ? item.marketplace_inventory[0]
+      : item?.marketplace_inventory;
 
-    if (label === 'created_at' || label === 'updated_at') {
-      const date = new Date(value);
-      if (!Number.isNaN(date.getTime())) {
-        displayValue = date.toLocaleString();
-      }
-    }
+    return product || {};
+  };
 
-    if (label === 'total' || label === 'amount') {
-      displayValue = formatLocalCurrency(value, user);
-    }
+  const getDelivery = (order) =>
+    Array.isArray(order?.deliveries)
+      ? order.deliveries[0]
+      : order?.delivery || null;
 
-    return (
+  const formatDate = (value) => {
+    if (!value) return '—';
+
+    const date = new Date(value);
+
+    return Number.isNaN(date.getTime())
+      ? String(value)
+      : date.toLocaleString();
+  };
+
+  const formatMoney = (value) =>
+    formatLocalCurrency(Number(value || 0), user);
+
+  return (
+    <div>
       <div
-        key={label}
         style={{
           display: 'flex',
           justifyContent: 'space-between',
-          gap: '20px',
-          padding: '12px 0',
-          borderBottom: '1px solid #eee'
+          alignItems: 'center',
+          gap: '12px',
+          flexWrap: 'wrap',
+          marginBottom: '20px'
         }}
       >
-        <strong style={{ textTransform: 'capitalize' }}>
-          {label.replaceAll('_', ' ')}
-        </strong>
-        <span style={{ textAlign: 'right', wordBreak: 'break-word' }}>
-          {String(displayValue)}
-        </span>
-      </div>
-    );
-  };
+        <div>
+          <h2 style={{ margin: 0 }}>Items Ordered</h2>
+          <p style={{ margin: '6px 0 0', color: '#777' }}>
+            Your paid orders, products, quantities and delivery progress.
+          </p>
+        </div>
 
-  return (
-    <>
-      <div className="data-table-wrapper">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Order</th>
-              <th>Status</th>
-              <th>Total</th>
-              <th>Date</th>
-              <th>Details</th>
-            </tr>
-          </thead>
-          <tbody>
-            {orders.map(order => (
-              <tr
-                key={order.id}
-                onClick={() => setSelectedOrder(order)}
-                style={{ cursor: 'pointer' }}
-                title="Open order details"
+        <div
+          style={{
+            padding: '9px 14px',
+            borderRadius: '999px',
+            background: '#f4eee9',
+            fontWeight: 800
+          }}
+        >
+          {orders.length} {orders.length === 1 ? 'Order' : 'Orders'}
+        </div>
+      </div>
+
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          gap: '16px'
+        }}
+      >
+        {orders.map(order => {
+          const items = getItems(order);
+          const delivery = getDelivery(order);
+
+          return (
+            <article
+              key={order.id}
+              style={{
+                background: '#fff',
+                border: '1px solid #eadfd6',
+                borderRadius: '18px',
+                padding: '18px',
+                boxShadow: '0 8px 25px rgba(35,31,32,.06)'
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  gap: '12px',
+                  alignItems: 'flex-start',
+                  marginBottom: '14px'
+                }}
               >
-                <td><strong>{order.order_number}</strong></td>
-                <td>{statusLabel(order.status)}</td>
-                <td>{formatLocalCurrency(order.total, user)}</td>
-                <td>{new Date(order.created_at).toLocaleDateString()}</td>
-                <td>
-                  <button
-                    type="button"
-                    className="btn-outline"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setSelectedOrder(order);
+                <div>
+                  <div
+                    style={{
+                      fontSize: '12px',
+                      color: '#777',
+                      marginBottom: '4px'
                     }}
                   >
-                    View
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                    ORDER
+                  </div>
+
+                  <strong>{order.order_number || order.id}</strong>
+                </div>
+
+                <span
+                  style={{
+                    padding: '6px 10px',
+                    borderRadius: '999px',
+                    background: '#f4eee9',
+                    fontSize: '12px',
+                    fontWeight: 800,
+                    textTransform: 'capitalize'
+                  }}
+                >
+                  {statusLabel(order.status)}
+                </span>
+              </div>
+
+              {items.length ? (
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '10px',
+                    marginBottom: '16px'
+                  }}
+                >
+                  {items.map(item => {
+                    const product = getProduct(item);
+
+                    return (
+                      <div
+                        key={item.id}
+                        style={{
+                          display: 'flex',
+                          gap: '12px',
+                          alignItems: 'center',
+                          padding: '10px',
+                          borderRadius: '12px',
+                          background: '#faf8f6',
+                          border: '1px solid #eee7e1'
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: '62px',
+                            height: '62px',
+                            flex: '0 0 62px',
+                            borderRadius: '10px',
+                            overflow: 'hidden',
+                            background: '#eee7e1',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                        >
+                          {product.image_url ? (
+                            <img
+                              src={product.image_url}
+                              alt={product.product_name || 'Ordered product'}
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover'
+                              }}
+                              onError={(event) => {
+                                event.currentTarget.style.display = 'none';
+                              }}
+                            />
+                          ) : (
+                            <span style={{ fontSize: '25px' }}>📦</span>
+                          )}
+                        </div>
+
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <strong
+                            style={{
+                              display: 'block',
+                              marginBottom: '4px'
+                            }}
+                          >
+                            {product.product_name || 'Ordered product'}
+                          </strong>
+
+                          <div
+                            style={{
+                              color: '#777',
+                              fontSize: '12px'
+                            }}
+                          >
+                            {product.vendor_name
+                              ? `Vendor: ${product.vendor_name}`
+                              : 'Brukina Marketplace'}
+                          </div>
+
+                          <div
+                            style={{
+                              marginTop: '5px',
+                              fontSize: '13px'
+                            }}
+                          >
+                            Qty: <strong>{item.quantity}</strong>
+                            {' · '}
+                            {formatMoney(item.unit_price)} each
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div
+                  style={{
+                    padding: '14px',
+                    marginBottom: '16px',
+                    borderRadius: '12px',
+                    background: '#fff8f3',
+                    border: '1px solid #f0dfd2',
+                    color: '#765'
+                  }}
+                >
+                  Product details are still loading for this order.
+                </div>
+              )}
+
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  gap: '12px',
+                  paddingTop: '12px',
+                  borderTop: '1px solid #eee',
+                  marginBottom: '12px'
+                }}
+              >
+                <strong>Total</strong>
+                <strong>{formatMoney(order.total)}</strong>
+              </div>
+
+              <div
+                style={{
+                  display: 'grid',
+                  gap: '7px',
+                  fontSize: '13px',
+                  color: '#555',
+                  marginBottom: '14px'
+                }}
+              >
+                <div>
+                  <strong>Ordered:</strong> {formatDate(order.created_at)}
+                </div>
+
+                {delivery && (
+                  <div>
+                    <strong>Delivery:</strong>{' '}
+                    {statusLabel(delivery.status)}
+                  </div>
+                )}
+              </div>
+
+              <button
+                type="button"
+                className="btn-outline"
+                style={{ width: '100%' }}
+                onClick={() => setSelectedOrder(order)}
+              >
+                View Order Details
+              </button>
+            </article>
+          );
+        })}
       </div>
 
       {selectedOrder && (
@@ -1126,10 +1328,10 @@ function OrdersPanel({ orders = [], user, error = '' }) {
             style={{
               background: '#fff',
               width: '100%',
-              maxWidth: '650px',
-              maxHeight: '85vh',
+              maxWidth: '700px',
+              maxHeight: '88vh',
               overflowY: 'auto',
-              borderRadius: '14px',
+              borderRadius: '18px',
               padding: '24px',
               boxShadow: '0 20px 60px rgba(0,0,0,0.25)'
             }}
@@ -1144,62 +1346,183 @@ function OrdersPanel({ orders = [], user, error = '' }) {
               }}
             >
               <div>
-                <p style={{ margin: 0, color: '#999', fontSize: '13px' }}>
-                  ORDER DETAILS
-                </p>
-                <h2 style={{ margin: '6px 0' }}>
-                  {selectedOrder.order_number || 'Order'}
+                <div
+                  style={{
+                    fontSize: '12px',
+                    color: '#777',
+                    marginBottom: '5px'
+                  }}
+                >
+                  BRUKINA ORDER
+                </div>
+
+                <h2 style={{ margin: 0 }}>
+                  {selectedOrder.order_number || selectedOrder.id}
                 </h2>
-                <strong style={{ textTransform: 'capitalize' }}>
-                  {statusLabel(selectedOrder.status)}
-                </strong>
               </div>
 
               <button
                 type="button"
+                className="btn-outline"
                 onClick={() => setSelectedOrder(null)}
-                aria-label="Close order details"
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '28px',
-                  cursor: 'pointer',
-                  color: '#777'
-                }}
               >
-                Ã—
+                Close
               </button>
             </div>
 
-            <div>
-              {Object.entries(selectedOrder)
-                .map(([label, value]) => displayField(label, value))}
-            </div>
-
-            <div style={{ marginTop: '24px' }}>
-              <OrderChatComponent
-                orderId={selectedOrder.id}
-                currentUserName={
-                  user?.user_metadata?.full_name ||
-                  user?.email ||
-                  'Customer'
-                }
-                currentUserRole={user?.user_metadata?.role || 'customer'}
-              />
-            </div>
-
-            <button
-              type="button"
-              className="btn-primary"
-              onClick={() => setSelectedOrder(null)}
-              style={{ marginTop: '20px', width: '100%' }}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                gap: '12px',
+                padding: '12px 0',
+                borderTop: '1px solid #eee',
+                borderBottom: '1px solid #eee',
+                marginBottom: '16px'
+              }}
             >
-              Close
-            </button>
+              <span>Status</span>
+              <strong>{statusLabel(selectedOrder.status)}</strong>
+            </div>
+
+            <h3 style={{ marginBottom: '12px' }}>Products Ordered</h3>
+
+            {getItems(selectedOrder).length ? (
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px'
+                }}
+              >
+                {getItems(selectedOrder).map(item => {
+                  const product = getProduct(item);
+                  const lineTotal =
+                    Number(item.unit_price || 0) *
+                    Number(item.quantity || 0);
+
+                  return (
+                    <div
+                      key={item.id}
+                      style={{
+                        display: 'flex',
+                        gap: '14px',
+                        padding: '12px',
+                        border: '1px solid #eee7e1',
+                        borderRadius: '14px'
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: '76px',
+                          height: '76px',
+                          flex: '0 0 76px',
+                          borderRadius: '10px',
+                          overflow: 'hidden',
+                          background: '#eee7e1',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                      >
+                        {product.image_url ? (
+                          <img
+                            src={product.image_url}
+                            alt={product.product_name || 'Product'}
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover'
+                            }}
+                            onError={(event) => {
+                              event.currentTarget.style.display = 'none';
+                            }}
+                          />
+                        ) : (
+                          <span style={{ fontSize: '30px' }}>📦</span>
+                        )}
+                      </div>
+
+                      <div style={{ flex: 1 }}>
+                        <strong style={{ display: 'block' }}>
+                          {product.product_name || 'Ordered product'}
+                        </strong>
+
+                        {product.vendor_name && (
+                          <div
+                            style={{
+                              fontSize: '12px',
+                              color: '#777',
+                              marginTop: '4px'
+                            }}
+                          >
+                            Vendor: {product.vendor_name}
+                          </div>
+                        )}
+
+                        <div style={{ marginTop: '8px' }}>
+                          Quantity: <strong>{item.quantity}</strong>
+                        </div>
+
+                        <div style={{ fontSize: '13px', color: '#666' }}>
+                          Unit price: {formatMoney(item.unit_price)}
+                        </div>
+
+                        <div style={{ marginTop: '5px' }}>
+                          Line total: <strong>{formatMoney(lineTotal)}</strong>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="empty-state-box">
+                No product line items were returned for this order.
+              </div>
+            )}
+
+            <div
+              style={{
+                marginTop: '20px',
+                padding: '16px',
+                borderRadius: '14px',
+                background: '#faf8f6'
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  marginBottom: '8px'
+                }}
+              >
+                <span>Order total</span>
+                <strong>{formatMoney(selectedOrder.total)}</strong>
+              </div>
+
+              <div style={{ fontSize: '13px', color: '#666' }}>
+                Placed: {formatDate(selectedOrder.created_at)}
+              </div>
+
+              {getDelivery(selectedOrder) && (
+                <div
+                  style={{
+                    marginTop: '8px',
+                    fontSize: '13px'
+                  }}
+                >
+                  Delivery status:{' '}
+                  <strong>
+                    {statusLabel(getDelivery(selectedOrder).status)}
+                  </strong>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }
 
