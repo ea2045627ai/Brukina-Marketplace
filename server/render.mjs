@@ -8,6 +8,8 @@ import initializePayment from '../netlify/functions/initialize-payment.mjs';
 import paystackWebhook from '../netlify/functions/paystack-webhook.mjs';
 import initializeDodoPayment from '../netlify/functions/initialize-dodo-payment.mjs';
 import dodoWebhook from '../netlify/functions/dodo-webhook.mjs';
+import operationsWebhook from '../netlify/functions/operations-webhook.mjs';
+import supplyBridge from '../netlify/functions/supply-bridge.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -16,7 +18,29 @@ const rootDir = path.resolve(__dirname, '..');
 const app = express();
 const PORT = Number(process.env.PORT || 10000);
 
+app.disable('x-powered-by');
 app.use(cors());
+
+function jsonResponse(res, body, status = 200) {
+  res
+    .status(status)
+    .set('Content-Type', 'application/json')
+    .send(JSON.stringify(body));
+}
+
+function methodGuard(allowed = 'POST') {
+  return (req, res, next) => {
+    if (req.method !== allowed) {
+      res.set('Allow', allowed);
+      return jsonResponse(
+        res,
+        { accepted: false, error: 'Method not allowed' },
+        405
+      );
+    }
+    next();
+  };
+}
 
 function adaptHandler(handler, { rawBody = false } = {}) {
   return async (req, res) => {
@@ -26,6 +50,7 @@ function adaptHandler(handler, { rawBody = false } = {}) {
       if (rawBody) {
         bodyText = await new Promise((resolve, reject) => {
           let data = '';
+
           req.setEncoding('utf8');
 
           req.on('data', chunk => {
@@ -37,7 +62,11 @@ function adaptHandler(handler, { rawBody = false } = {}) {
         });
       }
 
-      const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+      const protocol =
+        req.headers['x-forwarded-proto'] ||
+        req.protocol ||
+        'https';
+
       const host = req.get('host');
 
       const request = new Request(
@@ -62,28 +91,42 @@ function adaptHandler(handler, { rawBody = false } = {}) {
         res.setHeader(key, value);
       });
 
-      const buffer = Buffer.from(await response.arrayBuffer());
-      res.end(buffer);
+      res.end(
+        Buffer.from(await response.arrayBuffer())
+      );
     } catch (error) {
       console.error('[BRUKINA API ADAPTER]', error);
 
       if (!res.headersSent) {
-        res.status(500).json({
-          accepted: false,
-          error: 'Internal server error'
-        });
+        jsonResponse(
+          res,
+          {
+            accepted: false,
+            error: 'Internal server error'
+          },
+          500
+        );
       }
     }
   };
 }
 
-/*
- * Webhooks must receive their original raw body.
- */
+/* PAYSTACK WEBHOOK */
+app.all(
+  '/.netlify/functions/paystack-webhook',
+  methodGuard('POST')
+);
+
 app.post(
   '/.netlify/functions/paystack-webhook',
   express.raw({ type: '*/*' }),
   adaptHandler(paystackWebhook, { rawBody: true })
+);
+
+/* DODO WEBHOOK */
+app.all(
+  '/.netlify/functions/dodo-webhook',
+  methodGuard('POST')
 );
 
 app.post(
@@ -92,13 +135,22 @@ app.post(
   adaptHandler(dodoWebhook, { rawBody: true })
 );
 
-/*
- * Normal JSON API functions.
- */
+/* CREATE ORDER */
+app.all(
+  '/.netlify/functions/create-order',
+  methodGuard('POST')
+);
+
 app.post(
   '/.netlify/functions/create-order',
   express.json(),
   adaptHandler(createOrder)
+);
+
+/* PAYSTACK INITIALIZATION */
+app.all(
+  '/.netlify/functions/initialize-payment',
+  methodGuard('POST')
 );
 
 app.post(
@@ -107,15 +159,43 @@ app.post(
   adaptHandler(initializePayment)
 );
 
+/* DODO INITIALIZATION */
+app.all(
+  '/.netlify/functions/initialize-dodo-payment',
+  methodGuard('POST')
+);
+
 app.post(
   '/.netlify/functions/initialize-dodo-payment',
   express.json(),
   adaptHandler(initializeDodoPayment)
 );
 
-/*
- * Basic health endpoint.
- */
+/* OPERATIONS WEBHOOK */
+app.all(
+  '/.netlify/functions/operations-webhook',
+  methodGuard('POST')
+);
+
+app.post(
+  '/.netlify/functions/operations-webhook',
+  express.json(),
+  adaptHandler(operationsWebhook)
+);
+
+/* SUPPLY BRIDGE */
+app.all(
+  '/.netlify/functions/supply-bridge',
+  methodGuard('POST')
+);
+
+app.post(
+  '/.netlify/functions/supply-bridge',
+  express.json(),
+  adaptHandler(supplyBridge)
+);
+
+/* HEALTH */
 app.get('/health', (_req, res) => {
   res.json({
     ok: true,
@@ -125,18 +205,24 @@ app.get('/health', (_req, res) => {
   });
 });
 
-/*
- * Serve the production Vite build.
- */
-app.use(express.static(path.join(rootDir, 'dist')));
+/* FRONTEND */
+app.use(
+  express.static(path.join(rootDir, 'dist'))
+);
 
 /*
- * React SPA fallback.
+ * SPA fallback comes LAST.
+ * API routes above can therefore never fall through
+ * to index.html.
  */
 app.get('*', (_req, res) => {
-  res.sendFile(path.join(rootDir, 'dist', 'index.html'));
+  res.sendFile(
+    path.join(rootDir, 'dist', 'index.html')
+  );
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`[BRUKINA RENDER SERVER] listening on 0.0.0.0:${PORT}`);
+  console.log(
+    `[BRUKINA RENDER SERVER] listening on 0.0.0.0:${PORT}`
+  );
 });
