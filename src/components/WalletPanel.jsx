@@ -6,7 +6,7 @@ export default function WalletPanel() {
   const [balance, setBalance] = useState(0);
   const [transactions, setTransactions] = useState([]);
   const [depositAmount, setDepositAmount] = useState('');
-  const [provider, setProvider] = useState('paystack');
+  const [provider, setProvider] = useState('dodo');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 

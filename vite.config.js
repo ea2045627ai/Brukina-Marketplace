@@ -12,6 +12,11 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
         ws: true
+      },
+      '/developer-api': {
+        target: 'http://127.0.0.1:4179',
+        changeOrigin: true,
+        secure: false
       }
     }
   }
