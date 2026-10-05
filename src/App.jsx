@@ -18,6 +18,7 @@ import AdminTerminalPanel from './components/AdminTerminalPanel';
 import DeveloperControlCenter from './components/developer/DeveloperControlCenter.jsx';
 import './components/developer/developer-control-center.css';
 import CartPanel from './components/CartPanel.jsx';
+import AdminDispatchPanel from './components/AdminDispatchPanel.jsx';
 
 const roles = ['customer', 'vendor', 'driver', 'rider'];
 
