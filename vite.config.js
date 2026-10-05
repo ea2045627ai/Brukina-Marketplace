@@ -11,6 +11,7 @@ export default defineConfig({
         target: 'http://127.0.0.1:4179',
         changeOrigin: true,
         secure: false,
+        rewrite: (path) => path.replace(/^\/developer-api/, ''),
       },
       '/api': {
         target: 'http://127.0.0.1:3000',
