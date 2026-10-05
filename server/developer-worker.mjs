@@ -69,6 +69,7 @@ async function inspectBrowser() {
     '/#/signup',
     '/#/dashboard',
     '/#/orders',
+    '/#/cart',
     '/#/wallet',
     '/#/profile',
     '/#/admin',
