@@ -67,16 +67,28 @@ export default async function handler(request) {
     });
 
     if (!userResponse.ok) {
+      console.error('[PAYMENT] Supabase auth verification failed', {
+        status: userResponse.status
+      });
       return json({ error: 'Authentication required' }, 401);
     }
 
     const user = await userResponse.json();
+
+    console.log('[PAYMENT] Authenticated user verified', {
+      user_id: user?.id || null,
+      email_present: Boolean(user?.email)
+    });
 
     if (!user?.id || !user?.email) {
       return json({ error: 'Authenticated user email is required' }, 400);
     }
 
     const body = await request.json();
+    console.log('[PAYMENT] Request body received', {
+      amount_present: body?.amount !== undefined
+    });
+
     const amountGhs = Number(body.amount);
 
     if (!Number.isFinite(amountGhs) || amountGhs <= 0 || amountGhs > 1000000) {
@@ -111,11 +123,19 @@ export default async function handler(request) {
     );
 
     if (!intentResponse.ok) {
-      console.error('[PAYMENT] Failed to create payment intent', await intentResponse.text());
+      const intentError = await intentResponse.text();
+      console.error('[PAYMENT] Failed to create payment intent', {
+        status: intentResponse.status,
+        error: intentError
+      });
       return json({ error: 'Payment intent could not be created.' }, 500);
     }
 
     const paymentIntentId = await intentResponse.json();
+
+    console.log('[PAYMENT] Payment intent created', {
+      payment_intent_created: Boolean(paymentIntentId)
+    });
 
     const paystackResponse = await fetch(
       'https://api.paystack.co/transaction/initialize',
@@ -147,9 +167,19 @@ export default async function handler(request) {
       !paystackResult?.status ||
       !paystackResult?.data?.authorization_url
     ) {
-      console.error('[PAYMENT] Paystack initialization failed', paystackResult);
+      console.error('[PAYMENT] Paystack initialization failed', {
+        status: paystackResponse.status,
+        paystack_status: paystackResult?.status ?? null,
+        message: paystackResult?.message ?? null,
+        authorization_url_present: Boolean(paystackResult?.data?.authorization_url)
+      });
       return json({ error: 'Unable to initialize payment.' }, 502);
     }
+
+    console.log('[PAYMENT] Paystack checkout initialized', {
+      authorization_url_present: true,
+      access_code_present: Boolean(paystackResult?.data?.access_code)
+    });
 
     await updatePaymentIntent(
       config,
