@@ -10,7 +10,7 @@ import {
 
 const exec = promisify(execFile);
 
-const PORT = Number(process.env.DEVELOPER_APP_PORT || 5175);
+const PORT = Number(process.env.DEVELOPER_APP_PORT || 5173);
 const BASE_URL = process.env.DEVELOPER_APP_URL || `http://127.0.0.1:${PORT}`;
 
 function result(type, message, data = {}) {
