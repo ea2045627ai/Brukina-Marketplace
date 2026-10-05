@@ -45,9 +45,11 @@ export default function ProductCatalog({
   query = '', 
   page = 'dashboard', 
   onNavigate, 
-  user, 
-  role, 
-  onLogout 
+  user,
+  role,
+  onLogout,
+  onAddToCart,
+  cartCount = 0
 }) {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [viewProduct, setViewProduct] = useState(null);
@@ -115,30 +117,32 @@ export default function ProductCatalog({
         throw new Error('Please sign in again before placing an order.');
       }
 
-      const orderNumber = `BRK-${Date.now()}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
+      const response = await fetch('/.netlify/functions/create-order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          inventory_id: selectedProduct.id,
+          quantity: parsedQuantity
+        })
+      });
 
-    const { data: result, error: orderError } = await supabase.rpc(
-      'place_marketplace_order_transaction',
-      {
-        p_order_number: orderNumber,
-        p_customer_id: session.user.id,
-        p_inventory_id: selectedProduct.id,
-        p_quantity: parsedQuantity
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok || !result.accepted) {
+        throw new Error(
+          result.error ||
+          result.message ||
+          'The order could not be created.'
+        );
       }
-    );
 
-    if (orderError) {
-      throw orderError;
-    }
+      setNotice(
+        `Order ${result.order_number} created successfully. Opening your orders...`
+      );
 
-    if (!result?.success) {
-      throw new Error('The order could not be created.');
-    }
-
-    result.accepted = true;
-    result.order_number = result.order_number || orderNumber;
-
-    setNotice(`Order ${result.order_number} created successfully. Opening your orders...`);
       setTimeout(() => {
         setNotice('');
         setSelectedProduct(null);
@@ -221,7 +225,27 @@ export default function ProductCatalog({
       
       {/* Dynamic Status Notification Overlay banner */}
       {notice && (
-        <div style={{ position: 'fixed', top: '20px', right: '20px', background: '#231F20', color: '#fff', padding: '16px 24px', borderRadius: '8px', zIndex: 2000, boxShadow: '0 4px 12px rgba(0,0,0,0.15)', fontWeight: 'bold' }}>
+        {!isVendor && !isCourier && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '18px' }}>
+          <button
+            type="button"
+            onClick={() => onNavigate?.('cart')}
+            style={{
+              border: '1px solid #ded5cd',
+              background: '#fff',
+              color: '#231F20',
+              borderRadius: '12px',
+              padding: '11px 15px',
+              cursor: 'pointer',
+              fontWeight: 800
+            }}
+          >
+            🛒 Cart {cartCount > 0 ? `(${cartCount})` : ''}
+          </button>
+        </div>
+      )}
+
+      <div style={{ position: 'fixed', top: '20px', right: '20px', background: '#231F20', color: '#fff', padding: '16px 24px', borderRadius: '8px', zIndex: 2000, boxShadow: '0 4px 12px rgba(0,0,0,0.15)', fontWeight: 'bold' }}>
           {notice}
         </div>
       )}
@@ -550,8 +574,9 @@ export default function ProductCatalog({
                       {!isVendor && !isCourier && (
                         <button
                           onClick={() => {
-                            setSelectedProduct(item);
-                            setQuantity(1);
+                            onAddToCart?.(item, 1);
+                            setNotice(`${item.product_name} added to your cart.`);
+                            setTimeout(() => setNotice(''), 1800);
                           }}
                           style={{
                             padding: '11px 10px',
@@ -702,9 +727,10 @@ export default function ProductCatalog({
               {!isVendor && !isCourier && (
                 <button
                   onClick={() => {
-                    setSelectedProduct(viewProduct);
-                    setQuantity(1);
+                    onAddToCart?.(viewProduct, 1);
                     setViewProduct(null);
+                    setNotice(`${viewProduct.product_name} added to your cart.`);
+                    setTimeout(() => setNotice(''), 1800);
                   }}
                   style={{
                     width: '100%',

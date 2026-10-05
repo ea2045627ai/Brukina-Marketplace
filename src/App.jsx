@@ -17,6 +17,7 @@ import AdminPriceController from './components/AdminPriceController';
 import AdminTerminalPanel from './components/AdminTerminalPanel';
 import DeveloperControlCenter from './components/developer/DeveloperControlCenter.jsx';
 import './components/developer/developer-control-center.css';
+import CartPanel from './components/CartPanel.jsx';
 
 const roles = ['customer', 'vendor', 'driver', 'rider'];
 
@@ -135,6 +136,7 @@ const pageForPath = (path) => {
   if (path === '/rider' || path.includes('/rider/')) return 'rider';
   if (path === '/driver' || path.includes('/driver/')) return 'driver';
   if (path === '/wallet' || path.includes('/wallet/')) return 'wallet';
+  if (path === '/cart' || path.includes('/cart/')) return 'cart';
   if (path === '/orders' || path.includes('/orders/')) return 'orders';
   if (path === '/profile' || path.includes('/profile/')) return 'profile';
   
@@ -187,6 +189,7 @@ export default function App() {
       fashion: '/fashion',
       beauty: '/beauty',
       orders: '/orders',
+      cart: '/cart',
       wallet: '/wallet',
       profile: '/profile',
       admin: '/admin',
@@ -406,10 +409,102 @@ function Workspace({ page, role, user, onNavigate, onLogout }) {
   const [catalog, setCatalog] = useState([]);
   const [orders, setOrders] = useState([]);
   const [ordersError, setOrdersError] = useState('');
+  const [cart, setCart] = useState(() => {
+    try {
+      const stored = localStorage.getItem('brukina_cart_v1');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
   const [wallet, setWallet] = useState(null);
   const [deliveries, setDeliveries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('brukina_cart_v1', JSON.stringify(cart));
+    } catch (error) {
+      console.warn('[CART] Could not persist cart:', error);
+    }
+  }, [cart]);
+
+  const addToCart = (product, quantity = 1) => {
+    if (!product?.id) return;
+
+    const minimum = Number(product.minimum_order_quantity) > 0
+      ? Number(product.minimum_order_quantity)
+      : 1;
+
+    const stock = Number(product.stock_quantity);
+    const maximum = Number.isFinite(stock) && stock > 0 ? stock : 1000;
+
+    const requested = Math.max(minimum, Number(quantity) || minimum);
+
+    setCart(previous => {
+      const existing = previous.find(item => item.id === product.id);
+
+      if (existing) {
+        return previous.map(item =>
+          item.id === product.id
+            ? {
+                ...item,
+                quantity: Math.min(
+                  maximum,
+                  Math.max(minimum, Number(item.quantity || minimum) + requested)
+                )
+              }
+            : item
+        );
+      }
+
+      return [
+        ...previous,
+        {
+          id: product.id,
+          product_name: product.product_name,
+          vendor_name: product.vendor_name,
+          category: product.category,
+          price: Number(product.price || 0),
+          stock_quantity: product.stock_quantity,
+          minimum_order_quantity: product.minimum_order_quantity,
+          image_url: product.image_url,
+          quantity: Math.min(maximum, requested)
+        }
+      ];
+    });
+  };
+
+  const updateCartQuantity = (id, quantity) => {
+    setCart(previous =>
+      previous.map(item =>
+        item.id === id
+          ? { ...item, quantity: Math.max(1, Number(quantity) || 1) }
+          : item
+      )
+    );
+  };
+
+  const removeFromCart = id => {
+    setCart(previous => previous.filter(item => item.id !== id));
+  };
+
+  const clearCart = () => setCart([]);
+
+  const refreshOrders = async () => {
+    if (!user?.id) return;
+
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('customer_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    setOrders(data || []);
+    setOrdersError(error?.message || '');
+  };
 
   useEffect(() => {
     let active = true;
@@ -529,6 +624,22 @@ function Workspace({ page, role, user, onNavigate, onLogout }) {
     );
   }
 
+  if (page === 'cart') {
+    return (
+      <PageShell title="My Cart" onNavigate={onNavigate} onLogout={onLogout}>
+        <CartPanel
+          cart={cart}
+          user={user}
+          onUpdateQuantity={updateCartQuantity}
+          onRemove={removeFromCart}
+          onClear={clearCart}
+          onNavigate={onNavigate}
+          onOrdersRefresh={refreshOrders}
+        />
+      </PageShell>
+    );
+  }
+
   if (page === 'orders') {
     return (
       <PageShell title="My Orders" onNavigate={onNavigate} onLogout={onLogout}>
@@ -554,6 +665,8 @@ function Workspace({ page, role, user, onNavigate, onLogout }) {
       user={user}
       role={role}
       onLogout={onLogout}
+      onAddToCart={addToCart}
+      cartCount={cart.reduce((sum, item) => sum + Number(item.quantity || 0), 0)}
     />
   );
 }
@@ -561,6 +674,7 @@ function Workspace({ page, role, user, onNavigate, onLogout }) {
 function PageShell({ title, children, role, onNavigate, onLogout }) {
   const navItems = [
     ['dashboard', 'Marketplace'],
+    ['cart', 'Cart'],
     ['orders', 'Items Ordered'],
     ['profile', 'Profile'],
     ['wallet', 'Wallet'],
