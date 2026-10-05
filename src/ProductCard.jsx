@@ -224,8 +224,7 @@ export default function ProductCatalog({
     <div className="container" style={{ maxWidth: '1200px', margin: '0 auto', padding: '16px', position: 'relative' }}>
       
       {/* Dynamic Status Notification Overlay banner */}
-      {notice && (
-        {!isVendor && !isCourier && (
+      {notice && !isVendor && !isCourier && (
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '18px' }}>
           <button
             type="button"
