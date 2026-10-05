@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { createClient } from '@supabase/supabase-js';
 
-// UNIVERSAL REBUILT PORTAL SECURE DATA LEDGERS
+// UNIVERSAL PORTAL SECURE DATA LEDGERS
 const sb = createClient(
   'https://supabase.co', 
   'sb_publishable_rwhXMUxNgN6r01HRLxwsdg_TmIOmy92'
@@ -21,9 +21,9 @@ function App() {
   const [loading, setLoading] = useState(false);
 
   // FETCH ALL DEPOSIT ROWS REGARDLESS OF USER ID FILTER STRINGS
-    // FETCH ALL DEPOSIT ROWS REGARDLESS OF USER ID FILTER STRINGS
+  // FIXED: Targets your true plural momo_deposits table name exactly
   useEffect(() => {
-    sb.from('momo_deposit')
+    sb.from('momo_deposits')
       .select('*')
       .order('created_at', { ascending: false })
       .then(({ data }) => {
@@ -38,7 +38,7 @@ function App() {
       const res = await fetch('/api/payments/initialize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: amt, email: 'customer@brukina.com', userId: 'dev_user_01' })
+        body: JSON.stringify({ amount: amt, email: 'customer@brukina.com', userId: '00000000-0000-0000-0000-000000000000' })
       });
       const d = await res.json();
       if (d.url) window.location.href = d.url;
