@@ -1,44 +1,59 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 
 export default function AdminLedgerPanel() {
   const [ledger, setLedger] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [financials, setFinancials] = useState({ grossSales: '0.00', platformFees: '0.00', activeVolume: 0 });
+  const [financials, setFinancials] = useState({
+    grossSales: '0.00',
+    platformFees: '0.00',
+    activeVolume: 0
+  });
 
   useEffect(() => {
     async function fetchSystemLedger() {
       try {
-        // FIXED: Explicitly pull relevant columns and add safety constraints
         const { data, error } = await supabase
           .from('orders')
-          .select('id, quantity, total_amount, order_status, channel_origin, created_at, products(name, owner_type)')
+          .select(`
+            id,
+            order_number,
+            total,
+            status,
+            created_at,
+            vendor_id,
+            order_items (
+              quantity,
+              marketplace_inventory (
+                product_name,
+                vendor_name,
+                vendor_id
+              )
+            )
+          `)
           .order('created_at', { ascending: false })
-          .limit(100); // Enforce a performance safety ceiling limit for active lists
-          
+          .limit(100);
+
         if (error) throw error;
-        
+
         const safeData = data || [];
         setLedger(safeData);
 
-        // Compute balances safely handles nullable relational models
         let totalGross = 0;
         let totalCommissions = 0;
 
-        safeData.forEach(order => {
-          const amount = parseFloat(order.total) || 0;
+        safeData.forEach((order) => {
+          const amount = Number(order.total || 0);
           totalGross += amount;
 
-          // Catch edge case where product record is missing or soft-deleted
-          const ownerType = order.order_items?.[0]?.marketplace_inventory?.vendor_name || 'Vendor';
-          if (ownerType === 'vendor') {
-            totalCommissions += amount * 0.10;
-          } else if (ownerType === 'admin' || ownerType === 'native') {
-            totalCommissions += amount;
-          } else {
-            // Safe fallback for soft-deleted inventory: log 10% commission minimum to prevent false audit profits
-            totalCommissions += amount * 0.10;
-          }
+          const item = order.order_items?.[0]?.marketplace_inventory;
+          const hasVendor = Boolean(
+            order.vendor_id || item?.vendor_id || item?.vendor_name
+          );
+
+          totalCommissions += hasVendor
+            ? amount * 0.10
+            : amount;
         });
 
         setFinancials({
@@ -52,39 +67,63 @@ export default function AdminLedgerPanel() {
         setLoading(false);
       }
     }
+
     fetchSystemLedger();
   }, []);
 
-  if (loading) return <div className="loading-state">Syncing platform escrow accounting...</div>;
+  if (loading) {
+    return (
+      <div className="loading-state">
+        Syncing platform escrow accounting...
+      </div>
+    );
+  }
 
   return (
     <div className="admin-panel">
       <div className="panel-header">
         <span className="admin-tag">Admin Finance Node</span>
         <h2 className="panel-title">Ecosystem Transaction Ledger</h2>
-        <p className="panel-subtitle">Audit cross-channel settlements and commission margins.</p>
+        <p className="panel-subtitle">
+          Audit cross-channel settlements and commission margins.
+        </p>
       </div>
 
       <section className="stats-grid">
         <div className="stat-card">
           <div className="stat-label">Gross Trade Volume</div>
-          <div className="stat-value">GH₵ {financials.grossSales}</div>
+          <div className="stat-value">
+            GH₵ {financials.grossSales}
+          </div>
         </div>
+
         <div className="stat-card highlight">
-          <div className="stat-label accent">Your Accumulated Profits</div>
-          <div className="stat-value accent">GH₵ {financials.platformFees}</div>
-          <small className="stat-note">100% Retail + 10% B2B Commissions</small>
+          <div className="stat-label accent">
+            Your Accumulated Profits
+          </div>
+          <div className="stat-value accent">
+            GH₵ {financials.platformFees}
+          </div>
+          <small className="stat-note">
+            100% Retail + 10% B2B Commissions
+          </small>
         </div>
+
         <div className="stat-card">
           <div className="stat-label">Total Orders Processed</div>
-          <div className="stat-value">{financials.activeVolume} sales</div>
+          <div className="stat-value">
+            {financials.activeVolume} sales
+          </div>
         </div>
       </section>
 
       <div className="data-table-wrapper">
         <h3>Settlement Activity Log</h3>
+
         {ledger.length === 0 ? (
-          <div className="empty-state-box">No transactions tracked yet.</div>
+          <div className="empty-state-box">
+            No transactions tracked yet.
+          </div>
         ) : (
           <table className="data-table">
             <thead>
@@ -96,30 +135,64 @@ export default function AdminLedgerPanel() {
                 <th>Status</th>
               </tr>
             </thead>
+
             <tbody>
-              {ledger.map(order => {
-                const ownerType = order.order_items?.[0]?.marketplace_inventory?.vendor_name || 'Vendor';
-                const amount = parseFloat(order.total) || 0;
-                
-                // Keep UI visual math consistent with ledger array state parsing rules
-                const revenueCut = ownerType === 'vendor' 
-                  ? amount * 0.10 
-                  : ownerType ? amount : amount * 0.10;
+              {ledger.map((order) => {
+                const item =
+                  order.order_items?.[0]?.marketplace_inventory;
+
+                const amount = Number(order.total || 0);
+
+                const hasVendor = Boolean(
+                  order.vendor_id ||
+                  item?.vendor_id ||
+                  item?.vendor_name
+                );
+
+                const revenueCut = hasVendor
+                  ? amount * 0.10
+                  : amount;
+
+                const quantity =
+                  order.order_items?.reduce(
+                    (sum, line) =>
+                      sum + Number(line.quantity || 0),
+                    0
+                  ) || 0;
 
                 return (
                   <tr key={order.id}>
                     <td>
-                      <strong>{order.order_items?.[0]?.marketplace_inventory?.product_name || 'Marketplace item' || 'Deleted Product'}</strong>
-                      <div className="row-meta">#{order.id.slice(0, 8)} · Qty: {order.order_items?.reduce((sum, item) => sum + Number(item.quantity || 0), 0)}</div>
+                      <strong>
+                        {item?.product_name || 'Marketplace item'}
+                      </strong>
+
+                      <div className="row-meta">
+                        #{order.order_number || order.id.slice(0, 8)}
+                        {' · '}
+                        Qty: {quantity}
+                      </div>
                     </td>
+
                     <td>
                       <span className="channel-tag">
-                        {order.order_number ? order.order_number.replace('_', ' ') : 'native'}
+                        {hasVendor ? 'vendor' : 'native'}
                       </span>
                     </td>
-                    <td>GH₵ {amount.toFixed(2)}</td>
-                    <td className="positive">GH₵ {revenueCut.toFixed(2)}</td>
-                    <td><span className="status-badge">{order.status}</span></td>
+
+                    <td>
+                      GH₵ {amount.toFixed(2)}
+                    </td>
+
+                    <td className="positive">
+                      GH₵ {revenueCut.toFixed(2)}
+                    </td>
+
+                    <td>
+                      <span className="status-badge">
+                        {order.status}
+                      </span>
+                    </td>
                   </tr>
                 );
               })}
