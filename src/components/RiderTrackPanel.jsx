@@ -70,7 +70,11 @@ export default function RiderTrackPanel() {
 
       if (lockedError) throw lockedError;
 
-      setOpenJobs(available || []);
+      const dispatched = (available || []).filter(
+        (delivery) => delivery.orders?.status === 'out_for_delivery'
+      );
+
+      setOpenJobs(dispatched);
       setMyManifest(locked || []);
     } catch (err) {
       console.error('Logistics sync failure:', err.message);

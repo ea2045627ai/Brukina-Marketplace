@@ -566,7 +566,8 @@ function Workspace({ page, role, user, onNavigate, onLogout }) {
 
         <AdminCategoryPanel />
         <div style={{ marginTop: '24px' }}><AdminPriceController /></div>
-        <div style={{ marginTop: '24px' }}><AdminLedgerPanel /></div>
+        <div style={{ marginTop: '24px' }}><AdminDispatchPanel /></div>
+<div style={{ marginTop: '24px' }}><AdminLedgerPanel /></div>
         <div style={{ marginTop: '24px' }}><AdminApiLogger /></div>
         <div style={{ marginTop: '24px' }}><AdminTerminalPanel /></div>
       </PageShell>
