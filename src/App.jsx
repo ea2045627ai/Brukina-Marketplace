@@ -287,20 +287,17 @@ export default function App() {
   }
   
   return (
-    <>
-      <DeveloperControlCenter />
-      <Workspace 
-        page={page} 
-        role={role} 
-        user={user} 
-        onNavigate={navigate} 
-        onLogout={async () => { 
-          await supabase.auth.signOut(); 
-          setUser(null); 
-          navigate('login'); 
-        }} 
-      />
-    </>
+    <Workspace 
+      page={page} 
+      role={role} 
+      user={user} 
+      onNavigate={navigate} 
+      onLogout={async () => { 
+        await supabase.auth.signOut(); 
+        setUser(null); 
+        navigate('login'); 
+      }} 
+    />
   );
 }
 
