@@ -39,11 +39,11 @@ const ROLE_POLICIES = {
   },
   deployment: {
     name: 'Deployment Team',
-    mission: 'Continuously verify production build and deployment-related infrastructure.',
+    mission: 'Continuously verify production build, Netlify deployment functions and active Dodo payment infrastructure.',
     checks: [
       'Production build passes',
-      'Railway configuration exists',
-      'Operations webhook exists',
+      'Netlify configuration exists',
+      'Dodo payment functions exist',
       'Vite configuration exists'
     ]
   },
@@ -164,8 +164,11 @@ async function runRoleAudit(role, inspection = null) {
 
   if (role === 'deployment') {
     checks.push(
-      ['Railway configuration', fileExists('server/railway.mjs')],
-      ['Operations webhook', fileExists('server/operations-webhook.mjs')],
+      ['Netlify configuration', fileExists('netlify.toml')],
+      ['Dodo payment functions',
+        fileExists('netlify/functions/initialize-dodo-payment.mjs') &&
+        fileExists('netlify/functions/dodo-webhook.mjs')
+      ],
       ['Vite configuration', fileExists('vite.config.js')]
     );
 
