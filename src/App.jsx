@@ -946,9 +946,10 @@ function Workspace({ page, role, user, onNavigate, onLogout }) {
       onAddToCart={addToCart}
       cartCount={cart.reduce((sum, item) => sum + Number(item.quantity || 0), 0)}
     />
-
+    </>
   );
 }
+
 function PageShell({ title, children, role, onNavigate, onLogout }) {
   const navItems = [
     ['dashboard', 'Marketplace'],
