@@ -589,7 +589,7 @@ export default function ProductCatalog({
                             fontSize: '12px'
                           }}
                         >
-                          Buy now
+                          🛒 Add to Cart
                         </button>
                       )}
                     </div>
@@ -744,7 +744,7 @@ export default function ProductCatalog({
                     fontSize: '15px'
                   }}
                 >
-                  Buy this product →
+                  🛒 Add to Cart
                 </button>
               )}
             </div>

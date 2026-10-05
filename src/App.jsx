@@ -491,18 +491,105 @@ function Workspace({ page, role, user, onNavigate, onLogout }) {
   const clearCart = () => setCart([]);
 
   const refreshOrders = async () => {
-    if (!user?.id) return;
+    if (!user?.id || !supabase) {
+      setOrders([]);
+      return;
+    }
 
-    const { data, error } = await supabase
-      .from('orders')
-      .select('*')
-      .eq('customer_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(20);
+    try {
+      setOrdersError('');
 
-    setOrders(data || []);
-    setOrdersError(error?.message || '');
+      const { data: orderRows, error: orderError } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('customer_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (orderError) throw orderError;
+
+      const safeOrders = Array.isArray(orderRows) ? orderRows : [];
+
+      if (!safeOrders.length) {
+        setOrders([]);
+        return;
+      }
+
+      const orderIds = safeOrders
+        .map(order => order.id)
+        .filter(Boolean);
+
+      const { data: itemRows, error: itemError } = await supabase
+        .from('order_items')
+        .select(`
+          id,
+          order_id,
+          inventory_id,
+          quantity,
+          unit_price,
+          created_at,
+          marketplace_inventory (
+            id,
+            product_name,
+            vendor_name,
+            category,
+            brand,
+            description,
+            image_url,
+            price,
+            price_display,
+            unit,
+            sku,
+            active
+          )
+        `)
+        .in('order_id', orderIds)
+        .order('created_at', { ascending: true });
+
+      if (itemError) {
+        console.error('[ORDERS] order_items load failed:', itemError);
+
+        setOrders(
+          safeOrders.map(order => ({
+            ...order,
+            order_items: []
+          }))
+        );
+
+        setOrdersError(
+          'Orders loaded, but product details could not be displayed.'
+        );
+
+        return;
+      }
+
+      const itemsByOrder = new Map();
+
+      for (const item of itemRows || []) {
+        if (!itemsByOrder.has(item.order_id)) {
+          itemsByOrder.set(item.order_id, []);
+        }
+
+        itemsByOrder.get(item.order_id).push(item);
+      }
+
+      setOrders(
+        safeOrders.map(order => ({
+          ...order,
+          order_items: itemsByOrder.get(order.id) || []
+        }))
+      );
+    } catch (error) {
+      console.error('[ORDERS] Failed to load orders:', error);
+
+      setOrdersError(
+        error?.message || 'Unable to load your orders right now.'
+      );
+
+      setOrders([]);
+    }
   };
+
 
   useEffect(() => {
     let active = true;
@@ -522,6 +609,67 @@ function Workspace({ page, role, user, onNavigate, onLogout }) {
           setOrdersError(orderResult.error?.message || '');
           setWallet(walletResult.data || null);
           setDeliveries(deliveryResult.data || []);
+
+          // Load the products belonging to each customer order.
+          const initialOrders = orderResult.data || [];
+          const initialOrderIds = initialOrders
+            .map(order => order.id)
+            .filter(Boolean);
+
+          if (initialOrderIds.length) {
+            const { data: initialItems, error: initialItemsError } =
+              await supabase
+                .from('order_items')
+                .select(`
+                  id,
+                  order_id,
+                  inventory_id,
+                  quantity,
+                  unit_price,
+                  created_at,
+                  marketplace_inventory (
+                    id,
+                    product_name,
+                    vendor_name,
+                    category,
+                    brand,
+                    description,
+                    image_url,
+                    price,
+                    price_display,
+                    unit,
+                    sku,
+                    active
+                  )
+                `)
+                .in('order_id', initialOrderIds)
+                .order('created_at', { ascending: true });
+
+            if (initialItemsError) {
+              console.error(
+                '[ORDERS] Initial order_items load failed:',
+                initialItemsError
+              );
+            } else {
+              const initialItemsByOrder = new Map();
+
+              for (const item of initialItems || []) {
+                if (!initialItemsByOrder.has(item.order_id)) {
+                  initialItemsByOrder.set(item.order_id, []);
+                }
+
+                initialItemsByOrder.get(item.order_id).push(item);
+              }
+
+              setOrders(
+                initialOrders.map(order => ({
+                  ...order,
+                  order_items:
+                    initialItemsByOrder.get(order.id) || []
+                }))
+              );
+            }
+          }
         }
       } catch (err) {
         console.error("Error loading marketplace data:", err);
@@ -642,7 +790,12 @@ function Workspace({ page, role, user, onNavigate, onLogout }) {
   if (page === 'orders') {
     return (
       <PageShell title="My Orders" onNavigate={onNavigate} onLogout={onLogout}>
-        <OrdersPanel orders={orders} user={user} error={ordersError} />
+        <OrdersPanel
+          orders={orders}
+          user={user}
+          error={ordersError}
+          onNavigate={onNavigate}
+        />
       </PageShell>
     );
   }
@@ -656,7 +809,133 @@ function Workspace({ page, role, user, onNavigate, onLogout }) {
   }
 
   return (
-    <ProductCatalog 
+    <>
+      {!isVendor && !isCourier && (
+        <div
+          style={{
+            maxWidth: '1200px',
+            margin: '0 auto',
+            padding: '16px 16px 0',
+            display: 'grid',
+            gridTemplateColumns:
+              'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: '14px'
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => onNavigate('cart')}
+            style={{
+              textAlign: 'left',
+              border: '1px solid #eadfd6',
+              background: '#fff',
+              borderRadius: '20px',
+              padding: '20px',
+              cursor: 'pointer',
+              boxShadow:
+                '0 8px 25px rgba(35,31,32,.06)'
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}
+            >
+              <span style={{ fontSize: '30px' }}>🛒</span>
+
+              <span
+                style={{
+                  minWidth: '30px',
+                  height: '30px',
+                  padding: '0 8px',
+                  borderRadius: '999px',
+                  background:
+                    cart.length ? '#C85A32' : '#eee7e1',
+                  color:
+                    cart.length ? '#fff' : '#777',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 800,
+                  fontSize: '12px'
+                }}
+              >
+                {cart.reduce(
+                  (sum, item) =>
+                    sum + Number(item.quantity || 0),
+                  0
+                )}
+              </span>
+            </div>
+
+            <strong
+              style={{
+                display: 'block',
+                marginTop: '13px',
+                color: '#231F20',
+                fontSize: '17px'
+              }}
+            >
+              My Cart
+            </strong>
+
+            <span
+              style={{
+                display: 'block',
+                marginTop: '5px',
+                color: '#777',
+                fontSize: '12px'
+              }}
+            >
+              Review products and checkout securely.
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onNavigate('orders')}
+            style={{
+              textAlign: 'left',
+              border: '1px solid #eadfd6',
+              background: '#fff',
+              borderRadius: '20px',
+              padding: '20px',
+              cursor: 'pointer',
+              boxShadow:
+                '0 8px 25px rgba(35,31,32,.06)'
+            }}
+          >
+            <div style={{ fontSize: '30px' }}>📦</div>
+
+            <strong
+              style={{
+                display: 'block',
+                marginTop: '13px',
+                color: '#231F20',
+                fontSize: '17px'
+              }}
+            >
+              Items Ordered
+            </strong>
+
+            <span
+              style={{
+                display: 'block',
+                marginTop: '5px',
+                color: '#777',
+                fontSize: '12px'
+              }}
+            >
+              View products, quantities, totals and
+              delivery status.
+            </span>
+          </button>
+        </div>
+      )}
+
+      <ProductCatalog 
       catalog={catalog}
       query={query}
       page={page}
