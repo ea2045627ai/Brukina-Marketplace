@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient.js';
 
 export default function DynamicMarketplaceEngine({ activeUserRole }) {
@@ -7,15 +7,15 @@ export default function DynamicMarketplaceEngine({ activeUserRole }) {
   const [cart, setCart] = useState({});
   const [checkoutLoading, setCheckoutLoading] = useState(false);
 
-  // 1. Fetch products from the central marketplace inventory
   const loadMarketplaceCatalog = async () => {
     try {
       const { data, error } = await supabase
         .from('marketplace_inventory')
         .select(
-          'id, name:product_name, price, stock_quantity, minimum_order_quantity, category'
+          'id, product_name, price, stock_quantity, minimum_order_quantity, category, vendor_name, image_url'
         )
         .eq('active', true)
+        .gt('stock_quantity', 0)
         .order('product_name', { ascending: true });
 
       if (error) throw error;
@@ -34,15 +34,14 @@ export default function DynamicMarketplaceEngine({ activeUserRole }) {
   useEffect(() => {
     loadMarketplaceCatalog();
 
-    // 2. Live inventory synchronization
     const catalogChannel = supabase
-      .channel('public:marketplace_inventory')
+      .channel('brukina-dynamic-marketplace')
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'marketplace_inventory',
+          table: 'marketplace_inventory'
         },
         () => {
           loadMarketplaceCatalog();
@@ -62,7 +61,21 @@ export default function DynamicMarketplaceEngine({ activeUserRole }) {
     maxStock
   ) => {
     setCart((prev) => {
-      const current = prev[itemId] || 0;
+      const current = Number(prev[itemId] || 0);
+
+      if (change > 0 && current === 0) {
+        const initialQty = Math.min(minQty, maxStock);
+
+        if (initialQty <= 0) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          [itemId]: initialQty
+        };
+      }
+
       let target = current + change;
 
       if (target <= 0) {
@@ -71,73 +84,90 @@ export default function DynamicMarketplaceEngine({ activeUserRole }) {
         return updated;
       }
 
-      // Enforce minimum wholesale order quantity
-      if (change > 0 && current === 0) {
-        target = minQty;
-      }
+      target = Math.min(target, maxStock);
 
-      if (target > maxStock) {
-        target = maxStock;
+      if (target < minQty) {
+        target = minQty;
       }
 
       return {
         ...prev,
-        [itemId]: target,
+        [itemId]: target
       };
     });
   };
 
   const executeBulkCheckout = async (itemId) => {
-    const qty = cart[itemId];
+    const qty = Number(cart[itemId] || 0);
 
-    if (!qty) return;
+    if (!Number.isInteger(qty) || qty < 1) {
+      return;
+    }
 
     setCheckoutLoading(true);
 
     try {
       const {
-        data: { user },
-      } = await supabase.auth.getUser();
+        data: { session },
+        error: sessionError
+      } = await supabase.auth.getSession();
 
-      if (!user) {
+      if (sessionError) {
+        throw sessionError;
+      }
+
+      if (!session?.access_token) {
         throw new Error(
-          'Authentication required. Please sign into your session profile.'
+          'Authentication session expired. Please sign in again.'
         );
       }
 
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      const response = await fetch(
+        '/.netlify/functions/create-order',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify({
+            inventory_id: itemId,
+            quantity: qty
+          })
+        }
+      );
 
-      if (sessionError) throw sessionError;
+      let result = {};
 
-      if (!session?.access_token) {
-        throw new Error("Authentication session expired. Please sign in again.");
+      try {
+        result = await response.json();
+      } catch {
+        result = {};
       }
 
-      const orderNumber = `BRK-${Date.now()}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
-
-    const { data: result, error: orderError } = await supabase.rpc(
-      "place_marketplace_order_transaction",
-      {
-        p_order_number: orderNumber,
-        p_customer_id: user.id,
-        p_inventory_id: itemId,
-        p_quantity: qty,
+      if (response.status === 402 || result.payment_required) {
+        throw new Error(
+          result.error ||
+            'Insufficient wallet balance. Please fund your Brukina wallet before checkout.'
+        );
       }
-    );
 
-    if (orderError) {
-      throw orderError;
-    }
+      if (response.status === 409 || result.inventory_error) {
+        throw new Error(
+          result.error ||
+            'The requested inventory is no longer available in the required quantity.'
+        );
+      }
 
-    if (!result?.success) {
-      throw new Error("The order could not be created.");
-    }
+      if (!response.ok || !result.accepted) {
+        throw new Error(
+          result.error ||
+            'The order could not be created.'
+        );
+      }
 
-    result.accepted = true;
-    result.order_number = result.order_number || orderNumber;
-
-    alert(
-        `Order ${result.order_number} successfully generated and routed to the Operations Desk!`
+      alert(
+        `Order ${result.order_number} successfully generated and routed to the Operations Desk.`
       );
 
       setCart((prev) => {
@@ -148,7 +178,13 @@ export default function DynamicMarketplaceEngine({ activeUserRole }) {
 
       await loadMarketplaceCatalog();
     } catch (err) {
-      alert(`Checkout processing error: ${err.message}`);
+      console.error('Checkout processing error:', err);
+
+      alert(
+        `Checkout processing error: ${
+          err?.message || 'Unable to complete checkout.'
+        }`
+      );
     } finally {
       setCheckoutLoading(false);
     }
@@ -189,7 +225,7 @@ export default function DynamicMarketplaceEngine({ activeUserRole }) {
           gridTemplateColumns:
             'repeat(auto-fill, minmax(280px, 1fr))',
           gap: '20px',
-          marginTop: '20px',
+          marginTop: '20px'
         }}
       >
         {catalog.length === 0 ? (
@@ -199,16 +235,15 @@ export default function DynamicMarketplaceEngine({ activeUserRole }) {
               gridColumn: '1/-1',
               textAlign: 'center',
               color: '#666',
-              padding: '40px',
+              padding: '40px'
             }}
           >
-            No live inventory lines available on the floor
-            currently.
+            No live inventory lines available on the floor currently.
           </div>
         ) : (
           catalog.map((item) => {
             const currentCartQty =
-              cart[item.id] || 0;
+              Number(cart[item.id] || 0);
 
             const minimumOrderQuantity =
               Number(item.minimum_order_quantity) || 1;
@@ -219,6 +254,9 @@ export default function DynamicMarketplaceEngine({ activeUserRole }) {
             const price =
               Number(item.price) || 0;
 
+            const total =
+              currentCartQty * price;
+
             return (
               <div
                 key={item.id}
@@ -227,7 +265,7 @@ export default function DynamicMarketplaceEngine({ activeUserRole }) {
                   border: '1px solid #eee',
                   borderRadius: '8px',
                   padding: '16px',
-                  background: '#fff',
+                  background: '#fff'
                 }}
               >
                 <span
@@ -236,171 +274,125 @@ export default function DynamicMarketplaceEngine({ activeUserRole }) {
                     fontSize: '11px',
                     textTransform: 'uppercase',
                     color: '#999',
-                    fontWeight: 'bold',
+                    fontWeight: 'bold'
                   }}
                 >
-                  {item.category || 'General'}
+                  {item.category || 'Marketplace'}
                 </span>
 
-                <h4
-                  style={{
-                    margin: '4px 0 8px 0',
-                    fontSize: '18px',
-                    color: '#111',
-                  }}
-                >
-                  {item.name}
-                </h4>
+                {item.image_url && (
+                  <img
+                    src={item.image_url}
+                    alt={item.product_name}
+                    loading="lazy"
+                    style={{
+                      width: '100%',
+                      height: '180px',
+                      objectFit: 'cover',
+                      borderRadius: '6px',
+                      marginTop: '10px'
+                    }}
+                  />
+                )}
 
-                <div
-                  style={{
-                    fontSize: '20px',
-                    fontWeight: 'bold',
-                    color: '#2ecc71',
-                    marginBottom: '12px',
-                  }}
-                >
+                <h3 style={{ marginTop: '12px' }}>
+                  {item.product_name}
+                </h3>
+
+                <p className="row-meta">
+                  {item.vendor_name || 'Brukina Vendor'}
+                </p>
+
+                <strong>
                   GH₵ {price.toFixed(2)}
+                </strong>
+
+                <div
+                  style={{
+                    marginTop: '10px',
+                    fontSize: '13px'
+                  }}
+                >
+                  Stock: {stockQuantity}
+                  <br />
+                  MOQ: {minimumOrderQuantity}
                 </div>
 
                 <div
-                  className="item-specs"
                   style={{
-                    fontSize: '13px',
-                    color: '#666',
-                    marginBottom: '16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    marginTop: '14px'
                   }}
                 >
-                  <div>
-                    Stock Available:{' '}
-                    <strong>
-                      {stockQuantity} units
-                    </strong>
-                  </div>
+                  <button
+                    type="button"
+                    className="btn-outline"
+                    disabled={
+                      checkoutLoading ||
+                      currentCartQty <= 0
+                    }
+                    onClick={() =>
+                      updateCartQuantity(
+                        item.id,
+                        -minimumOrderQuantity,
+                        minimumOrderQuantity,
+                        stockQuantity
+                      )
+                    }
+                  >
+                    −
+                  </button>
 
-                  <div>
-                    Minimum Order Qty:{' '}
-                    <strong>
-                      {minimumOrderQuantity} units
-                    </strong>
-                  </div>
+                  <strong>
+                    {currentCartQty}
+                  </strong>
+
+                  <button
+                    type="button"
+                    className="btn-outline"
+                    disabled={
+                      checkoutLoading ||
+                      currentCartQty >= stockQuantity
+                    }
+                    onClick={() =>
+                      updateCartQuantity(
+                        item.id,
+                        minimumOrderQuantity,
+                        minimumOrderQuantity,
+                        stockQuantity
+                      )
+                    }
+                  >
+                    +
+                  </button>
                 </div>
 
-                <div
-                  className="interaction-row"
-                  style={{
-                    marginTop: 'auto',
-                  }}
-                >
-                  {stockQuantity === 0 ? (
-                    <button
-                      disabled
-                      style={{
-                        width: '100%',
-                        padding: '10px',
-                        background: '#eee',
-                        color: '#999',
-                        border: 'none',
-                        borderRadius: '4px',
-                      }}
-                    >
-                      Out of Stock
-                    </button>
-                  ) : (
+                {currentCartQty > 0 && (
+                  <div style={{ marginTop: '12px' }}>
                     <div>
-                      <div
-                        className="qty-picker"
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent:
-                            'space-between',
-                          marginBottom: '10px',
-                          background: '#f9f9f9',
-                          padding: '6px',
-                          borderRadius: '4px',
-                        }}
-                      >
-                        <button
-                          onClick={() =>
-                            updateCartQuantity(
-                              item.id,
-                              -1,
-                              minimumOrderQuantity,
-                              stockQuantity
-                            )
-                          }
-                          style={{
-                            border: 'none',
-                            background: 'none',
-                            cursor: 'pointer',
-                            padding: '4px 10px',
-                            fontSize: '16px',
-                          }}
-                        >
-                          -
-                        </button>
-
-                        <span
-                          style={{
-                            fontWeight: 'bold',
-                          }}
-                        >
-                          {currentCartQty ||
-                            'Select Qty'}
-                        </span>
-
-                        <button
-                          onClick={() =>
-                            updateCartQuantity(
-                              item.id,
-                              1,
-                              minimumOrderQuantity,
-                              stockQuantity
-                            )
-                          }
-                          style={{
-                            border: 'none',
-                            background: 'none',
-                            cursor: 'pointer',
-                            padding: '4px 10px',
-                            fontSize: '16px',
-                          }}
-                        >
-                          +
-                        </button>
-                      </div>
-
-                      {currentCartQty > 0 && (
-                        <button
-                          disabled={checkoutLoading}
-                          onClick={() =>
-                            executeBulkCheckout(
-                              item.id
-                            )
-                          }
-                          style={{
-                            width: '100%',
-                            padding: '10px',
-                            background: '#111',
-                            color: '#fff',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontWeight: 'bold',
-                          }}
-                        >
-                          {checkoutLoading
-                            ? 'Routing Order...'
-                            : `Buy (GH₵ ${(
-                                price *
-                                currentCartQty
-                              ).toFixed(2)})`}
-                        </button>
-                      )}
+                      Order total:{' '}
+                      <strong>
+                        GH₵ {total.toFixed(2)}
+                      </strong>
                     </div>
-                  )}
-                </div>
+
+                    <button
+                      type="button"
+                      className="btn-primary"
+                      disabled={checkoutLoading}
+                      onClick={() =>
+                        executeBulkCheckout(item.id)
+                      }
+                      style={{ marginTop: '10px' }}
+                    >
+                      {checkoutLoading
+                        ? 'Processing...'
+                        : 'Checkout Securely'}
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })
