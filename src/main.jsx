@@ -23,7 +23,7 @@ function App() {
   // FETCH ALL DEPOSIT ROWS REGARDLESS OF USER ID FILTER STRINGS
     // FETCH ALL DEPOSIT ROWS REGARDLESS OF USER ID FILTER STRINGS
   useEffect(() => {
-    sb.from('momo_deposits')
+    sb.from('momo_deposit')
       .select('*')
       .order('created_at', { ascending: false })
       .then(({ data }) => {
