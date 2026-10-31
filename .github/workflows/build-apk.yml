@@ -1,0 +1,75 @@
+﻿name: Compile Brukina Android Production Package
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Initialize Java Development Environment
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Initialize Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Configure Global CLI Build Modules
+        run: npm install -g @bubblewrap/cli
+
+      - name: Generate Secure Keystore Signatures
+        run: |
+          keytool -genkey -v -keystore android.keystore -alias androidkey -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass password -keypass password \
+            -dname "CN=Brukina, OU=Production, O=Marketplace, L=Accra, S=GreaterAccra, C=GH"
+
+      - name: Pre-scaffold Configuration Files
+        run: |
+          echo '{
+            "packageId": "com.brukinamarketplace.twa",
+            "host": "brukinamarketplace.github.io",
+            "name": "Brukina Marketplace",
+            "launcherName": "BrukinaMkt",
+            "applicationId": "com.brukinamarketplace.twa",
+            "statusBarColor": "#000000",
+            "navigationBarColor": "#000000",
+            "displayMode": "standalone",
+            "orientation": "default",
+            "startUrl": "/",
+            "webManifestUrl": "https://github.io",
+            "iconUrl": "https://picsum.photos",
+            "fallbackUrl": "https://brukinamarketplace.github.io/",
+            "splashScreenFadeOutDuration": 300,
+            "signingKey": {
+              "path": "./android.keystore",
+              "alias": "androidkey"
+            },
+            "appVersionName": "1.0.0",
+            "appVersionCode": 1,
+            "shadowConnections": [],
+            "shareTarget": false,
+            "fingerprints": [],
+            "generatorApp": "bubblewrap-cli"
+          }' > twa-manifest.json
+
+      - name: Execute Bubblewrap Build Package
+        run: |
+          echo -e "password\npassword" | bubblewrap build
+
+      - name: Archive Production APK and AAB Packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: Brukina-Marketplace-Release
+          path: |
+            *.apk
+            *.aab

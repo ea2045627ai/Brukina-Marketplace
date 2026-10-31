@@ -1,0 +1,26 @@
+﻿{
+  "packageId": "com.brukinamarketplace.twa",
+  "host": "brukinamarketplace.github.io",
+  "name": "Brukina Marketplace",
+  "launcherName": "BrukinaMkt",
+  "applicationId": "com.brukinamarketplace.twa",
+  "statusBarColor": "#000000",
+  "navigationBarColor": "#000000",
+  "displayMode": "standalone",
+  "orientation": "default",
+  "startUrl": "/",
+  "webManifestUrl": "https://github.io",
+  "iconUrl": "https://picsum.photos",
+  "fallbackUrl": "https://github.io",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "androidkey"
+  },
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "shadowConnections": [],
+  "shareTarget": false,
+  "fingerprints": [],
+  "generatorApp": "bubblewrap-cli"
+}
