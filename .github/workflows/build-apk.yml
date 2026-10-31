@@ -37,7 +37,7 @@ jobs:
         run: |
           echo '{
             "packageId": "com.brukinamarketplace.twa",
-            "host": "brukinamarketplace.github.io",
+            "host": "ea2045627ai.github.io",
             "name": "Brukina Marketplace",
             "launcherName": "BrukinaMkt",
             "applicationId": "com.brukinamarketplace.twa",
@@ -48,7 +48,7 @@ jobs:
             "startUrl": "/",
             "webManifestUrl": "https://github.io",
             "iconUrl": "https://picsum.photos",
-            "fallbackUrl": "https://brukinamarketplace.github.io/",
+            "fallbackUrl": "https://github.io",
             "splashScreenFadeOutDuration": 300,
             "signingKey": {
               "path": "./android.keystore",
