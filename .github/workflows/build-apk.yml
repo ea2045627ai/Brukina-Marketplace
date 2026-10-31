@@ -45,10 +45,10 @@ jobs:
             "navigationBarColor": "#000000",
             "displayMode": "standalone",
             "orientation": "default",
-            "startUrl": "/",
+            "startUrl": "/Brukina-Marketplace/",
             "webManifestUrl": "https://github.io",
             "iconUrl": "https://picsum.photos",
-            "fallbackUrl": "https://github.io",
+            "fallbackUrl": "https://ea2045627ai.github.io/Brukina-Marketplace/",
             "splashScreenFadeOutDuration": 300,
             "signingKey": {
               "path": "./android.keystore",
