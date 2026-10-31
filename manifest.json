@@ -1,7 +1,7 @@
 ﻿{
   "name": "Brukina Marketplace",
   "short_name": "BrukinaMkt",
-  "start_url": "/",
+  "start_url": "/Brukina-Marketplace/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#000000",
