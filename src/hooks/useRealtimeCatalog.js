@@ -24,8 +24,8 @@ const upsertById = (products, product) => {
 
 export function useRealtimeCatalog(supabase, { freeDeliveryOnly = false } = {}) {
   const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [loadedRequest, setLoadedRequest] = useState(null);
+  const [requestError, setRequestError] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -36,9 +36,6 @@ export function useRealtimeCatalog(supabase, { freeDeliveryOnly = false } = {}) 
         active = false;
       };
     }
-
-    setLoading(true);
-    setError(null);
 
     const channel = supabase
       .channel('marketplace-inventory-catalog')
@@ -69,7 +66,11 @@ export function useRealtimeCatalog(supabase, { freeDeliveryOnly = false } = {}) 
       .subscribe((status, subscriptionError) => {
         if (!active) return;
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          setError(subscriptionError || new Error(`Catalog subscription ${status.toLowerCase()}.`));
+          setRequestError({
+            supabase,
+            freeDeliveryOnly,
+            error: subscriptionError || new Error(`Catalog subscription ${status.toLowerCase()}.`)
+          });
         }
       });
 
@@ -94,9 +95,9 @@ export function useRealtimeCatalog(supabase, { freeDeliveryOnly = false } = {}) 
           );
         }
       } catch (loadError) {
-        if (active) setError(loadError);
+        if (active) setRequestError({ supabase, freeDeliveryOnly, error: loadError });
       } finally {
-        if (active) setLoading(false);
+        if (active) setLoadedRequest({ supabase, freeDeliveryOnly });
       }
     };
 
@@ -110,6 +111,13 @@ export function useRealtimeCatalog(supabase, { freeDeliveryOnly = false } = {}) 
 
   const missingSupabaseClient = !supabase?.from || !supabase?.channel || !supabase?.removeChannel;
   const visibleProducts = missingSupabaseClient ? [] : products;
+  const loading = !missingSupabaseClient
+    && (loadedRequest?.supabase !== supabase || loadedRequest?.freeDeliveryOnly !== freeDeliveryOnly);
+  const error = missingSupabaseClient
+    ? missingSupabaseClientError
+    : requestError?.supabase === supabase && requestError.freeDeliveryOnly === freeDeliveryOnly
+      ? requestError.error
+      : null;
 
   return {
     products: visibleProducts,
