@@ -30,10 +30,10 @@ cleanup() {
     wait "$functions_pid" 2>/dev/null || true
   fi
   if (( started_supabase )); then
-    npx --yes supabase@latest stop --workdir "$staging_workdir" >/dev/null
+    npx --yes supabase@latest stop --workdir "$staging_workdir" >/dev/null 2>&1 || true
   fi
   rm -f -- "$status_file" "$mock_env_file" "$staging_workdir/supabase"
-  rmdir "$staging_workdir"
+  rmdir "$staging_workdir" 2>/dev/null || true
   exit "$result"
 }
 trap cleanup EXIT
@@ -42,8 +42,8 @@ trap 'exit 143' TERM
 
 if ! npx --yes supabase@latest status --workdir "$staging_workdir" --output env >"$status_file" 2>/dev/null; then
   printf 'Starting an isolated local Supabase stack. No remote project is used.\n'
-  npx --yes supabase@latest start --workdir "$staging_workdir" --yes
   started_supabase=1
+  npx --yes supabase@latest start --workdir "$staging_workdir" --yes
   npx --yes supabase@latest status --workdir "$staging_workdir" --output env >"$status_file"
 fi
 
