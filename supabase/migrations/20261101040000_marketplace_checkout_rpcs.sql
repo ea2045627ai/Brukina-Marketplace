@@ -1,5 +1,16 @@
 BEGIN;
 
+ALTER TABLE public.marketplace_order_payments
+  ADD COLUMN IF NOT EXISTS authorization_url text;
+
+ALTER TABLE public.marketplace_order_payments
+  DROP CONSTRAINT IF EXISTS marketplace_order_payments_payment_method_check;
+ALTER TABLE public.marketplace_order_payments
+  ADD CONSTRAINT marketplace_order_payments_payment_method_check
+  CHECK (payment_method IN ('MTN', 'Telecel', 'AT', 'Paystack'));
+
+DROP FUNCTION IF EXISTS public.create_marketplace_checkout_order(uuid, jsonb, text, uuid);
+
 CREATE OR REPLACE FUNCTION public.create_marketplace_checkout_order(
   p_customer_id uuid,
   p_items jsonb,
@@ -13,7 +24,8 @@ RETURNS TABLE (
   subtotal numeric,
   delivery_charge numeric,
   total numeric,
-  payment_status text
+  payment_status text,
+  authorization_url text
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -37,7 +49,7 @@ BEGIN
   IF p_customer_id IS NULL OR p_idempotency_key IS NULL THEN
     RAISE EXCEPTION 'customer and idempotency key are required' USING ERRCODE = '22023';
   END IF;
-  IF p_payment_method NOT IN ('MTN', 'Telecel', 'AT') THEN
+  IF p_payment_method IS DISTINCT FROM 'Paystack' THEN
     RAISE EXCEPTION 'unsupported payment method' USING ERRCODE = '22023';
   END IF;
   IF jsonb_typeof(p_items) IS DISTINCT FROM 'array'
@@ -58,7 +70,7 @@ BEGIN
   SELECT payment.order_id, payment.transaction_ref,
          payment.amount - payment.delivery_charge AS existing_subtotal,
          payment.delivery_charge, payment.amount, payment.payment_status,
-         orders.order_number
+         orders.order_number, payment.authorization_url
   INTO v_existing
   FROM public.marketplace_order_payments AS payment
   JOIN public.orders AS orders ON orders.id = payment.order_id
@@ -68,7 +80,8 @@ BEGIN
   IF FOUND THEN
     RETURN QUERY SELECT v_existing.order_id, v_existing.order_number,
       v_existing.transaction_ref, v_existing.existing_subtotal,
-      v_existing.delivery_charge, v_existing.amount, v_existing.payment_status;
+      v_existing.delivery_charge, v_existing.amount, v_existing.payment_status,
+      v_existing.authorization_url;
     RETURN;
   END IF;
 
@@ -168,7 +181,7 @@ BEGIN
   );
 
   RETURN QUERY SELECT v_order_id, v_order_number, v_transaction_ref,
-    v_subtotal, v_delivery_charge, v_total, 'pending'::text;
+    v_subtotal, v_delivery_charge, v_total, 'pending'::text, NULL::text;
 END;
 $function$;
 

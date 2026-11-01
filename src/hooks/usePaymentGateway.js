@@ -1,14 +1,12 @@
 import { useRef, useState } from 'react';
 import { supabase } from '../supabaseClient.js';
 
-const supportedNetworks = new Set(['MTN', 'Telecel', 'AT']);
-const ghanaPhonePattern = /^(?:\+233|0)\d{9}$/;
-
 export function usePaymentGateway() {
   const [processing, setProcessing] = useState(false);
   const [paymentError, setPaymentError] = useState(null);
   const [transactionId, setTransactionId] = useState(null);
   const [paymentPending, setPaymentPending] = useState(false);
+  const [paymentUrl, setPaymentUrl] = useState(null);
   const idempotencyKey = useRef(null);
 
   const processMarketplaceCheckout = async orderPayload => {
@@ -20,6 +18,7 @@ export function usePaymentGateway() {
     setPaymentError(null);
     setTransactionId(null);
     setPaymentPending(false);
+    setPaymentUrl(null);
 
     try {
       if (!supabase) {
@@ -39,16 +38,6 @@ export function usePaymentGateway() {
         return { inventory_id: item.id, quantity };
       });
 
-      const phoneNumber = String(orderPayload.paymentDetails?.phoneNumber || '').replace(/[\s()-]/g, '');
-      const networkProvider = orderPayload.paymentDetails?.networkProvider;
-
-      if (!ghanaPhonePattern.test(phoneNumber)) {
-        throw new Error('Enter a valid Ghanaian mobile money number.');
-      }
-      if (!supportedNetworks.has(networkProvider)) {
-        throw new Error('Select a supported mobile money network.');
-      }
-
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
       if (sessionError) throw sessionError;
       if (!sessionData.session) {
@@ -60,7 +49,6 @@ export function usePaymentGateway() {
         {
           body: {
             items,
-            payment: { phone_number: phoneNumber, network_provider: networkProvider },
             idempotency_key: idempotencyKey.current || (idempotencyKey.current = crypto.randomUUID())
           }
         }
@@ -71,8 +59,21 @@ export function usePaymentGateway() {
         throw new Error('The checkout service returned an invalid payment response.');
       }
 
+      let checkoutUrl = null;
+      if (data.status === 'pending') {
+        if (typeof data.payment_url !== 'string') {
+          throw new Error('Paystack did not return a checkout URL.');
+        }
+        const parsedUrl = new URL(data.payment_url);
+        if (parsedUrl.protocol !== 'https:' || parsedUrl.hostname !== 'checkout.paystack.com') {
+          throw new Error('Paystack returned an untrusted checkout URL.');
+        }
+        checkoutUrl = parsedUrl.toString();
+      }
+
       setTransactionId(data.reference);
       setPaymentPending(data.status === 'pending');
+      setPaymentUrl(checkoutUrl);
       idempotencyKey.current = null;
       return {
         success: data.status === 'paid',
@@ -90,11 +91,52 @@ export function usePaymentGateway() {
     }
   };
 
+  const verifyMarketplacePayment = async () => {
+    if (processing) {
+      return { success: false, error: 'A checkout request is already in progress.' };
+    }
+    if (!supabase || !transactionId) {
+      return { success: false, error: 'There is no payment reference to verify.' };
+    }
+
+    setProcessing(true);
+    setPaymentError(null);
+    try {
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+      if (!sessionData.session) throw new Error('Sign in before checking payment status.');
+
+      const { data, error: verifyError } = await supabase.functions.invoke(
+        'marketplace-checkout',
+        { body: { action: 'verify', reference: transactionId } }
+      );
+      if (verifyError) throw verifyError;
+      if (!data || !['pending', 'paid'].includes(data.status) || data.reference !== transactionId) {
+        throw new Error('The payment verification service returned an invalid response.');
+      }
+
+      const paid = data.status === 'paid';
+      setPaymentPending(!paid);
+      if (paid) setPaymentUrl(null);
+      return { success: paid, pending: !paid, reference: transactionId };
+    } catch (error) {
+      const message = error instanceof Error
+        ? error.message
+        : 'Payment status could not be verified. Please try again.';
+      setPaymentError(message);
+      return { success: false, error: message };
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   return {
     processMarketplaceCheckout,
+    verifyMarketplacePayment,
     processing,
     paymentError,
     transactionId,
-    paymentPending
+    paymentPending,
+    paymentUrl
   };
 }

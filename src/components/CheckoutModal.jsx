@@ -1,23 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { usePaymentGateway } from '../hooks/usePaymentGateway.js';
 import './CheckoutModal.css';
-
-const networks = [
-  { value: 'MTN', label: 'MTN Mobile Money' },
-  { value: 'Telecel', label: 'Telecel Cash' },
-  { value: 'AT', label: 'AT Money' }
-];
 
 export default function CheckoutModal({ cartItems = [], onCheckoutSuccess, onClose }) {
   const {
     processMarketplaceCheckout,
+    verifyMarketplacePayment,
     processing,
     paymentError,
     transactionId,
-    paymentPending
+    paymentPending,
+    paymentUrl
   } = usePaymentGateway();
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [networkProvider, setNetworkProvider] = useState('MTN');
 
   const subtotal = cartItems.reduce((sum, item) => {
     const price = Number(item.price);
@@ -39,10 +33,14 @@ export default function CheckoutModal({ cartItems = [], onCheckoutSuccess, onClo
   const handlePaymentSubmit = async event => {
     event.preventDefault();
     const result = await processMarketplaceCheckout({
-      items: cartItems.map(item => ({ id: item.id, quantity: item.quantity || 1 })),
-      paymentDetails: { phoneNumber, networkProvider }
+      items: cartItems.map(item => ({ id: item.id, quantity: item.quantity || 1 }))
     });
 
+    if (result.success) onCheckoutSuccess?.(result.reference);
+  };
+
+  const handlePaymentVerification = async () => {
+    const result = await verifyMarketplacePayment();
     if (result.success) onCheckoutSuccess?.(result.reference);
   };
 
@@ -102,45 +100,50 @@ export default function CheckoutModal({ cartItems = [], onCheckoutSuccess, onClo
 
         {transactionId ? (
           <div className="checkout-result" role="status">
-            <h3>{paymentPending ? 'Payment request sent' : 'Payment confirmed'}</h3>
+            <h3>{paymentPending ? 'Complete payment with Paystack' : 'Payment confirmed'}</h3>
             <p>
               {paymentPending
-                ? 'Approve the mobile money prompt on your phone. The order is not marked paid until the provider confirms it.'
-                : 'The payment provider confirmed your payment.'}
+                ? 'Continue to Paystack to authorize the mobile money payment. Your order is marked paid only after Paystack confirms it.'
+                : 'Paystack confirmed your payment.'}
             </p>
             <p className="checkout-reference">Reference: {transactionId}</p>
+            {paymentPending && paymentUrl && (
+              <a
+                className="checkout-paystack-link"
+                href={paymentUrl}
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                Continue to Paystack
+              </a>
+            )}
+            {paymentError && <p className="checkout-error" role="alert">{paymentError}</p>}
             {paymentPending && (
-              <button className="checkout-secondary" onClick={onClose} type="button">
-                Close
-              </button>
+              <div className="checkout-actions">
+                <button
+                  className="checkout-secondary"
+                  disabled={processing}
+                  onClick={onClose}
+                  type="button"
+                >
+                  Close
+                </button>
+                <button
+                  className="checkout-primary"
+                  disabled={processing}
+                  onClick={handlePaymentVerification}
+                  type="button"
+                >
+                  {processing ? 'Checking…' : 'Check payment status'}
+                </button>
+              </div>
             )}
           </div>
         ) : (
           <form onSubmit={handlePaymentSubmit}>
-            <label className="checkout-field">
-              <span>Mobile money network</span>
-              <select
-                onChange={event => setNetworkProvider(event.target.value)}
-                value={networkProvider}
-              >
-                {networks.map(network => (
-                  <option key={network.value} value={network.value}>{network.label}</option>
-                ))}
-              </select>
-            </label>
-
-            <label className="checkout-field">
-              <span>Mobile money number</span>
-              <input
-                autoComplete="tel"
-                inputMode="tel"
-                onChange={event => setPhoneNumber(event.target.value)}
-                placeholder="024 400 0000"
-                required
-                type="tel"
-                value={phoneNumber}
-              />
-            </label>
+            <p className="checkout-disclaimer">
+              Paystack will collect your mobile money network and phone number securely on its hosted checkout page.
+            </p>
 
             {paymentError && <p className="checkout-error" role="alert">{paymentError}</p>}
 
