@@ -11,7 +11,7 @@ The market hub supports email/password, Google OAuth, Apple OAuth, and phone/SMS
 
 ## Supabase Auth dashboard
 
-1. Apply the profile migration with the rest of the project migrations (`npx supabase link --project-ref <project-ref>` and `npx supabase db push`).
+1. Apply the project migrations (`npx supabase link --project-ref <project-ref>` and `npx supabase db push`). The inventory policy migration removes obsolete broad policies while retaining public reads for active inventory and scoped vendor access.
 2. In **Authentication → URL Configuration**, set **Site URL** to the real production origin. Add that origin and the local development origin (normally `http://localhost:5173`) to **Redirect URLs**. Do not use wildcard production redirects.
 3. Enable email signup and configure email confirmation/SMTP. The email callback returns to the application root.
 4. Enable Google and Apple in **Authentication → Sign In / Providers**. Register each provider's Supabase callback URL (`https://<project-ref>.supabase.co/auth/v1/callback`) in that provider's console, then enter its client ID and secret in Supabase's provider settings. Keep secrets in provider dashboards, not this repository.
