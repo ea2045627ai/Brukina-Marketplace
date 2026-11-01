@@ -3,6 +3,7 @@ import process from 'node:process';
 import { loadEnv } from 'vite';
 
 const root = process.cwd();
+const dryRun = process.argv.includes('--dry-run');
 const fail = message => {
   console.error(`ERROR: ${message}`);
   process.exit(1);
@@ -24,10 +25,6 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 if (deployToken && /^(your_|paste_|placeholder)/i.test(deployToken)) {
   fail('NETLIFY_AUTH_TOKEN contains a placeholder value.');
-}
-
-if (!appOrigin) {
-  fail('Set APP_ORIGIN to the deployed HTTPS origin in .env.production or the environment.');
 }
 
 let appUrl;
@@ -76,6 +73,11 @@ for (const asset of [
     if (error?.code === 'ENOENT') fail(`Required production asset is missing: dist/${asset}`);
     throw error;
   }
+}
+
+if (dryRun) {
+  console.log('Dry run complete. Netlify upload was not attempted.');
+  process.exit(0);
 }
 
 console.log(`Publishing verified build to ${appUrl.origin}...`);

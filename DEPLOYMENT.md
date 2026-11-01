@@ -28,6 +28,8 @@ npm run deploy:netlify
 
 The command validates configuration, runs ESLint and the production build, checks required PWA assets, then requests a production deploy. It stops with the CLI error if Netlify blocks production deploys or the account lacks permission.
 
+To validate configuration and build without uploading, run `npm run deploy:netlify -- --dry-run`.
+
 ## Deploy from GitHub Actions
 
 Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as variables and `NETLIFY_AUTH_TOKEN` as a secret in the repository's `production` environment, then run **Actions → Deploy Brukina Marketplace → Run workflow**. The site ID and app origin are already configured. The workflow is manual so production is not changed by an unreviewed push.
