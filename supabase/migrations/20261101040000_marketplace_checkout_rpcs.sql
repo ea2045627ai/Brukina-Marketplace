@@ -206,6 +206,11 @@ BEGIN
   IF v_payment.amount <> p_amount OR v_payment.currency <> p_currency THEN
     RAISE EXCEPTION 'payment amount or currency mismatch' USING ERRCODE = '22023';
   END IF;
+  IF v_payment.provider_reference IS NOT NULL
+    AND v_payment.provider_reference IS DISTINCT FROM p_provider_reference THEN
+    RAISE EXCEPTION 'provider reference does not match the initialized payment'
+      USING ERRCODE = '22023';
+  END IF;
 
   IF v_payment.payment_status = 'paid' THEN
     IF v_payment.provider_reference IS DISTINCT FROM p_provider_reference THEN
