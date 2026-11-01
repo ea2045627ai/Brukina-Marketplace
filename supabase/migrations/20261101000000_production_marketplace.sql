@@ -174,7 +174,7 @@ FROM public.marketplace_inventory;
 
 GRANT SELECT ON public.inventory TO anon, authenticated;
 
-INSERT INTO public.marketplace_inventory (
+WITH seed (
   product_name,
   vendor_name,
   category,
@@ -209,16 +209,43 @@ VALUES
     '50 kg bag', 800, 10, 105.00, 'GH₵ 105.00', 'FREE DELIVERY',
     ARRAY['wholesale', 'free-delivery', 'construction'], true, '/Brukina-Marketplace/icon-512.png', true
   )
-ON CONFLICT (product_name, vendor_name) DO UPDATE SET
-  category = EXCLUDED.category,
-  description = EXCLUDED.description,
-  unit = EXCLUDED.unit,
-  minimum_order_quantity = EXCLUDED.minimum_order_quantity,
-  price = EXCLUDED.price,
-  price_display = EXCLUDED.price_display,
-  badge = EXCLUDED.badge,
-  tags = EXCLUDED.tags,
-  free_delivery = EXCLUDED.free_delivery,
-  active = EXCLUDED.active;
+INSERT INTO public.marketplace_inventory (
+  product_name,
+  vendor_name,
+  category,
+  description,
+  unit,
+  stock_quantity,
+  minimum_order_quantity,
+  price,
+  price_display,
+  badge,
+  tags,
+  free_delivery,
+  image_url,
+  active
+)
+SELECT
+  seed.product_name,
+  seed.vendor_name,
+  seed.category,
+  seed.description,
+  seed.unit,
+  seed.stock_quantity,
+  seed.minimum_order_quantity,
+  seed.price,
+  seed.price_display,
+  seed.badge,
+  seed.tags,
+  seed.free_delivery,
+  seed.image_url,
+  seed.active
+FROM seed
+WHERE NOT EXISTS (
+  SELECT 1
+  FROM public.marketplace_inventory existing
+  WHERE existing.product_name = seed.product_name
+    AND existing.vendor_name = seed.vendor_name
+);
 
 COMMIT;
