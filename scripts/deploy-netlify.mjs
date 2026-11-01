@@ -22,8 +22,8 @@ if (!supabaseUrl || !supabaseAnonKey) {
   fail('Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env.production or the environment.');
 }
 
-if (!deployToken || /^(your_|paste_|placeholder)/i.test(deployToken)) {
-  fail('Set NETLIFY_AUTH_TOKEN in your environment or Netlify CI secrets.');
+if (deployToken && /^(your_|paste_|placeholder)/i.test(deployToken)) {
+  fail('NETLIFY_AUTH_TOKEN contains a placeholder value.');
 }
 
 if (!appOrigin) {
@@ -101,7 +101,7 @@ const deploy = spawnSync(
   {
     cwd: root,
     stdio: 'inherit',
-    env: { ...process.env, NETLIFY_AUTH_TOKEN: deployToken }
+    env: process.env
   }
 );
 

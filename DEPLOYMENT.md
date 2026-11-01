@@ -20,7 +20,7 @@ In Supabase **Authentication → URL Configuration**, set the Site URL to the pr
 
 ## Deploy locally
 
-Set the required values in `.env.production` and `NETLIFY_AUTH_TOKEN` in the shell or a secure credential manager. `.env.production` is ignored by Git. Then run:
+Set `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and `APP_ORIGIN` in `.env.production` (or the shell environment). `.env.production` is ignored by Git. Authenticate the local Netlify CLI with `netlify login`, or set `NETLIFY_AUTH_TOKEN` in a secure shell environment, then run:
 
 ```sh
 npm run deploy:netlify
