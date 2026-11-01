@@ -54,12 +54,8 @@ function runCapture(command, args, label) {
   return result.stdout;
 }
 
-if (process.env.FLY_API_TOKEN) {
-  run('flyctl', ['auth', 'whoami'], 'Fly.io authentication check', {
-    ...process.env,
-    FLY_API_TOKEN: process.env.FLY_API_TOKEN
-  });
-} else if (!dryRun) {
+const usesDeployToken = Boolean(process.env.FLY_API_TOKEN);
+if (!usesDeployToken && !dryRun) {
   run('flyctl', ['auth', 'whoami'], 'Fly.io authentication check');
 }
 
@@ -90,20 +86,22 @@ if (dryRun) {
   process.exit(0);
 }
 
-const appsOutput = runCapture('flyctl', ['apps', 'list', '--json'], 'Fly.io app listing');
-let apps;
-try {
-  const parsed = JSON.parse(appsOutput);
-  apps = Array.isArray(parsed) ? parsed : parsed.apps;
-} catch {
-  fail('Could not parse Fly.io app listing; update flyctl and retry.');
-}
+if (!usesDeployToken) {
+  const appsOutput = runCapture('flyctl', ['apps', 'list', '--json'], 'Fly.io app listing');
+  let apps;
+  try {
+    const parsed = JSON.parse(appsOutput);
+    apps = Array.isArray(parsed) ? parsed : parsed.apps;
+  } catch {
+    fail('Could not parse Fly.io app listing; update flyctl and retry.');
+  }
 
-if (!Array.isArray(apps)) fail('Fly.io returned an invalid app listing.');
-const appExists = apps.some(app => (app.Name || app.name) === appName);
-if (!appExists) {
-  console.log(`Creating Fly.io app ${appName} in your personal organization...`);
-  run('flyctl', ['apps', 'create', appName, '--org', 'personal', '--yes'], 'Fly.io app creation');
+  if (!Array.isArray(apps)) fail('Fly.io returned an invalid app listing.');
+  const appExists = apps.some(app => (app.Name || app.name) === appName);
+  if (!appExists) {
+    console.log(`Creating Fly.io app ${appName} in your personal organization...`);
+    run('flyctl', ['apps', 'create', appName, '--org', 'personal', '--yes'], 'Fly.io app creation');
+  }
 }
 
 console.log(`Deploying to Fly.io app ${appName} in region jnb...`);
