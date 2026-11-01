@@ -1,6 +1,6 @@
 ﻿{
   "packageId": "com.brukinamarketplace.twa",
-  "host": "brukinamarketplace.github.io",
+  "host": "ea2045627ai.github.io",
   "name": "Brukina Marketplace",
   "launcherName": "BrukinaMkt",
   "applicationId": "com.brukinamarketplace.twa",
@@ -8,10 +8,10 @@
   "navigationBarColor": "#000000",
   "displayMode": "standalone",
   "orientation": "default",
-  "startUrl": "/",
-  "webManifestUrl": "https://github.io",
-  "iconUrl": "https://picsum.photos",
-  "fallbackUrl": "https://github.io",
+  "startUrl": "/Brukina-Marketplace/",
+  "webManifestUrl": "https://ea2045627ai.github.io/Brukina-Marketplace/manifest.webmanifest",
+  "iconUrl": "https://ea2045627ai.github.io/Brukina-Marketplace/icon-512.png",
+  "fallbackUrl": "https://ea2045627ai.github.io/Brukina-Marketplace/",
   "splashScreenFadeOutDuration": 300,
   "signingKey": {
     "path": "./android.keystore",

@@ -6,4 +6,5 @@ build/
 !.env.example
 .data/
 .netlify/
+supabase/.temp/
 android.keystore
