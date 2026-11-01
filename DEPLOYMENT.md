@@ -49,6 +49,6 @@ Fly.io deployment uses a non-root Nginx container to serve the prebuilt Vite app
 3. Validate the build without creating Fly resources: `npm run deploy:fly -- --dry-run`.
 4. After confirming the account and potential costs, run `npm run deploy:fly`. The script creates the configured app in the personal organization if it does not exist, then builds and deploys it. The app will be served at `https://brukina-marketplace-ttwezetyljpvtdlvgyxr.fly.dev` if that Fly app name is available.
 
-To deploy from GitHub Actions, add `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and `FLY_API_TOKEN` as Actions secrets available to the workflow, then run **Actions → Deploy Brukina Marketplace to Fly.io → Run workflow**. The workflow is manual.
+To deploy from GitHub Actions, add `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and an app-scoped Fly deploy token as Actions secrets available to the workflow (`FLY_API_TOKEN`). The workflow targets the existing app directly when using this restricted token. Run **Actions → Deploy Brukina Marketplace to Fly.io → Run workflow** to publish.
 
 The Fly app and its `fly.dev` hostname are separate from the existing Netlify site and custom domains. Pointing a custom domain to Fly requires your DNS access and certificate configuration. The deploy only publishes the frontend; configure Supabase Auth redirect URLs and separately deploy its migrations/functions and provider secrets before enabling production checkout or social/SMS authentication.
