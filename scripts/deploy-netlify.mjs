@@ -1,6 +1,4 @@
 import { spawnSync } from 'node:child_process';
-import { readFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
 import process from 'node:process';
 import { loadEnv } from 'vite';
 
@@ -13,9 +11,11 @@ const fail = message => {
 const config = loadEnv('production', root, '');
 const getConfig = name => process.env[name] || config[name] || '';
 
+const defaultSiteId = '0ddca59d-f4cd-473e-b26a-7d8b9a43d491';
+const defaultAppOrigin = 'https://brukina-markethub.netlify.app';
 const supabaseUrl = getConfig('VITE_SUPABASE_URL');
 const supabaseAnonKey = getConfig('VITE_SUPABASE_ANON_KEY');
-const appOrigin = getConfig('APP_ORIGIN');
+const appOrigin = getConfig('APP_ORIGIN') || defaultAppOrigin;
 const deployToken = process.env.NETLIFY_AUTH_TOKEN;
 
 if (!supabaseUrl || !supabaseAnonKey) {
@@ -48,15 +48,7 @@ if (projectUrl.protocol !== 'https:' || projectUrl.username || projectUrl.passwo
   fail('VITE_SUPABASE_URL must be a valid HTTPS Supabase project URL.');
 }
 
-let siteId = process.env.NETLIFY_SITE_ID;
-if (!siteId) {
-  try {
-    const linkedSite = JSON.parse(await readFile(resolve(root, '.netlify/state.json'), 'utf8'));
-    siteId = linkedSite.siteId;
-  } catch {
-    fail('Set NETLIFY_SITE_ID or link this repository to its Netlify site first.');
-  }
-}
+const siteId = process.env.NETLIFY_SITE_ID || defaultSiteId;
 
 if (typeof siteId !== 'string' || !/^[0-9a-f-]{36}$/i.test(siteId)) {
   fail('NETLIFY_SITE_ID must be a valid Netlify site ID.');

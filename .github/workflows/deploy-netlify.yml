@@ -29,28 +29,17 @@ jobs:
 
       - name: Verify required deployment settings
         env:
-          APP_ORIGIN: ${{ vars.APP_ORIGIN }}
-          NETLIFY_SITE_ID: ${{ vars.NETLIFY_SITE_ID }}
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
         run: |
           set -euo pipefail
-          for name in APP_ORIGIN NETLIFY_SITE_ID NETLIFY_AUTH_TOKEN VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY; do
+          for name in NETLIFY_AUTH_TOKEN VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY; do
             if [[ -z "${!name:-}" ]]; then
               printf 'Missing GitHub environment value: %s\n' "$name" >&2
               exit 1
             fi
           done
-          node --input-type=module -e '
-            const origin = new URL(process.env.APP_ORIGIN);
-            if (origin.protocol !== "https:" || origin.origin !== process.env.APP_ORIGIN ||
-                origin.pathname !== "/" || origin.search || origin.hash ||
-                origin.username || origin.password) {
-              console.error("APP_ORIGIN must be an HTTPS origin without a path or credentials.");
-              process.exit(1);
-            }
-          '
 
       - name: Lint and build
         env:
@@ -69,5 +58,4 @@ jobs:
       - name: Publish to Netlify production
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          NETLIFY_SITE_ID: ${{ vars.NETLIFY_SITE_ID }}
-        run: npx --yes netlify-cli deploy --prod --dir=dist --site="$NETLIFY_SITE_ID" --message="GitHub Actions production deploy"
+        run: npx --yes netlify-cli deploy --prod --dir=dist --site=0ddca59d-f4cd-473e-b26a-7d8b9a43d491 --message="GitHub Actions production deploy"

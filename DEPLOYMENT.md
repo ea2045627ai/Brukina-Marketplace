@@ -10,9 +10,9 @@ Configure these values in Netlify and, if using GitHub Actions, in the GitHub re
 | --- | --- | --- |
 | `VITE_SUPABASE_URL` | Netlify/GitHub environment variable | Public Supabase project URL |
 | `VITE_SUPABASE_ANON_KEY` | Netlify/GitHub environment variable | Public Supabase publishable/anon key; never use the service-role key |
-| `APP_ORIGIN` | Netlify/GitHub environment variable | `https://brukina-markethub.netlify.app` |
-| `NETLIFY_SITE_ID` | GitHub environment variable | `0ddca59d-f4cd-473e-b26a-7d8b9a43d491` |
 | `NETLIFY_AUTH_TOKEN` | GitHub environment secret or local shell | Netlify deploy token; never commit or print it |
+
+The current app origin and Netlify site ID are preconfigured in the deploy script and workflow. Set `APP_ORIGIN` only if changing to a different production domain.
 
 Set public Supabase browser variables at **build time**. Do not expose service-role keys, Paystack secret keys, SMS credentials, or webhook secrets through any `VITE_` variable. Configure those server-side in Supabase secrets instead.
 
@@ -20,7 +20,7 @@ In Supabase **Authentication → URL Configuration**, set the Site URL to the pr
 
 ## Deploy locally
 
-Set `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and `APP_ORIGIN` in `.env.production` (or the shell environment). `.env.production` is ignored by Git. Authenticate the local Netlify CLI with `netlify login`, or set `NETLIFY_AUTH_TOKEN` in a secure shell environment, then run:
+Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in `.env.production` or another production-mode Vite env file (ignored by Git). The current app origin and site ID are defaults. Authenticate the local Netlify CLI with `netlify login`, or set `NETLIFY_AUTH_TOKEN` in a secure shell environment, then run:
 
 ```sh
 npm run deploy:netlify
@@ -30,7 +30,7 @@ The command validates configuration, runs ESLint and the production build, check
 
 ## Deploy from GitHub Actions
 
-Add the table values to the repository's `production` environment as described above, then run **Actions → Deploy Brukina Marketplace → Run workflow**. The workflow is manual so production is not changed by an unreviewed push.
+Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as variables and `NETLIFY_AUTH_TOKEN` as a secret in the repository's `production` environment, then run **Actions → Deploy Brukina Marketplace → Run workflow**. The site ID and app origin are already configured. The workflow is manual so production is not changed by an unreviewed push.
 
 Netlify may pause deployments due to team billing/plan limits. Neither the local command nor GitHub Actions can override that restriction; resume deploys in Netlify before retrying. A successful upload is not a substitute for configuring Supabase OAuth, SMS, payment, and database settings.
 
