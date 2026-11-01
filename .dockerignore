@@ -1,0 +1,15 @@
+.git
+.github
+.gradle
+.netlify
+.vscode
+.data
+node_modules
+android
+build
+.env
+.env.*
+!.env.example
+*.keystore
+*.jks
+*.log
