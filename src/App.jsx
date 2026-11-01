@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRealtimeCatalog } from './hooks/useRealtimeCatalog.js';
 import { supabase } from './supabaseClient.js';
 import CheckoutModal from './components/CheckoutModal.jsx';
+import AuthPanel from './components/AuthPanel.jsx';
+import { signOut } from './auth.js';
 
 const filters = [
   { value: 'all', label: 'All products' },
@@ -11,10 +13,46 @@ const filters = [
 
 export default function App() {
   const { catalog, loading, error } = useRealtimeCatalog(supabase, { freeDeliveryOnly: false });
+  const [session, setSession] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [authError, setAuthError] = useState(null);
+  const [signOutError, setSignOutError] = useState(null);
   const [filter, setFilter] = useState('all');
   const [cart, setCart] = useState([]);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [orderReference, setOrderReference] = useState(null);
+
+  useEffect(() => {
+    if (!supabase) {
+      setAuthLoading(false);
+      return undefined;
+    }
+
+    let active = true;
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      if (active) {
+        setSession(nextSession);
+        setSignOutError(null);
+      }
+    });
+
+    supabase.auth.getSession()
+      .then(({ data, error: sessionError }) => {
+        if (sessionError) throw sessionError;
+        if (active) setSession(data.session);
+      })
+      .catch(error => {
+        if (active) setAuthError(error instanceof Error ? error.message : 'Could not load your session.');
+      })
+      .finally(() => {
+        if (active) setAuthLoading(false);
+      });
+
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const addToCart = product => {
     setOrderReference(null);
@@ -35,6 +73,33 @@ export default function App() {
     return true;
   });
 
+  if (authLoading) {
+    return <main className="auth-page"><p role="status">Checking your session…</p></main>;
+  }
+
+  if (!supabase) {
+    return (
+      <main className="auth-page">
+        <section className="auth-card" role="alert">
+          <p className="eyebrow">Brukina Marketplace</p>
+          <h1>Authentication is not configured</h1>
+          <p className="auth-intro">
+            Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in the deployment environment.
+          </p>
+        </section>
+      </main>
+    );
+  }
+
+  if (!session) {
+    return (
+      <>
+        {authError && <p className="auth-message error" role="alert">{authError}</p>}
+        <AuthPanel />
+      </>
+    );
+  }
+
   return (
     <div className="app-shell">
       <header className="page-header">
@@ -45,6 +110,21 @@ export default function App() {
         </div>
         <div className="header-actions">
           <span className="live-indicator"><span /> Live catalog</span>
+          <span className="signed-in-user">{session.user.email || session.user.phone}</span>
+          <button
+            className="sign-out-button"
+            onClick={async () => {
+              setSignOutError(null);
+              try {
+                await signOut();
+              } catch (error) {
+                setSignOutError(error instanceof Error ? error.message : 'Could not sign out.');
+              }
+            }}
+            type="button"
+          >
+            Sign out
+          </button>
           <button
             className="cart-button"
             disabled={cart.length === 0}
@@ -61,6 +141,7 @@ export default function App() {
           Payment confirmed. Order reference: {orderReference}
         </p>
       )}
+      {signOutError && <p className="status-message error" role="alert">{signOutError}</p>}
 
       <nav className="catalog-filters" aria-label="Filter products">
         {filters.map(option => (
