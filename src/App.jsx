@@ -1,12 +1,7 @@
 import React, { useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
 import { useRealtimeCatalog } from './hooks/useRealtimeCatalog.js';
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const supabase = supabaseUrl && supabaseAnonKey
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : null;
+import { supabase } from './supabaseClient.js';
+import CheckoutModal from './components/CheckoutModal.jsx';
 
 const filters = [
   { value: 'all', label: 'All products' },
@@ -17,6 +12,22 @@ const filters = [
 export default function App() {
   const { catalog, loading, error } = useRealtimeCatalog(supabase, { freeDeliveryOnly: false });
   const [filter, setFilter] = useState('all');
+  const [cart, setCart] = useState([]);
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [orderReference, setOrderReference] = useState(null);
+
+  const addToCart = product => {
+    setOrderReference(null);
+    setCart(current => {
+      const existing = current.find(item => item.id === product.id);
+      if (existing) {
+        return current.map(item => item.id === product.id
+          ? { ...item, quantity: item.quantity + 1 }
+          : item);
+      }
+      return [...current, { ...product, quantity: 1 }];
+    });
+  };
 
   const filteredCatalog = catalog.filter(item => {
     if (filter === 'wholesale') return item.is_wholesale && item.free_delivery;
@@ -32,8 +43,24 @@ export default function App() {
           <h1>Market hub</h1>
           <p className="subtitle">Browse retail and wholesale products from local suppliers.</p>
         </div>
-        <span className="live-indicator"><span /> Live catalog</span>
+        <div className="header-actions">
+          <span className="live-indicator"><span /> Live catalog</span>
+          <button
+            className="cart-button"
+            disabled={cart.length === 0}
+            onClick={() => setCheckoutOpen(true)}
+            type="button"
+          >
+            Checkout{cart.length > 0 ? ` · ${cart.reduce((sum, item) => sum + item.quantity, 0)}` : ''}
+          </button>
+        </div>
       </header>
+
+      {orderReference && (
+        <p className="status-message" role="status">
+          Payment confirmed. Order reference: {orderReference}
+        </p>
+      )}
 
       <nav className="catalog-filters" aria-label="Filter products">
         {filters.map(option => (
@@ -74,10 +101,24 @@ export default function App() {
               {item.minimum_order_quantity > 1 && (
                 <p className="minimum-order">Minimum order: {item.minimum_order_quantity} {item.unit || 'units'}</p>
               )}
+              <button className="add-to-cart" onClick={() => addToCart(item)} type="button">
+                Add to cart
+              </button>
             </div>
           </article>
         ))}
       </main>
+      {checkoutOpen && (
+        <CheckoutModal
+          cartItems={cart}
+          onCheckoutSuccess={reference => {
+            setCart([]);
+            setCheckoutOpen(false);
+            setOrderReference(reference);
+          }}
+          onClose={() => setCheckoutOpen(false)}
+        />
+      )}
     </div>
   );
 }

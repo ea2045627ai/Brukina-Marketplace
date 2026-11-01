@@ -72,6 +72,35 @@ button {
   background: #22c55e;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.cart-button,
+.add-to-cart {
+  min-height: 40px;
+  padding: 9px 14px;
+  border: 1px solid #166534;
+  border-radius: 7px;
+  background: #166534;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+}
+
+.cart-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.add-to-cart {
+  width: 100%;
+  margin-top: 14px;
+}
+
 .catalog-filters {
   display: flex;
   flex-wrap: wrap;
@@ -210,5 +239,10 @@ button {
   .page-header {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: space-between;
   }
 }
