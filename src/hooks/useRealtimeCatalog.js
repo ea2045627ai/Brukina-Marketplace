@@ -6,7 +6,8 @@ const isCatalogProduct = (product, freeDeliveryOnly) =>
 const normalizeProduct = product => ({
   ...product,
   name: product.product_name,
-  is_wholesale: product.tags?.includes('wholesale') === true
+  is_wholesale: product.is_wholesale === true
+    || product.tags?.includes('wholesale') === true
     || /wholesale/i.test(product.badge || '')
 });
 
