@@ -14,7 +14,7 @@ const filters = [
 export default function App() {
   const { catalog, loading, error } = useRealtimeCatalog(supabase, { freeDeliveryOnly: false });
   const [session, setSession] = useState(null);
-  const [authLoading, setAuthLoading] = useState(true);
+  const [authLoading, setAuthLoading] = useState(Boolean(supabase));
   const [authError, setAuthError] = useState(null);
   const [signOutError, setSignOutError] = useState(null);
   const [filter, setFilter] = useState('all');
@@ -23,10 +23,7 @@ export default function App() {
   const [orderReference, setOrderReference] = useState(null);
 
   useEffect(() => {
-    if (!supabase) {
-      setAuthLoading(false);
-      return undefined;
-    }
+    if (!supabase) return undefined;
 
     let active = true;
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
