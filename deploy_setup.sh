@@ -4,6 +4,7 @@ set -euo pipefail
 export TARGET_PROJECT_REFERENCE="ttwezetyljpvtdlvgyxr"
 export APP_BUILD_OUTPUT_DIRECTORY="./dist"
 export ARKESEL_SENDER_ID="${ARKESEL_SENDER_ID:-BrukinaHub}"
+export APP_ORIGIN="${APP_ORIGIN:-https://brukina-marketplace-ttwezetyljpvtdlvgyxr.fly.dev}"
 
 fail() {
   printf 'ERROR: %s\n' "$1" >&2

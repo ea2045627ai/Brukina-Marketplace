@@ -38,7 +38,7 @@ Netlify may pause deployments due to team billing/plan limits. Neither the local
 
 ## Backend services
 
-The static-site deploy publishes the web client only. Apply database migrations and deploy Supabase Edge Functions separately using [deploy_setup.sh](./deploy_setup.sh), after configuring its required Supabase, Paystack, Arkesel, SMS, and origin values. The script intentionally requires an explicit production migration confirmation.
+The static-site deploy publishes the web client only. Apply database migrations and deploy Supabase Edge Functions separately using [deploy_setup.sh](./deploy_setup.sh), after configuring its required Supabase, Paystack, Arkesel, and SMS credentials. The script defaults `APP_ORIGIN` to the live Fly URL; set it explicitly only when using a different production domain. The script intentionally requires an explicit production migration confirmation.
 
 ## Deploy to Fly.io
 
