@@ -4,7 +4,7 @@ The market hub supports email/password, Google OAuth, Apple OAuth, and phone/SMS
 
 ## Application configuration
 
-1. Copy `.env.example` to `.env.local` for local development.
+1. Use `.env.example` as a template and add any missing variables to `.env.local` for local development; preserve existing local settings.
 2. Set `VITE_SUPABASE_URL` to the Supabase project URL and `VITE_SUPABASE_ANON_KEY` to its publishable/anon key. These browser values are public; never put a service-role key in a `VITE_` variable.
 3. Configure the same two variables in the hosting platform's build environment.
 4. Choose the real HTTPS production origin (for example `https://shop.example.com`). The provided text `brukinaMarkethub` is not a valid URL, so it cannot be activated as a redirect origin.

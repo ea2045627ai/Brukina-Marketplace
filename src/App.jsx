@@ -201,7 +201,7 @@ export default function App() {
       {authOpen && supabase && (
         <AuthPanel
           onClose={() => setAuthOpen(false)}
-          prompt={cart.length > 0 ? 'Sign in to continue to checkout. Your cart will remain while you sign in.' : null}
+          prompt={cart.length > 0 ? 'Sign in to continue to checkout.' : null}
         />
       )}
     </div>

@@ -65,7 +65,7 @@ export default function AuthPanel({ onClose, prompt }) {
 
   return (
     <main className="auth-page">
-      <section aria-labelledby="auth-title" className="auth-card">
+      <section aria-labelledby="auth-title" aria-modal="true" className="auth-card" role="dialog">
         {onClose && (
           <button className="auth-close" onClick={onClose} type="button">
             Back to marketplace
@@ -73,7 +73,7 @@ export default function AuthPanel({ onClose, prompt }) {
         )}
         <p className="eyebrow">Brukina Marketplace</p>
         <h1 id="auth-title">Welcome to the market hub</h1>
-        <p className="auth-intro">Sign in or create an account to browse and check out.</p>
+        <p className="auth-intro">Sign in or create an account to check out.</p>
 
         {prompt && <p className="auth-message" role="status">{prompt}</p>}
         {errorMessage && <p className="auth-message error" role="alert">{errorMessage}</p>}
