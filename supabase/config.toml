@@ -1,0 +1,2 @@
+[functions.marketplace-checkout]
+verify_jwt = true

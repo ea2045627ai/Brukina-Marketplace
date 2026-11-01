@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { supabase } from '../supabaseClient.js';
 
 const supportedNetworks = new Set(['MTN', 'Telecel', 'AT']);
@@ -9,6 +9,7 @@ export function usePaymentGateway() {
   const [paymentError, setPaymentError] = useState(null);
   const [transactionId, setTransactionId] = useState(null);
   const [paymentPending, setPaymentPending] = useState(false);
+  const idempotencyKey = useRef(null);
 
   const processMarketplaceCheckout = async orderPayload => {
     if (processing) {
@@ -59,7 +60,8 @@ export function usePaymentGateway() {
         {
           body: {
             items,
-            payment: { phone_number: phoneNumber, network_provider: networkProvider }
+            payment: { phone_number: phoneNumber, network_provider: networkProvider },
+            idempotency_key: idempotencyKey.current || (idempotencyKey.current = crypto.randomUUID())
           }
         }
       );
@@ -71,6 +73,7 @@ export function usePaymentGateway() {
 
       setTransactionId(data.reference);
       setPaymentPending(data.status === 'pending');
+      idempotencyKey.current = null;
       return {
         success: data.status === 'paid',
         pending: data.status === 'pending',
