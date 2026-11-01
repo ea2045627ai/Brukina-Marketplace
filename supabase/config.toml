@@ -1,3 +1,8 @@
+project_id = "brukina-marketplace-local-staging"
+
+[db]
+major_version = 17
+
 [functions.marketplace-checkout]
 # The handler verifies checkout JWTs with auth.getUser and authenticates provider callbacks with HMAC.
 verify_jwt = false
