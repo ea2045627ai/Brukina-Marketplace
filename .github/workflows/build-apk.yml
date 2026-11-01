@@ -22,54 +22,32 @@ jobs:
       - name: Initialize Node.js Environment
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '22'
 
-      - name: Configure Global CLI Build Modules
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Bubblewrap CLI
         run: npm install -g @bubblewrap/cli
 
-      - name: Generate Secure Keystore Signatures
+      - name: Build unsigned Android package
         run: |
-          keytool -genkey -v -keystore android.keystore -alias androidkey -keyalg RSA -keysize 2048 -validity 10000 \
-            -storepass password -keypass password \
-            -dname "CN=Brukina, OU=Production, O=Marketplace, L=Accra, S=GreaterAccra, C=GH"
-
-      - name: Pre-scaffold Configuration Files
-        run: |
-          echo '{
-            "packageId": "com.brukinamarketplace.twa",
-            "host": "ea2045627ai.github.io",
-            "name": "Brukina Marketplace",
-            "launcherName": "BrukinaMkt",
-            "applicationId": "com.brukinamarketplace.twa",
-            "statusBarColor": "#000000",
-            "navigationBarColor": "#000000",
-            "displayMode": "standalone",
-            "orientation": "default",
-            "startUrl": "/Brukina-Marketplace/",
-            "webManifestUrl": "https://github.io",
-            "iconUrl": "https://picsum.photos",
-            "fallbackUrl": "https://ea2045627ai.github.io/Brukina-Marketplace/",
-            "splashScreenFadeOutDuration": 300,
-            "signingKey": {
-              "path": "./android.keystore",
-              "alias": "androidkey"
-            },
-            "appVersionName": "1.0.0",
-            "appVersionCode": 1,
-            "shadowConnections": [],
-            "shareTarget": false,
-            "fingerprints": [],
-            "generatorApp": "bubblewrap-cli"
-          }' > twa-manifest.json
-
-      - name: Execute Bubblewrap Build Package
-        run: |
-          echo -e "password\npassword" | bubblewrap build
+          sudo apt-get update
+          sudo apt-get install --yes expect
+          expect <<'EXPECT'
+          set timeout -1
+          spawn bubblewrap build --skipPwaValidation --skipSigning
+          expect {
+            -re {would you like to regenerate} { send "y\r"; exp_continue }
+            -re {versionName for the new App version:} { send "1.0.0\r"; exp_continue }
+            eof
+          }
+          EXPECT
 
       - name: Archive Production APK and AAB Packages
         uses: actions/upload-artifact@v4
         with:
-          name: Brukina-Marketplace-Release
+          name: Brukina-Marketplace-Unsigned-Preview
           path: |
             *.apk
             *.aab
