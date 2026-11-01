@@ -50,14 +50,21 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          secrets_file="$(mktemp "${TMPDIR:-/tmp}/brukina-supabase-secrets.XXXXXX")"
+          chmod 600 "$secrets_file"
+          trap 'rm -f -- "$secrets_file"' EXIT
+          umask 077
+          {
+            printf 'PAYSTACK_SECRET_KEY=%s\n' "$PAYSTACK_SECRET_KEY"
+            printf 'ARKESEL_API_KEY=%s\n' "$ARKESEL_API_KEY"
+            printf 'ARKESEL_WEBHOOK_SECRET=%s\n' "$ARKESEL_WEBHOOK_SECRET"
+            printf 'SMS_INTERNAL_SECRET=%s\n' "$SMS_INTERNAL_SECRET"
+            printf 'APP_ORIGIN=%s\n' "$APP_ORIGIN"
+            printf 'ARKESEL_SENDER_ID=%s\n' "$ARKESEL_SENDER_ID"
+          } >"$secrets_file"
           npx --yes supabase@latest secrets set \
             --project-ref ttwezetyljpvtdlvgyxr \
-            "PAYSTACK_SECRET_KEY=$PAYSTACK_SECRET_KEY" \
-            "ARKESEL_API_KEY=$ARKESEL_API_KEY" \
-            "ARKESEL_WEBHOOK_SECRET=$ARKESEL_WEBHOOK_SECRET" \
-            "SMS_INTERNAL_SECRET=$SMS_INTERNAL_SECRET" \
-            "APP_ORIGIN=$APP_ORIGIN" \
-            "ARKESEL_SENDER_ID=$ARKESEL_SENDER_ID"
+            --env-file "$secrets_file"
 
       - name: Deploy checkout, callback, and SMS functions
         shell: bash
