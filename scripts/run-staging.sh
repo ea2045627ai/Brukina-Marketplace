@@ -11,7 +11,9 @@ fi
 
 status_file="$(mktemp "${TMPDIR:-/tmp}/brukina-staging-status.XXXXXX")"
 mock_env_file="$(mktemp "${TMPDIR:-/tmp}/brukina-staging-env.XXXXXX")"
+staging_workdir="$(mktemp -d "${TMPDIR:-/tmp}/brukina-staging-project.XXXXXX")"
 chmod 600 "$status_file" "$mock_env_file"
+ln -s "$repo_root/supabase" "$staging_workdir/supabase"
 functions_pid=""
 vite_pid=""
 started_supabase=0
@@ -27,21 +29,22 @@ cleanup() {
     kill "$functions_pid" 2>/dev/null || true
     wait "$functions_pid" 2>/dev/null || true
   fi
-  rm -f -- "$status_file" "$mock_env_file"
   if (( started_supabase )); then
-    npx --yes supabase@latest stop --workdir "$repo_root" >/dev/null
+    npx --yes supabase@latest stop --workdir "$staging_workdir" >/dev/null
   fi
+  rm -f -- "$status_file" "$mock_env_file" "$staging_workdir/supabase"
+  rmdir "$staging_workdir"
   exit "$result"
 }
 trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
-if ! npx --yes supabase@latest status --workdir "$repo_root" --output env >"$status_file" 2>/dev/null; then
+if ! npx --yes supabase@latest status --workdir "$staging_workdir" --output env >"$status_file" 2>/dev/null; then
   printf 'Starting an isolated local Supabase stack. No remote project is used.\n'
-  npx --yes supabase@latest start --workdir "$repo_root"
+  npx --yes supabase@latest start --workdir "$staging_workdir" --yes
   started_supabase=1
-  npx --yes supabase@latest status --workdir "$repo_root" --output env >"$status_file"
+  npx --yes supabase@latest status --workdir "$staging_workdir" --output env >"$status_file"
 fi
 
 read_status_value() {
@@ -68,7 +71,7 @@ fi
 printf 'APP_ORIGIN=http://127.0.0.1:5173\n' >"$mock_env_file"
 
 npx --yes supabase@latest functions serve staging-mock-services \
-  --workdir "$repo_root" \
+  --workdir "$staging_workdir" \
   --env-file "$mock_env_file" &
 functions_pid=$!
 
