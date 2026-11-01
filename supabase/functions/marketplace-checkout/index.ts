@@ -30,11 +30,14 @@ type CheckoutOrder = {
   payment_status: string;
 };
 
-const jsonResponse = (body: Record<string, unknown>, status: number, headers: HeadersInit = {}) =>
-  new Response(JSON.stringify(body), {
+const jsonResponse = (body: Record<string, unknown>, status: number, headers: HeadersInit = {}) => {
+  const responseHeaders = new Headers(headers);
+  responseHeaders.set('Content-Type', 'application/json; charset=utf-8');
+  return new Response(JSON.stringify(body), {
     status,
-    headers: { 'Content-Type': 'application/json; charset=utf-8', ...headers }
+    headers: responseHeaders
   });
+};
 
 async function readJsonBody(request: Request, maximumBytes: number): Promise<{ raw: string; value: unknown }> {
   const reader = request.body?.getReader();
