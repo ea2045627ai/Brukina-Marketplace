@@ -48,6 +48,10 @@ BEGIN
   END IF;
 
   IF v_payment.payment_status = 'failed' THEN
+    IF v_payment.provider_reference IS DISTINCT FROM p_provider_reference THEN
+      RAISE EXCEPTION 'failed payment callback reference does not match the recorded transaction'
+        USING ERRCODE = '23505';
+    END IF;
     RETURN QUERY SELECT v_payment.order_id, v_payment.payment_status;
     RETURN;
   END IF;
