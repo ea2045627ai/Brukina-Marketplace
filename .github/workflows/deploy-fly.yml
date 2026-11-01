@@ -1,0 +1,48 @@
+name: Deploy Brukina Marketplace to Fly.io
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fly-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install Fly CLI
+        uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build and deploy to Fly.io
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$FLY_API_TOKEN" ]]; then
+            echo "Configure FLY_API_TOKEN in the production environment secrets." >&2
+            exit 1
+          fi
+          if [[ -z "$VITE_SUPABASE_URL" || -z "$VITE_SUPABASE_ANON_KEY" ]]; then
+            echo "Configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in production environment variables." >&2
+            exit 1
+          fi
+          npm run deploy:fly

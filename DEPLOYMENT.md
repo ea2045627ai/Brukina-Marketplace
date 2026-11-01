@@ -44,9 +44,11 @@ The static-site deploy publishes the web client only. Apply database migrations 
 
 Fly.io deployment uses a non-root Nginx container to serve the prebuilt Vite app. `fly.toml` configures the app as `brukina-marketplace-ttwezetyljpvtdlvgyxr` in Johannesburg, with HTTPS, a health check, and scale-to-zero. Machines may incur hosting charges while running; check the current Fly.io pricing and account limits before creating the app.
 
-1. Install `flyctl` from Fly.io's official installation instructions and sign in with `fly auth login` (or configure a scoped `FLY_API_TOKEN` securely).
+1. Install `flyctl` from Fly.io's official installation instructions and sign in with `fly auth login` (or configure a scoped `FLY_API_TOKEN` securely). You can also install with `go install github.com/superfly/flyctl@latest`.
 2. Ensure `.env.production` contains the real public `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`. These are embedded in the static browser build and are not server secrets. Never put a Supabase service-role key or payment/SMS secret in a `VITE_` variable.
 3. Validate the build without creating Fly resources: `npm run deploy:fly -- --dry-run`.
-4. After confirming the account, app name, and potential costs, run `npm run deploy:fly`. Fly may ask to create the app and provision a machine. The app will be served at `https://brukina-marketplace-ttwezetyljpvtdlvgyxr.fly.dev` if that Fly app name is available.
+4. After confirming the account and potential costs, run `npm run deploy:fly`. The script creates the configured app in the personal organization if it does not exist, then builds and deploys it. The app will be served at `https://brukina-marketplace-ttwezetyljpvtdlvgyxr.fly.dev` if that Fly app name is available.
+
+To deploy from GitHub Actions, add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as variables and `FLY_API_TOKEN` as a secret in the repository's `production` environment, then run **Actions → Deploy Brukina Marketplace to Fly.io → Run workflow**. The workflow is manual.
 
 The Fly app and its `fly.dev` hostname are separate from the existing Netlify site and custom domains. Pointing a custom domain to Fly requires your DNS access and certificate configuration. The deploy only publishes the frontend; configure Supabase Auth redirect URLs and separately deploy its migrations/functions and provider secrets before enabling production checkout or social/SMS authentication.

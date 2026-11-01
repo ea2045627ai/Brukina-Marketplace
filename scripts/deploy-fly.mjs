@@ -43,6 +43,17 @@ function run(command, args, label, env = process.env) {
   if (result.status !== 0) fail(`${label} failed.`);
 }
 
+function runCapture(command, args, label) {
+  const result = spawnSync(command, args, {
+    cwd: root,
+    encoding: 'utf8',
+    env: process.env
+  });
+  if (result.error) fail(`Could not run ${label}: ${result.error.message}`);
+  if (result.status !== 0) fail(`${label} failed.`);
+  return result.stdout;
+}
+
 if (process.env.FLY_API_TOKEN) {
   run('flyctl', ['auth', 'whoami'], 'Fly.io authentication check', {
     ...process.env,
@@ -77,6 +88,22 @@ for (const asset of [
 if (dryRun) {
   console.log(`Dry run complete for Fly app ${appName}; no app or machine was created.`);
   process.exit(0);
+}
+
+const appsOutput = runCapture('flyctl', ['apps', 'list', '--json'], 'Fly.io app listing');
+let apps;
+try {
+  const parsed = JSON.parse(appsOutput);
+  apps = Array.isArray(parsed) ? parsed : parsed.apps;
+} catch {
+  fail('Could not parse Fly.io app listing; update flyctl and retry.');
+}
+
+if (!Array.isArray(apps)) fail('Fly.io returned an invalid app listing.');
+const appExists = apps.some(app => (app.Name || app.name) === appName);
+if (!appExists) {
+  console.log(`Creating Fly.io app ${appName} in your personal organization...`);
+  run('flyctl', ['apps', 'create', appName, '--org', 'personal', '--yes'], 'Fly.io app creation');
 }
 
 console.log(`Deploying to Fly.io app ${appName} in region jnb...`);
