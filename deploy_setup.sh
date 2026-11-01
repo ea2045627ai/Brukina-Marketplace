@@ -63,7 +63,7 @@ do
 done
 
 printf 'Linking Supabase project %s...\n' "$TARGET_PROJECT_REFERENCE"
-npx supabase link --project-ref "$TARGET_PROJECT_REFERENCE"
+npx --yes supabase@latest link --project-ref "$TARGET_PROJECT_REFERENCE"
 
 secrets_file="$(mktemp "${TMPDIR:-/tmp}/brukina-supabase-secrets.XXXXXX")"
 chmod 600 "$secrets_file"
@@ -79,7 +79,7 @@ umask 077
 } >"$secrets_file"
 
 printf '%s\n' 'Uploading required server secrets to Supabase...'
-npx supabase secrets set \
+npx --yes supabase@latest secrets set \
   --project-ref "$TARGET_PROJECT_REFERENCE" \
   --env-file "$secrets_file"
 
@@ -90,16 +90,16 @@ if [[ "$confirmation_token" != "APPLY ${TARGET_PROJECT_REFERENCE}" ]]; then
 fi
 
 printf '%s\n' 'Applying database migrations...'
-npx supabase db push --project-ref "$TARGET_PROJECT_REFERENCE" --yes
+npx --yes supabase@latest db push --project-ref "$TARGET_PROJECT_REFERENCE" --yes
 
 printf '%s\n' 'Deploying checkout, payment callback, and SMS functions...'
-npx supabase functions deploy marketplace-checkout \
+npx --yes supabase@latest functions deploy marketplace-checkout \
   --project-ref "$TARGET_PROJECT_REFERENCE" \
   --no-verify-jwt
-npx supabase functions deploy arkesel-payment-callback \
+npx --yes supabase@latest functions deploy arkesel-payment-callback \
   --project-ref "$TARGET_PROJECT_REFERENCE" \
   --no-verify-jwt
-npx supabase functions deploy send-order-sms \
+npx --yes supabase@latest functions deploy send-order-sms \
   --project-ref "$TARGET_PROJECT_REFERENCE" \
   --no-verify-jwt
 
