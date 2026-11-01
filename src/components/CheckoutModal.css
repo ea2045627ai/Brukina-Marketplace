@@ -41,6 +41,10 @@
   text-transform: uppercase;
 }
 
+.checkout-mock-label {
+  color: #b45309;
+}
+
 .checkout-close {
   width: 36px;
   height: 36px;

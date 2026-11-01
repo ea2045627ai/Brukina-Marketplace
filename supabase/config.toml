@@ -9,3 +9,7 @@ verify_jwt = false
 [functions.send-order-sms]
 # The handler verifies either the customer JWT or a short-lived internal HMAC.
 verify_jwt = false
+
+[functions.staging-mock-services]
+# Staging only: returns mock results and never calls payment or SMS providers.
+verify_jwt = true

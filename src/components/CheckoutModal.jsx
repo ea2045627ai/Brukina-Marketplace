@@ -10,7 +10,8 @@ export default function CheckoutModal({ cartItems = [], onCheckoutSuccess, onClo
     paymentError,
     transactionId,
     paymentPending,
-    paymentUrl
+    paymentUrl,
+    isMockPaymentMode
   } = usePaymentGateway();
 
   const subtotal = cartItems.reduce((sum, item) => {
@@ -59,7 +60,9 @@ export default function CheckoutModal({ cartItems = [], onCheckoutSuccess, onClo
       >
         <div className="checkout-heading">
           <div>
-            <p className="checkout-eyebrow">Brukina Marketplace</p>
+            <p className={isMockPaymentMode ? 'checkout-eyebrow checkout-mock-label' : 'checkout-eyebrow'}>
+              {isMockPaymentMode ? 'STAGING · MOCK SERVICES · NO REAL CHARGES' : 'Brukina Marketplace'}
+            </p>
             <h2 id="checkout-title">Secure checkout</h2>
           </div>
           <button
@@ -100,9 +103,15 @@ export default function CheckoutModal({ cartItems = [], onCheckoutSuccess, onClo
 
         {transactionId ? (
           <div className="checkout-result" role="status">
-            <h3>{paymentPending ? 'Complete payment with Paystack' : 'Payment confirmed'}</h3>
+            <h3>
+              {isMockPaymentMode
+                ? 'Mock checkout simulated — not paid'
+                : paymentPending ? 'Complete payment with Paystack' : 'Payment confirmed'}
+            </h3>
             <p>
-              {paymentPending
+              {isMockPaymentMode
+                ? 'This staging-only response does not create an order, charge a customer, or mark payment as complete.'
+                : paymentPending
                 ? 'Continue to Paystack to authorize the mobile money payment. Your order is marked paid only after Paystack confirms it.'
                 : 'Paystack confirmed your payment.'}
             </p>
@@ -142,7 +151,9 @@ export default function CheckoutModal({ cartItems = [], onCheckoutSuccess, onClo
         ) : (
           <form onSubmit={handlePaymentSubmit}>
             <p className="checkout-disclaimer">
-              Paystack will collect your mobile money network and phone number securely on its hosted checkout page.
+              {isMockPaymentMode
+                ? 'Staging mode: this only exercises the mock handler. It will not contact Paystack or charge a customer.'
+                : 'Paystack will collect your mobile money network and phone number securely on its hosted checkout page.'}
             </p>
 
             {paymentError && <p className="checkout-error" role="alert">{paymentError}</p>}
@@ -157,7 +168,9 @@ export default function CheckoutModal({ cartItems = [], onCheckoutSuccess, onClo
                 Cancel
               </button>
               <button className="checkout-primary" disabled={processing || cartItems.length === 0} type="submit">
-                {processing ? 'Contacting provider…' : `Continue · GH₵ ${totalAmount.toFixed(2)}`}
+                {processing
+                  ? isMockPaymentMode ? 'Simulating…' : 'Contacting provider…'
+                  : `${isMockPaymentMode ? 'Simulate checkout' : 'Continue'} · GH₵ ${totalAmount.toFixed(2)}`}
               </button>
             </div>
           </form>

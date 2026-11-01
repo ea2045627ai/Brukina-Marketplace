@@ -1,6 +1,9 @@
 import { useRef, useState } from 'react';
 import { supabase } from '../supabaseClient.js';
 
+const isMockPaymentMode = import.meta.env.VITE_PAYMENT_MODE === 'mock';
+const paymentFunction = isMockPaymentMode ? 'staging-mock-services' : 'marketplace-checkout';
+
 export function usePaymentGateway() {
   const [processing, setProcessing] = useState(false);
   const [paymentError, setPaymentError] = useState(null);
@@ -45,9 +48,10 @@ export function usePaymentGateway() {
       }
 
       const { data, error: checkoutError } = await supabase.functions.invoke(
-        'marketplace-checkout',
+        paymentFunction,
         {
           body: {
+            ...(isMockPaymentMode ? { action: 'checkout' } : {}),
             items,
             idempotency_key: idempotencyKey.current || (idempotencyKey.current = crypto.randomUUID())
           }
@@ -55,12 +59,15 @@ export function usePaymentGateway() {
       );
       if (checkoutError) throw checkoutError;
 
-      if (!data || !['pending', 'paid'].includes(data.status) || typeof data.reference !== 'string') {
+      if (!data
+        || !['pending', 'paid'].includes(data.status)
+        || typeof data.reference !== 'string'
+        || (isMockPaymentMode && (data.mode !== 'mock' || data.status !== 'pending'))) {
         throw new Error('The checkout service returned an invalid payment response.');
       }
 
       let checkoutUrl = null;
-      if (data.status === 'pending') {
+      if (data.status === 'pending' && !isMockPaymentMode) {
         if (typeof data.payment_url !== 'string') {
           throw new Error('Paystack did not return a checkout URL.');
         }
@@ -78,7 +85,8 @@ export function usePaymentGateway() {
       return {
         success: data.status === 'paid',
         pending: data.status === 'pending',
-        reference: data.reference
+        reference: data.reference,
+        mock: isMockPaymentMode
       };
     } catch (error) {
       const message = error instanceof Error
@@ -107,11 +115,19 @@ export function usePaymentGateway() {
       if (!sessionData.session) throw new Error('Sign in before checking payment status.');
 
       const { data, error: verifyError } = await supabase.functions.invoke(
-        'marketplace-checkout',
-        { body: { action: 'verify', reference: transactionId } }
+        paymentFunction,
+        {
+          body: {
+            action: 'verify',
+            reference: transactionId
+          }
+        }
       );
       if (verifyError) throw verifyError;
-      if (!data || !['pending', 'paid'].includes(data.status) || data.reference !== transactionId) {
+      if (!data
+        || !['pending', 'paid'].includes(data.status)
+        || data.reference !== transactionId
+        || (isMockPaymentMode && (data.mode !== 'mock' || data.status !== 'pending'))) {
         throw new Error('The payment verification service returned an invalid response.');
       }
 
@@ -137,6 +153,7 @@ export function usePaymentGateway() {
     paymentError,
     transactionId,
     paymentPending,
-    paymentUrl
+    paymentUrl,
+    isMockPaymentMode
   };
 }
