@@ -1,3 +1,7 @@
 [functions.marketplace-checkout]
 # The handler verifies checkout JWTs with auth.getUser and authenticates provider callbacks with HMAC.
 verify_jwt = false
+
+[functions.arkesel-payment-callback]
+# Webhook requests authenticate with the raw-body HMAC signature in the handler.
+verify_jwt = false
