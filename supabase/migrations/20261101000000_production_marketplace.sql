@@ -190,6 +190,7 @@ WITH seed (
   image_url,
   active
 )
+AS (
 VALUES
   (
     'Premium maize grain', 'Brukina Wholesale', 'Grains & Cereals',
@@ -209,6 +210,7 @@ VALUES
     '50 kg bag', 800, 10, 105.00, 'GH₵ 105.00', 'FREE DELIVERY',
     ARRAY['wholesale', 'free-delivery', 'construction'], true, '/Brukina-Marketplace/icon-512.png', true
   )
+)
 INSERT INTO public.marketplace_inventory (
   product_name,
   vendor_name,
