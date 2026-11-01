@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { notifyOrderBySms } from '../_shared/notify-order-sms.ts';
 
 const MAX_BODY_BYTES = 64 * 1024;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -231,6 +232,9 @@ Deno.serve(async request => {
 
     const payload = parseWebhook(rawBody);
     await processCallback(payload);
+    if (payload.status === 'success') {
+      await notifyOrderBySms(payload.reference);
+    }
     return jsonResponse({ received: true, processed: payload.status }, 200, headers);
   } catch (error) {
     const status = error instanceof HttpError ? error.status : 500;

@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { notifyOrderBySms } from '../_shared/notify-order-sms.ts';
 
 const ORDER_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ALLOWED_ORDER_STATUSES = new Set([
@@ -71,7 +72,54 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-async function authenticateUser(request: Request) {
+function bytesToHex(bytes: Uint8Array): string {
+  return Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
+async function hmacSha256Hex(secret: string, value: string): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const signature = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(value));
+  return bytesToHex(new Uint8Array(signature));
+}
+
+function constantTimeHexEqual(expected: string, supplied: string): boolean {
+  if (!/^[0-9a-f]{64}$/i.test(expected) || !/^[0-9a-f]{64}$/i.test(supplied)) return false;
+  const normalizedExpected = expected.toLowerCase();
+  const normalizedSupplied = supplied.toLowerCase();
+  let difference = 0;
+  for (let index = 0; index < normalizedExpected.length; index += 1) {
+    difference |= normalizedExpected.charCodeAt(index) ^ normalizedSupplied.charCodeAt(index);
+  }
+  return difference === 0;
+}
+
+async function authenticateRequest(request: Request, orderId: string): Promise<string | null> {
+  const suppliedTimestamp = request.headers.get('x-marketplace-timestamp');
+  const suppliedSignature = request.headers.get('x-marketplace-signature');
+  if (suppliedTimestamp || suppliedSignature) {
+    const timestampSeconds = Number(suppliedTimestamp);
+    if (!/^\d{10}$/.test(suppliedTimestamp || '')
+      || !Number.isSafeInteger(timestampSeconds)
+      || Math.abs(Date.now() / 1000 - timestampSeconds) > 300) {
+      throw new HttpError('Internal notification signature has expired.', 401);
+    }
+
+    const expectedSignature = await hmacSha256Hex(
+      requiredEnv('SMS_INTERNAL_SECRET'),
+      `${suppliedTimestamp}.${orderId}`
+    );
+    if (!constantTimeHexEqual(expectedSignature, suppliedSignature || '')) {
+      throw new HttpError('Internal notification signature is invalid.', 401);
+    }
+    return null;
+  }
+
   const bearer = request.headers.get('authorization')?.match(/^Bearer\s+(.+)$/i)?.[1];
   if (!bearer) throw new HttpError('Authentication is required.', 401);
 
@@ -82,16 +130,37 @@ async function authenticateUser(request: Request) {
   );
   const { data, error } = await authClient.auth.getUser(bearer);
   if (error || !data.user) throw new HttpError('Authentication token is invalid or expired.', 401);
-  return data.user;
+  return data.user.id;
 }
 
 async function parseRequest(request: Request): Promise<OrderNotificationRequest> {
   const contentLength = Number(request.headers.get('content-length') || '0');
   if (contentLength > 4096) throw new HttpError('Request body is too large.', 413);
 
+  const reader = request.body?.getReader();
+  if (!reader) throw new HttpError('Request body is required.', 400);
+  const decoder = new TextDecoder();
+  let raw = '';
+  let byteCount = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      byteCount += value.byteLength;
+      if (byteCount > 4096) {
+        await reader.cancel();
+        throw new HttpError('Request body is too large.', 413);
+      }
+      raw += decoder.decode(value, { stream: true });
+    }
+    raw += decoder.decode();
+  } finally {
+    reader.releaseLock();
+  }
+
   let body: unknown;
   try {
-    body = await request.json();
+    body = JSON.parse(raw) as unknown;
   } catch {
     throw new HttpError('Request body must be valid JSON.', 400);
   }
@@ -104,15 +173,25 @@ async function parseRequest(request: Request): Promise<OrderNotificationRequest>
 async function claimNotification(
   admin: ReturnType<typeof getSupabaseAdmin>,
   orderId: string
-): Promise<string> {
+): Promise<{ notificationId: string | null; alreadySent: boolean }> {
   const { data, error } = await admin.rpc('claim_marketplace_order_sms', {
     p_order_id: orderId
   });
   if (error) throw error;
-  if (!Array.isArray(data) || data.length !== 1 || typeof data[0].notification_id !== 'string') {
-    throw new HttpError('An SMS notification for this order is already being processed or was sent.', 409);
+  if (Array.isArray(data) && data.length === 1 && typeof data[0].notification_id === 'string') {
+    return { notificationId: data[0].notification_id, alreadySent: false };
   }
-  return data[0].notification_id;
+
+  const { data: existing, error: existingError } = await admin
+    .from('marketplace_order_notifications')
+    .select('status')
+    .eq('order_id', orderId)
+    .eq('channel', 'sms')
+    .maybeSingle();
+  if (existingError) throw existingError;
+  if (existing?.status === 'sent') return { notificationId: null, alreadySent: true };
+  if (existing?.status === 'sending') return { notificationId: null, alreadySent: false };
+  throw new Error('Could not claim the order SMS notification.');
 }
 
 async function updateNotification(
@@ -158,10 +237,8 @@ Deno.serve(async request => {
   let admin: ReturnType<typeof getSupabaseAdmin> | null = null;
 
   try {
-    const [{ order_id: orderId }, user] = await Promise.all([
-      parseRequest(request),
-      authenticateUser(request)
-    ]);
+    const { order_id: orderId } = await parseRequest(request);
+    const authenticatedUserId = await authenticateRequest(request, orderId);
 
     admin = getSupabaseAdmin();
     const { data: order, error: orderError } = await admin
@@ -171,7 +248,7 @@ Deno.serve(async request => {
       .maybeSingle();
 
     if (orderError) throw orderError;
-    if (!order || order.customer_id !== user.id) {
+    if (!order || (authenticatedUserId && order.customer_id !== authenticatedUserId)) {
       throw new HttpError('Order was not found for the authenticated customer.', 404);
     }
     if (!ALLOWED_ORDER_STATUSES.has(order.status)) {
@@ -188,7 +265,7 @@ Deno.serve(async request => {
       throw new HttpError('Order payment has not been confirmed.', 409);
     }
 
-    const { data: account, error: accountError } = await admin.auth.admin.getUserById(user.id);
+    const { data: account, error: accountError } = await admin.auth.admin.getUserById(order.customer_id);
     if (accountError) throw accountError;
     if (!account.user?.phone || !account.user.phone_confirmed_at) {
       throw new HttpError('A verified phone number is required for SMS notifications.', 422);
@@ -220,7 +297,14 @@ Deno.serve(async request => {
     const orderType = isWholesale ? 'wholesale' : 'retail';
     const message = `Brukina: Your ${orderType} order ${order.order_number} is confirmed. Total: GHS ${Number(order.total).toFixed(2)}. Thank you.`;
 
-    notificationId = await claimNotification(admin, orderId);
+    const claim = await claimNotification(admin, orderId);
+    notificationId = claim.notificationId;
+    if (claim.alreadySent) {
+      return jsonResponse({ sent: true, already_sent: true, order_id: orderId }, 200, cors);
+    }
+    if (!notificationId) {
+      return jsonResponse({ accepted: true, status: 'sending', order_id: orderId }, 202, cors);
+    }
 
     const providerResponse = await fetch(ARKESEL_SMS_URL, {
       method: 'POST',

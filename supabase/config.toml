@@ -7,5 +7,5 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.send-order-sms]
-# The handler verifies the customer JWT and order ownership before sending.
-verify_jwt = true
+# The handler verifies either the customer JWT or a short-lived internal HMAC.
+verify_jwt = false

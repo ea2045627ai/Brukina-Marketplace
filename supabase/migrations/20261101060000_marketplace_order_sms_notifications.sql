@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS public.marketplace_order_notifications (
   error_message text,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (order_id, notification_type, channel)
+  UNIQUE (order_id, channel)
 );
 
 CREATE INDEX IF NOT EXISTS marketplace_order_notifications_status_created_idx
@@ -65,7 +65,7 @@ BEGIN
   WHERE orders.id = p_order_id
     AND orders.status IN ('confirmed', 'processing', 'packed', 'out_for_delivery', 'delivered')
     AND payment.payment_status = 'paid'
-  ON CONFLICT (order_id, notification_type, channel)
+  ON CONFLICT (order_id, channel)
   DO UPDATE SET
     status = 'sending',
     error_message = NULL,

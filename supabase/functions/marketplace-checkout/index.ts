@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { notifyOrderBySms } from '../_shared/notify-order-sms.ts';
 
 const PAYSTACK_API_URL = 'https://api.paystack.co';
 const PAYSTACK_CHECKOUT_HOST = 'checkout.paystack.com';
@@ -178,6 +179,7 @@ async function confirmPayment(
     throw new Error('Database did not confirm the payment ledger update.');
   }
 
+  await notifyOrderBySms(payment.order_id);
   return payment.order_id as string;
 }
 
@@ -278,6 +280,7 @@ async function handlePaystackVerification(
   if (paymentError) throw paymentError;
   if (!payment) throw new HttpError('Payment reference was not found.', 404);
   if (payment.payment_status === 'paid') {
+    await notifyOrderBySms(payment.order_id);
     return { status: 'paid', reference };
   }
 
@@ -304,6 +307,7 @@ async function handlePaystackVerification(
 
   const metadataOrderId = isRecord(transaction.metadata) ? transaction.metadata.order_id : null;
   if (transaction.reference !== reference
+    || typeof transaction.currency !== 'string'
     || transaction.currency !== payment.currency
     || typeof transaction.amount !== 'number'
     || !Number.isSafeInteger(transaction.amount)
