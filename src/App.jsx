@@ -16,6 +16,7 @@ export default function App() {
   const [session, setSession] = useState(null);
   const [authLoading, setAuthLoading] = useState(Boolean(supabase));
   const [authError, setAuthError] = useState(null);
+  const [authOpen, setAuthOpen] = useState(false);
   const [signOutError, setSignOutError] = useState(null);
   const [filter, setFilter] = useState('all');
   const [cart, setCart] = useState([]);
@@ -29,6 +30,7 @@ export default function App() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       if (active) {
         setSession(nextSession);
+        if (nextSession) setAuthOpen(false);
         setSignOutError(null);
       }
     });
@@ -70,33 +72,6 @@ export default function App() {
     return true;
   });
 
-  if (authLoading) {
-    return <main className="auth-page"><p role="status">Checking your session…</p></main>;
-  }
-
-  if (!supabase) {
-    return (
-      <main className="auth-page">
-        <section className="auth-card" role="alert">
-          <p className="eyebrow">Brukina Marketplace</p>
-          <h1>Authentication is not configured</h1>
-          <p className="auth-intro">
-            Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in the deployment environment.
-          </p>
-        </section>
-      </main>
-    );
-  }
-
-  if (!session) {
-    return (
-      <>
-        {authError && <p className="auth-message error" role="alert">{authError}</p>}
-        <AuthPanel />
-      </>
-    );
-  }
-
   return (
     <div className="app-shell">
       <header className="page-header">
@@ -107,25 +82,50 @@ export default function App() {
         </div>
         <div className="header-actions">
           <span className="live-indicator"><span /> Live catalog</span>
-          <span className="signed-in-user">{session.user.email || session.user.phone}</span>
-          <button
-            className="sign-out-button"
-            onClick={async () => {
-              setSignOutError(null);
-              try {
-                await signOut();
-              } catch (error) {
-                setSignOutError(error instanceof Error ? error.message : 'Could not sign out.');
-              }
-            }}
-            type="button"
-          >
-            Sign out
-          </button>
+          {authLoading && <span className="signed-in-user" role="status">Checking sign-in…</span>}
+          {!authLoading && session && (
+            <>
+              <span className="signed-in-user">{session.user.email || session.user.phone}</span>
+              <button
+                className="sign-out-button"
+                onClick={async () => {
+                  setSignOutError(null);
+                  try {
+                    await signOut();
+                  } catch (signOutError) {
+                    setSignOutError(signOutError instanceof Error ? signOutError.message : 'Could not sign out.');
+                  }
+                }}
+                type="button"
+              >
+                Sign out
+              </button>
+            </>
+          )}
+          {!authLoading && !session && (
+            <button
+              className="sign-out-button"
+              disabled={!supabase}
+              onClick={() => setAuthOpen(true)}
+              type="button"
+            >
+              Sign in
+            </button>
+          )}
           <button
             className="cart-button"
-            disabled={cart.length === 0}
-            onClick={() => setCheckoutOpen(true)}
+            disabled={cart.length === 0 || authLoading}
+            onClick={() => {
+              if (!session) {
+                if (!supabase) {
+                  setAuthError('Authentication is unavailable. Configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.');
+                  return;
+                }
+                setAuthOpen(true);
+                return;
+              }
+              setCheckoutOpen(true);
+            }}
             type="button"
           >
             Checkout{cart.length > 0 ? ` · ${cart.reduce((sum, item) => sum + item.quantity, 0)}` : ''}
@@ -139,6 +139,7 @@ export default function App() {
         </p>
       )}
       {signOutError && <p className="status-message error" role="alert">{signOutError}</p>}
+      {authError && <p className="status-message error" role="alert">{authError}</p>}
 
       <nav className="catalog-filters" aria-label="Filter products">
         {filters.map(option => (
@@ -195,6 +196,12 @@ export default function App() {
             setOrderReference(reference);
           }}
           onClose={() => setCheckoutOpen(false)}
+        />
+      )}
+      {authOpen && supabase && (
+        <AuthPanel
+          onClose={() => setAuthOpen(false)}
+          prompt={cart.length > 0 ? 'Sign in to continue to checkout. Your cart will remain while you sign in.' : null}
         />
       )}
     </div>

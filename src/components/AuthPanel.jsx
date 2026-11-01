@@ -12,7 +12,7 @@ const getErrorMessage = error => (
   error instanceof Error ? error.message : 'Authentication failed. Please try again.'
 );
 
-export default function AuthPanel() {
+export default function AuthPanel({ onClose, prompt }) {
   const [isSignUp, setIsSignUp] = useState(false);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -66,10 +66,16 @@ export default function AuthPanel() {
   return (
     <main className="auth-page">
       <section aria-labelledby="auth-title" className="auth-card">
+        {onClose && (
+          <button className="auth-close" onClick={onClose} type="button">
+            Back to marketplace
+          </button>
+        )}
         <p className="eyebrow">Brukina Marketplace</p>
         <h1 id="auth-title">Welcome to the market hub</h1>
         <p className="auth-intro">Sign in or create an account to browse and check out.</p>
 
+        {prompt && <p className="auth-message" role="status">{prompt}</p>}
         {errorMessage && <p className="auth-message error" role="alert">{errorMessage}</p>}
         {message && <p className="auth-message" role="status">{message}</p>}
 
