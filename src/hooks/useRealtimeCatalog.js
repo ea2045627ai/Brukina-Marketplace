@@ -3,6 +3,13 @@ import { useEffect, useState } from 'react';
 const isCatalogProduct = (product, freeDeliveryOnly) =>
   product?.active === true && (!freeDeliveryOnly || product.free_delivery === true);
 
+const normalizeProduct = product => ({
+  ...product,
+  name: product.product_name,
+  is_wholesale: product.tags?.includes('wholesale') === true
+    || /wholesale/i.test(product.badge || '')
+});
+
 const upsertById = (products, product) => {
   const index = products.findIndex(item => item.id === product.id);
   if (index === -1) return [product, ...products];
@@ -12,7 +19,7 @@ const upsertById = (products, product) => {
   return updated;
 };
 
-export function useRealtimeCatalog(supabase, { freeDeliveryOnly = true } = {}) {
+export function useRealtimeCatalog(supabase, { freeDeliveryOnly = false } = {}) {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -55,7 +62,7 @@ export function useRealtimeCatalog(supabase, { freeDeliveryOnly = true } = {}) {
             if (!isCatalogProduct(product, freeDeliveryOnly)) {
               return current.filter(item => item.id !== product.id);
             }
-            return upsertById(current, product);
+            return upsertById(current, normalizeProduct(product));
           });
         }
       )
@@ -80,7 +87,11 @@ export function useRealtimeCatalog(supabase, { freeDeliveryOnly = true } = {}) {
         if (queryError) throw queryError;
 
         if (active && revision === initialRevision) {
-          setProducts((data || []).filter(product => isCatalogProduct(product, freeDeliveryOnly)));
+          setProducts(
+            (data || [])
+              .filter(product => isCatalogProduct(product, freeDeliveryOnly))
+              .map(normalizeProduct)
+          );
         }
       } catch (loadError) {
         if (active) setError(loadError);
@@ -97,5 +108,5 @@ export function useRealtimeCatalog(supabase, { freeDeliveryOnly = true } = {}) {
     };
   }, [supabase, freeDeliveryOnly]);
 
-  return { products, loading, error };
+  return { products, catalog: products, loading, error };
 }
