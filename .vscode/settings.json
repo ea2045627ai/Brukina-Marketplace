@@ -1,0 +1,8 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^git ls-files \\| sed -n '1,180p'; printf '\\\\nTop-level source tree:\\\\n'; find src public supabase \\.github -maxdepth 3 -type f -print 2>/dev/null \\| sort \\| sed -n '1,180p'; printf '\\\\nIgnore rules:\\\\n'; sed -n '1,160p' \\.gitignore$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}
