@@ -5,3 +5,7 @@ verify_jwt = false
 [functions.arkesel-payment-callback]
 # Webhook requests authenticate with the raw-body HMAC signature in the handler.
 verify_jwt = false
+
+[functions.send-order-sms]
+# The handler verifies the customer JWT and order ownership before sending.
+verify_jwt = true
