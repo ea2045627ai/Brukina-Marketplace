@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 
+const missingSupabaseClientError = new Error('A configured Supabase client is required.');
+
 const isCatalogProduct = (product, freeDeliveryOnly) =>
   product?.active === true && (!freeDeliveryOnly || product.free_delivery === true);
 
@@ -30,9 +32,6 @@ export function useRealtimeCatalog(supabase, { freeDeliveryOnly = false } = {}) 
     let revision = 0;
 
     if (!supabase?.from || !supabase?.channel || !supabase?.removeChannel) {
-      setProducts([]);
-      setError(new Error('A configured Supabase client is required.'));
-      setLoading(false);
       return () => {
         active = false;
       };
@@ -109,5 +108,13 @@ export function useRealtimeCatalog(supabase, { freeDeliveryOnly = false } = {}) 
     };
   }, [supabase, freeDeliveryOnly]);
 
-  return { products, catalog: products, loading, error };
+  const missingSupabaseClient = !supabase?.from || !supabase?.channel || !supabase?.removeChannel;
+  const visibleProducts = missingSupabaseClient ? [] : products;
+
+  return {
+    products: visibleProducts,
+    catalog: visibleProducts,
+    loading: missingSupabaseClient ? false : loading,
+    error: missingSupabaseClient ? missingSupabaseClientError : error
+  };
 }

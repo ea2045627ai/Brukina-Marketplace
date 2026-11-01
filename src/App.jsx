@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useRealtimeCatalog } from './hooks/useRealtimeCatalog.js';
 import { supabase } from './supabaseClient.js';
 import CheckoutModal from './components/CheckoutModal.jsx';

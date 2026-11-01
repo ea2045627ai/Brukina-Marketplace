@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { usePaymentGateway } from '../hooks/usePaymentGateway.js';
 import './CheckoutModal.css';
 
