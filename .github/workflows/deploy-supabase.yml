@@ -1,0 +1,94 @@
+name: Deploy Brukina Supabase Backend
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      PAYSTACK_SECRET_KEY: ${{ secrets.PAYSTACK_SECRET_KEY }}
+      ARKESEL_API_KEY: ${{ secrets.ARKESEL_API_KEY }}
+      ARKESEL_WEBHOOK_SECRET: ${{ secrets.ARKESEL_WEBHOOK_SECRET }}
+      SMS_INTERNAL_SECRET: ${{ secrets.SMS_INTERNAL_SECRET }}
+      APP_ORIGIN: https://brukina-marketplace-ttwezetyljpvtdlvgyxr.fly.dev
+      ARKESEL_SENDER_ID: BrukinaHub
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Verify required backend secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in \
+            SUPABASE_ACCESS_TOKEN \
+            PAYSTACK_SECRET_KEY \
+            ARKESEL_API_KEY \
+            ARKESEL_WEBHOOK_SECRET \
+            SMS_INTERNAL_SECRET
+          do
+            if [[ -z "${!name:-}" ]]; then
+              printf 'Missing required GitHub production environment secret: %s\n' "$name" >&2
+              exit 1
+            fi
+          done
+
+      - name: Install Supabase CLI
+        run: npx --yes supabase@latest --version
+
+      - name: Configure Supabase function secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes supabase@latest secrets set \
+            --project-ref ttwezetyljpvtdlvgyxr \
+            "PAYSTACK_SECRET_KEY=$PAYSTACK_SECRET_KEY" \
+            "ARKESEL_API_KEY=$ARKESEL_API_KEY" \
+            "ARKESEL_WEBHOOK_SECRET=$ARKESEL_WEBHOOK_SECRET" \
+            "SMS_INTERNAL_SECRET=$SMS_INTERNAL_SECRET" \
+            "APP_ORIGIN=$APP_ORIGIN" \
+            "ARKESEL_SENDER_ID=$ARKESEL_SENDER_ID"
+
+      - name: Deploy checkout, callback, and SMS functions
+        shell: bash
+        run: |
+          set -euo pipefail
+          for function in \
+            marketplace-checkout \
+            arkesel-payment-callback \
+            send-order-sms
+          do
+            npx --yes supabase@latest functions deploy "$function" \
+              --project-ref ttwezetyljpvtdlvgyxr \
+              --no-verify-jwt
+          done
+
+      - name: Verify deployed function endpoints
+        shell: bash
+        run: |
+          set -euo pipefail
+          for function in \
+            marketplace-checkout \
+            arkesel-payment-callback \
+            send-order-sms
+          do
+            status="$(curl --silent --show-error --output /dev/null \
+              --write-out '%{http_code}' \
+              --request OPTIONS \
+              "https://ttwezetyljpvtdlvgyxr.supabase.co/functions/v1/$function")"
+            if [[ "$status" == "404" || "$status" == "000" ]]; then
+              printf 'Function endpoint verification failed for %s (HTTP %s).\n' "$function" "$status" >&2
+              exit 1
+            fi
+            printf '%s endpoint responded with HTTP %s\n' "$function" "$status"
+          done

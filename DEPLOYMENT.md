@@ -40,6 +40,8 @@ Netlify may pause deployments due to team billing/plan limits. Neither the local
 
 The static-site deploy publishes the web client only. Apply database migrations and deploy Supabase Edge Functions separately using [deploy_setup.sh](./deploy_setup.sh), after configuring its required Supabase, Paystack, Arkesel, and SMS credentials. The script defaults `APP_ORIGIN` to the live Fly URL; set it explicitly only when using a different production domain. The script intentionally requires an explicit production migration confirmation.
 
+For the already-linked production database, the GitHub Actions workflow **Deploy Brukina Supabase Backend** sets the server-only function secrets and deploys the checkout, Arkesel callback, and SMS Edge Functions without reapplying migrations. Add `SUPABASE_ACCESS_TOKEN`, `PAYSTACK_SECRET_KEY`, `ARKESEL_API_KEY`, `ARKESEL_WEBHOOK_SECRET`, and `SMS_INTERNAL_SECRET` as secrets in the GitHub `production` environment, then run the workflow manually. Enter secret values directly in GitHub; never put them in the repository, workflow inputs, or `VITE_` variables. Google/Apple OAuth credentials and the Supabase Auth SMS provider are configured separately in Supabase Auth.
+
 ## Deploy to Fly.io
 
 Fly.io deployment uses a non-root Nginx container to serve the prebuilt Vite app. `fly.toml` configures the app as `brukina-marketplace-ttwezetyljpvtdlvgyxr` in Johannesburg, with HTTPS, a health check, and scale-to-zero. Machines may incur hosting charges while running; check the current Fly.io pricing and account limits before creating the app.
