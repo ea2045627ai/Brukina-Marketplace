@@ -8,6 +8,7 @@
     "preview": "vite preview",
     "start": "node server.js",
     "check": "eslint .",
+    "staging": "bash scripts/run-staging.sh",
     "deploy:netlify": "node scripts/deploy-netlify.mjs",
     "deploy:fly": "node scripts/deploy-fly.mjs"
   },
