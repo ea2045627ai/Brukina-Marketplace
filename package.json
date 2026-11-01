@@ -8,7 +8,8 @@
     "preview": "vite preview",
     "start": "node server.js",
     "check": "eslint .",
-    "deploy:netlify": "node scripts/deploy-netlify.mjs"
+    "deploy:netlify": "node scripts/deploy-netlify.mjs",
+    "deploy:fly": "node scripts/deploy-fly.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
