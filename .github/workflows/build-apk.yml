@@ -9,6 +9,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
@@ -30,26 +31,40 @@ jobs:
           packages: platform-tools
 
       - name: Install Bubblewrap CLI
-        run: npm install -g @bubblewrap/cli
+        run: npm install -g @bubblewrap/cli@1.27.0
 
       - name: Build unsigned Android package
         run: |
           sudo apt-get update
           sudo apt-get install --yes expect
           expect <<'EXPECT'
-          set timeout -1
+          set timeout 1200
           spawn bubblewrap build --skipPwaValidation --skipSigning
           expect {
-            -re {would you like to regenerate} { send "y\r"; exp_continue }
-            -re {versionName for the new App version:} { send "1.0.0\r"; exp_continue }
-            eof
+            -re {(?i)would you like to regenerate your project\?} { send -- "y\r"; exp_continue }
+            -re {versionName for the new App version:} { send -- "1.0.0\r"; exp_continue }
+            timeout {
+              puts stderr "Timed out waiting for Bubblewrap build prompts or completion."
+              catch {close}
+              catch {wait}
+              exit 124
+            }
+            eof {}
           }
+          set result [wait]
+          exit [lindex $result 3]
           EXPECT
+
+      - name: Verify unsigned Android packages
+        run: |
+          test -s app-release-unsigned-aligned.apk
+          test -s app/build/outputs/bundle/release/app-release.aab
 
       - name: Archive Unsigned Preview APK and AAB Packages
         uses: actions/upload-artifact@v4
         with:
           name: Brukina-Marketplace-Unsigned-Preview
           path: |
-            *.apk
-            *.aab
+            app-release-unsigned-aligned.apk
+            app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
