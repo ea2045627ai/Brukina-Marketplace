@@ -39,21 +39,30 @@ jobs:
           sudo apt-get install --yes expect
           expect <<'EXPECT'
           set timeout 1200
+          proc answer_prompt {pattern response} {
+            expect -nocase -re $pattern {} timeout {
+              puts stderr "Timed out waiting for Bubblewrap prompt: $pattern"
+              exit 124
+            } eof {
+              puts stderr "Bubblewrap exited before prompt: $pattern"
+              exit 1
+            }
+            send -- $response
+          }
           spawn bubblewrap build --skipPwaValidation --skipSigning
+          answer_prompt {do you want Bubblewrap to install the JDK} "n\r"
+          answer_prompt {path to your existing JDK 17:} "$env(JAVA_HOME)\r"
+          answer_prompt {do you want Bubblewrap to install the Android SDK} "n\r"
+          answer_prompt {path to your existing Android SDK:} "$env(ANDROID_SDK_ROOT)\r"
+          answer_prompt {would you like to regenerate your project\?} "y\r"
+          answer_prompt {versionName for the new App version:} "1.0.0\r"
           expect {
-            -nocase -re {do you want Bubblewrap to install the JDK} { send -- "n\r"; exp_continue }
-            -nocase -re {path to your existing JDK 17:} { send -- "$env(JAVA_HOME)\r"; exp_continue }
-            -nocase -re {do you want Bubblewrap to install the Android SDK} { send -- "n\r"; exp_continue }
-            -nocase -re {path to your existing Android SDK:} { send -- "$env(ANDROID_SDK_ROOT)\r"; exp_continue }
-            -nocase -re {would you like to regenerate your project\?} { send -- "y\r"; exp_continue }
-            -re {versionName for the new App version:} { send -- "1.0.0\r"; exp_continue }
+            eof {}
             timeout {
-              puts stderr "Timed out waiting for Bubblewrap build prompts or completion."
+              puts stderr "Timed out waiting for Bubblewrap build to finish."
               catch {close}
-              catch {wait}
               exit 124
             }
-            eof {}
           }
           set result [wait]
           exit [lindex $result 3]
