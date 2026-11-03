@@ -41,6 +41,10 @@ jobs:
           set timeout 1200
           spawn bubblewrap build --skipPwaValidation --skipSigning
           expect {
+            -re {(?i)do you want Bubblewrap to install the JDK} { send -- "n\r"; exp_continue }
+            -re {(?i)path to your existing JDK 17:} { send -- "$env(JAVA_HOME)\r"; exp_continue }
+            -re {(?i)do you want Bubblewrap to install the Android SDK} { send -- "n\r"; exp_continue }
+            -re {(?i)path to your existing Android SDK:} { send -- "$env(ANDROID_SDK_ROOT)\r"; exp_continue }
             -re {(?i)would you like to regenerate your project\?} { send -- "y\r"; exp_continue }
             -re {versionName for the new App version:} { send -- "1.0.0\r"; exp_continue }
             timeout {
