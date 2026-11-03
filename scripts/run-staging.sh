@@ -32,20 +32,34 @@ cleanup() {
   if (( started_supabase )); then
     npx --yes supabase@latest stop --workdir "$staging_workdir" >/dev/null 2>&1 || true
   fi
-  rm -f -- "$status_file" "$mock_env_file" "$staging_workdir/supabase"
-  rmdir "$staging_workdir" 2>/dev/null || true
+  rm -f -- "$status_file" "$mock_env_file"
+  rm -rf -- "$staging_workdir"
   exit "$result"
 }
 trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
+if [[ ! -f "$staging_workdir/supabase/config.toml" ]]; then
+  npx --yes supabase@latest init --workdir "$staging_workdir" --force >/dev/null
+  sed -i 's/^project_id = .*/project_id = "brukina-marketplace-local-staging"/' \
+    "$staging_workdir/supabase/config.toml"
+  ln -s "$repo_root/supabase/functions" "$staging_workdir/supabase/functions"
+  ln -s "$repo_root/supabase/migrations" "$staging_workdir/supabase/migrations"
+  cat >>"$staging_workdir/supabase/config.toml" <<'EOF'
+
+[functions.staging-mock-services]
+verify_jwt = true
+EOF
+fi
+
 if ! npx --yes supabase@latest status --workdir "$staging_workdir" --output env >"$status_file" 2>/dev/null; then
   printf 'Starting an isolated local Supabase stack. No remote project is used.\n'
   started_supabase=1
   npx --yes supabase@latest start --workdir "$staging_workdir" --yes
-  npx --yes supabase@latest status --workdir "$staging_workdir" --output env >"$status_file"
 fi
+npx --yes supabase@latest migration up --local --workdir "$staging_workdir"
+npx --yes supabase@latest status --workdir "$staging_workdir" --output env >"$status_file"
 
 read_status_value() {
   awk -F= -v name="$1" '
